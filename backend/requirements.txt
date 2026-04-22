@@ -1,0 +1,50 @@
+# Core Web Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.3
+starlette==0.41.3
+sse-starlette==3.0.3
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+anyio>=3.7.1,<5
+numpy>=1.26.0
+python-multipart==0.0.21
+
+# Database
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.11
+alembic==1.13.1
+
+# Data Validation
+pydantic==2.11.10
+pydantic-settings==2.10.1
+pydantic_core==2.33.2
+
+# AI/LLM
+crewai==1.7.2
+openai==1.83.0
+langchain-google-genai
+google-generativeai
+
+# Security
+python-jose[cryptography]==3.3.0
+python-dotenv==1.1.1
+
+# WebSockets
+websockets==16.0
+
+# HTTP Client (used by crewai/openai)
+httpx==0.28.1
+httpx-sse==0.4.3
+requests==2.32.5
+
+# Platform-specific
+uvloop==0.22.1; platform_system != "Windows"
+
+#langchain and transformers dependencies
+transformers==4.31.0
+sentence-transformers==2.3.0
+langchain==0.0.208
+langchain-chroma==0.0.208
+chromadb==0.3.24
+
+
