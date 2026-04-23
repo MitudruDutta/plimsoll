@@ -46,3 +46,4 @@ backend/data/mock/
 tmp/
 temp/
 *.tmp
+.codex

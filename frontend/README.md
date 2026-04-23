@@ -1,132 +1,36 @@
-# NaviGuard Maritime AI - Frontend
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Frontend interface, including customer chat widget and admin dashboard.
+## Getting Started
 
-## Tech Stack
-
-- **React** 18
-- **Ant Design** 5
-- **Vite** 5
-- **React Router** 6
-- **Axios**
-
-## Quick Start
-
-### Install Dependencies
-
-```bash
-npm install
-```
-
-### Start Development Server
+First, run the development server:
 
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Visit: http://localhost:5173
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Build for Production
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-```bash
-npm run build
-```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Pages
+## Learn More
 
-### Customer Side
+To learn more about Next.js, take a look at the following resources:
 
-- **Home** (`/`) - Contains Chat Widget floating chat window
-- Customers can chat with AI directly on the webpage
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### Admin Dashboard
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-- **Customer List** (`/admin/customers`) - View all customers, sorted by priority
-- **Conversation Details** (`/admin/conversations/:id`) - View specific customer's conversation history
+## Deploy on Vercel
 
-## Features
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-### Chat Widget
-
-- ✅ Floating chat button
-- ✅ Real-time conversation
-- ✅ Markdown rendering
-- ✅ Message polling (5 seconds)
-- ✅ Responsive design
-
-### Admin Dashboard
-
-- ✅ Customer list table
-- ✅ Search and sort
-- ✅ Customer category tags (high-value/normal/low-value)
-- ✅ Conversation history timeline
-- ✅ Confidence display
-
-## Configuration
-
-### Environment Variables
-
-Create `.env` file:
-
-```env
-VITE_API_BASE_URL=http://localhost:8000/api
-VITE_WS_URL=ws://localhost:8000/ws  # Used in V1.0
-```
-
-## Architecture Features
-
-### Message Service Abstraction Layer
-
-Uses adapter pattern for easy upgrade from HTTP polling to WebSocket:
-
-```javascript
-// MVP: HTTP polling
-const messageService = new MessageService(new PollingStrategy());
-
-// V1.0: WebSocket (only need to modify 1 line)
-const messageService = new MessageService(new WebSocketStrategy());
-```
-
-### API Service Layer
-
-Unified API calling interface for easy management and testing.
-
-## Directory Structure
-
-```
-frontend/
-├── src/
-│   ├── components/
-│   │   ├── ChatWidget/       # Customer chat components
-│   │   └── Admin/            # Admin dashboard components
-│   ├── services/
-│   │   ├── api.js            # API calls
-│   │   └── messageService.js # Message service abstraction
-│   ├── App.jsx               # Main application
-│   └── main.jsx              # Entry point
-├── package.json
-└── vite.config.js
-```
-
-## Development Notes
-
-### Adding New Pages
-
-1. Create component in `src/components`
-2. Add route in `App.jsx`
-
-### Calling APIs
-
-```javascript
-import { chatAPI } from "./services/api";
-
-const response = await chatAPI.sendMessage({
-  customer_id: 1,
-  message: "What is the M30's flight time?",
-});
-```
-
----
-
-**Version**: 1.0.0  
-**Status**: ✅ Development Complete
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
