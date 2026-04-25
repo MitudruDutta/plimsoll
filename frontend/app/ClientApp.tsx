@@ -8,7 +8,7 @@ import {
   Routes,
   useLocation,
 } from "react-router-dom";
-import { ClerkProvider, RedirectToSignIn, SignedIn, SignedOut, SignUp } from "@clerk/clerk-react";
+import { ClerkProvider, RedirectToSignIn, SignedIn, SignedOut, SignUp, useAuth } from "@clerk/clerk-react";
 import { ConfigProvider } from "antd";
 import enUS from "antd/locale/en_US";
 
@@ -21,6 +21,8 @@ import { PaymentPage } from "../views/PaymentPage";
 import { PortSelectionPage } from "../views/PortSelectionPage";
 import { SignInPage } from "../views/SignInPage";
 import { UsersHome } from "../views/UsersHome";
+import { setApiAuthToken } from "../services/api";
+import { setDocumentAuthToken } from "../services/documentApi";
 
 const PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
@@ -77,6 +79,36 @@ function ProtectedRoute({ children }: React.PropsWithChildren) {
       </SignedOut>
     </>
   );
+}
+
+function AuthBridge() {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncToken() {
+      if (!isLoaded) return;
+      if (!isSignedIn) {
+        setApiAuthToken(null);
+        setDocumentAuthToken(null);
+        return;
+      }
+
+      const token = await getToken();
+      if (!cancelled) {
+        setApiAuthToken(token);
+        setDocumentAuthToken(token);
+      }
+    }
+
+    syncToken();
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken, isLoaded, isSignedIn]);
+
+  return null;
 }
 
 function MissingClerkKey() {
@@ -160,6 +192,7 @@ export default function ClientApp() {
     <React.StrictMode>
       <ErrorBoundary>
         <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+          <AuthBridge />
           <RoutedApp />
         </ClerkProvider>
       </ErrorBoundary>

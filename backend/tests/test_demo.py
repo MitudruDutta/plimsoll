@@ -12,7 +12,7 @@ print(f"DEBUG: checking if demo exists in {parent_dir}: {os.path.exists(os.path.
 print(f"DEBUG: checking if demo/__init__.py exists: {os.path.exists(os.path.join(parent_dir, 'demo', '__init__.py'))}")
 print(f"DEBUG: checking if demo/crisis_455pm_data.py exists: {os.path.exists(os.path.join(parent_dir, 'demo', 'crisis_455pm_data.py'))}")
 
-from api.v2.demo_routes import router as demo_router
+from modules.demo.demo_routes import router as demo_router
 
 # Create a standalone app for testing
 app = FastAPI()
@@ -22,7 +22,7 @@ client = TestClient(app)
 
 def test_demo_start():
     print("Testing REST endpoint...")
-    response = client.post("/api/v2/demo/start", json={"scenario": "crisis_455pm"})
+    response = client.post("/api/demo/start", json={"scenario": "crisis_455pm"})
     if response.status_code != 200:
         print(f"❌ REST endpoint failed: {response.text}")
         return None
@@ -44,9 +44,9 @@ def test_demo_websocket():
 
     # Connect to WebSocket
     # Note: TestClient websocket URL must be relative or match base_url. 
-    # The router prefix is /api/v2/demo, so the ws route is /api/v2/demo/ws
+    # The router prefix is /api/demo, so the ws route is /api/demo/ws
     
-    with client.websocket_connect(f"/api/v2/demo/ws?demo_id={demo_id}") as websocket:
+    with client.websocket_connect(f"/api/demo/ws?demo_id={demo_id}") as websocket:
         # Send play command
         websocket.send_json({"action": "play"})
         

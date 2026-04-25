@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 from modules.financial.market_data_service import get_market_data_service, MarketRegime
-from modules.orchestration.hedging_strategies import (
+from modules.financial.hedging_strategies import (
     create_comprehensive_hedge_strategy,
     FuelHedgingStrategy,
     CurrencyHedgingStrategy,

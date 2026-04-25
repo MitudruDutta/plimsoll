@@ -105,7 +105,7 @@ export async function getMaritimeRouteFromBackend(
   end: [number, number]
 ): Promise<RouteAPIResponse | null> {
   try {
-    const response = await fetch('/api/v2/maritime-route', {
+    const response = await fetch('/api/maritime-route', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -196,4 +196,3 @@ export function calculateGreatCircleRoute(
  *    - (A*)
  *    - AIS
  */
-

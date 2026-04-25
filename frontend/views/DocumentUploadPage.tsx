@@ -1,6 +1,7 @@
 // @ts-nocheck
 import * as React from 'react';
 import { useState, useCallback, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -53,8 +54,9 @@ const DOCUMENT_TYPES = [
 ];
 
 export function DocumentUploadPage() {
+  const { user } = useUser();
   // State
-  const [customerId] = useState<number>(1); // TODO: Get from auth context
+  const [customerId, setCustomerId] = useState<number | null>(null);
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [selectedVessel, setSelectedVessel] = useState<Vessel | null>(null);
   const [portCodes, setPortCodes] = useState<string>('');
@@ -79,22 +81,30 @@ export function DocumentUploadPage() {
   const [newRouteName, setNewRouteName] = useState('');
   const [newRoutePorts, setNewRoutePorts] = useState('');
 
-  // Load vessels on mount
+  // Provision current Clerk user and load their vessels.
   useEffect(() => {
-    const loadVessels = async () => {
+    if (!user) return;
+    const provisionAndLoadVessels = async () => {
       try {
-        const data = await documentAPI.getVessels(customerId);
+        const provisioned = await documentAPI.provisionUser({
+          clerk_id: user.id,
+          email: user.primaryEmailAddress?.emailAddress || '',
+          name: user.fullName || undefined,
+        });
+        setCustomerId(provisioned.customer_id);
+        const data = await documentAPI.getVessels(provisioned.customer_id);
         setVessels(data);
-        if (data.length > 0) {
-          setSelectedVessel(data[0]);
+        const defaultVessel = data.find(v => v.id === provisioned.vessel_id) || data[0];
+        if (defaultVessel) {
+          setSelectedVessel(defaultVessel);
         }
       } catch (err) {
         console.error('Failed to load vessels:', err);
         setError('Failed to load vessels. Please try again.');
       }
     };
-    loadVessels();
-  }, [customerId]);
+    provisionAndLoadVessels();
+  }, [user]);
 
   // Load routes when vessel changes
   useEffect(() => {
@@ -156,6 +166,11 @@ export function DocumentUploadPage() {
 
   // Detect missing documents (new workflow)
   const handleDetectMissing = useCallback(async () => {
+    if (!customerId) {
+      setError('Your maritime profile is still loading. Please try again.');
+      return;
+    }
+
     if (!selectedVessel) {
       setError('Please select a vessel');
       return;
@@ -196,10 +211,15 @@ export function DocumentUploadPage() {
     }
 
     try {
-      const result = await documentAPI.detectMissingDocuments({
-        vessel_id: selectedVessel.id,
-        route_id: selectedRoute?.id,
-      });
+      const result = routeMode === 'manual'
+        ? await documentAPI.detectMissingDocuments({
+            port_codes: portCodes.split(',').map(p => p.trim().toUpperCase()).filter(Boolean),
+            customer_id: customerId,
+          })
+        : await documentAPI.detectMissingDocuments({
+            vessel_id: selectedVessel.id,
+            route_id: selectedRoute?.id,
+          });
 
       setAnalysisSteps(prev => prev.map(s => ({ ...s, status: 'complete' as const })));
       setMissingDocsResult(result);
@@ -213,10 +233,14 @@ export function DocumentUploadPage() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [selectedVessel, selectedRoute, routeMode, portCodes, currentStep]);
+  }, [customerId, selectedVessel, selectedRoute, routeMode, portCodes, currentStep]);
 
   // Handle file selection
   const handleFilesSelected = useCallback(async (files: File[]) => {
+    if (!customerId) {
+      setError('Your maritime profile is still loading. Please try again.');
+      return;
+    }
     if (!selectedVessel) {
       setError('Please select a vessel first');
       return;
@@ -274,6 +298,11 @@ export function DocumentUploadPage() {
 
   // Run analysis
   const handleAnalyze = useCallback(async () => {
+    if (!customerId) {
+      setError('Your maritime profile is still loading. Please try again.');
+      return;
+    }
+
     if (!selectedVessel) {
       setError('Please select a vessel');
       return;
@@ -338,7 +367,7 @@ export function DocumentUploadPage() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [selectedVessel, uploadedFiles, portCodes, currentStep]);
+  }, [customerId, selectedVessel, uploadedFiles, portCodes, currentStep]);
 
   // Clear uploads
   const handleClearUploads = useCallback(() => {

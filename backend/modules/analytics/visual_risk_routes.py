@@ -13,7 +13,7 @@ from modules.analytics.visual_risk_service import get_visual_risk_analyzer, Visu
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v2/visual-risk", tags=["Visual Risk"])
+router = APIRouter(prefix="/api/visual-risk", tags=["Visual Risk"])
 
 
 @router.get("/status")

@@ -1,14 +1,14 @@
 ﻿import asyncio
 from fastapi import WebSocket
-from demo.crisis_455pm_data import CRISIS_TIMELINE
-from demo.cot_data import (
+from modules.demo.crisis_455pm_data import CRISIS_TIMELINE
+from modules.demo.cot_data import (
     get_reasoning_steps_for_demo,
     get_debate_exchanges_for_demo,
     get_final_decision_for_demo,
     get_execution_steps_for_demo,
     get_execution_summary_for_demo
 )
-from modules.financial.visual_risk_service import get_visual_risk_analyzer
+from modules.analytics.visual_risk_service import get_visual_risk_analyzer
 import logging
 from datetime import datetime
 

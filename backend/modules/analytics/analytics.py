@@ -4,11 +4,11 @@ import json
 import os
 from collections import Counter
 from datetime import datetime
-from api.deps import get_current_user
+from api.routes.deps import get_current_user
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
-DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "virtual_users.json")
+DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "virtual_users.json")
 
 def load_virtual_data():
     if not os.path.exists(DATA_PATH):

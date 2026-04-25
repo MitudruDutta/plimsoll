@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, date, timedelta
 from typing import List, Dict, Any, Optional
 
-from models.compliance_report import (
+from shared.database.models.compliance_report import (
     ComplianceReport,
     ComplianceReportSummary,
     ComplianceStatus,

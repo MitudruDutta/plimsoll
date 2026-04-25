@@ -4,7 +4,8 @@
  * Provides functions to interact with the Financial Hedging backend API
  */
 
-const HEDGE_BASE_URL = '/api/hedge';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+const HEDGE_BASE_URL = `${API_BASE_URL}/hedge`;
 
 // ========== Request Models ==========
 

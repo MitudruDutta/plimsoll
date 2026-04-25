@@ -14,7 +14,7 @@ from pathlib import Path
 from fastapi import UploadFile
 
 from shared.config import get_settings
-from modules.maritime.ocr_service import get_ocr_service, OCRResult
+from modules.analytics.ocr_service import get_ocr_service, OCRResult
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
 from modules.orchestration.document_tools import classify_document_from_text
 
@@ -34,11 +34,13 @@ class DocumentService:
     - Document-requirement matching
     """
 
-    ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
+    ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".json"}
     ALLOWED_MIME_TYPES = {
         "application/pdf",
         "image/png",
         "image/jpeg",
+        "application/json",
+        "text/plain",
     }
 
     def __init__(self):
@@ -162,6 +164,10 @@ class DocumentService:
 
         # Save file to disk
         content = await file.read()
+        max_bytes = settings.max_upload_size_mb * 1024 * 1024
+        if len(content) > max_bytes:
+            raise ValueError(f"File too large. Maximum size is {settings.max_upload_size_mb}MB")
+
         with open(file_path, "wb") as f:
             f.write(content)
 
@@ -343,11 +349,13 @@ class DocumentService:
 
         # Delete file from disk
         file_path = raw.get("file_path", "")
-        if file_path and os.path.exists(file_path):
+        upload_root = os.path.abspath(self.upload_dir)
+        file_abs = os.path.abspath(file_path) if file_path else ""
+        if file_abs and file_abs.startswith(upload_root + os.sep) and os.path.exists(file_abs):
             try:
-                os.remove(file_path)
+                os.remove(file_abs)
             except Exception as e:
-                logger.error(f"Failed to delete file {file_path}: {e}")
+                logger.error(f"Failed to delete file {file_abs}: {e}")
 
         # Delete from ChromaDB
         self.kb.delete_user_document(document_id)

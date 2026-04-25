@@ -11,6 +11,14 @@ const api = axios.create({
   }
 });
 
+export function setDocumentAuthToken(token?: string | null) {
+  if (token) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
+  }
+}
+
 // Types
 export interface Vessel {
   id: number;
@@ -184,15 +192,12 @@ export interface ProvisionResponse {
 export const documentAPI = {
   // Auto-provision customer (and discover default vessel) for a Clerk user
   provisionUser: async (params: ProvisionParams): Promise<ProvisionResponse> => {
-    const response = await api.post('/v2/maritime/me/provision', params);
+    const response = await api.post('/maritime/me/provision', params);
     return response.data;
   },
 
   // Upload a document with OCR processing
   uploadDocument: async (params: UploadDocumentParams): Promise<DocumentInfo> => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H1',location:'frontend/src/services/documentApi.ts:uploadDocument:start',message:'uploadDocument called',data:{customerIdType:typeof params.customer_id,vesselIdType:typeof params.vessel_id,documentType:params.document_type,titlePresent:!!params.title,filePresent:!!params.file,fileCtor:params.file ? (params.file as any).constructor?.name : null,fileType:params.file ? (params.file as any).type : null,fileSize:params.file ? (params.file as any).size : null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (
       params.customer_id == null ||
       params.vessel_id == null ||
@@ -200,9 +205,6 @@ export const documentAPI = {
       !params.title ||
       !params.file
     ) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H1',location:'frontend/src/services/documentApi.ts:uploadDocument:missingRequired',message:'missing required upload fields',data:{hasCustomerId:params.customer_id != null,hasVesselId:params.vessel_id != null,hasDocumentType:!!params.document_type,hasTitle:!!params.title,hasFile:!!params.file},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       throw new Error('Missing required fields: customer_id, vessel_id, document_type, title, and file are all required.');
     }
 
@@ -226,65 +228,59 @@ export const documentAPI = {
       formData.append('issuing_authority', params.issuing_authority);
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H2',location:'frontend/src/services/documentApi.ts:uploadDocument:beforePost',message:'prepared multipart payload',data:{keys:Array.from(formData.keys()),forcingContentType:'multipart/form-data'},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     try {
-      const response = await api.post('/v2/maritime/documents/upload', formData, {
+      const response = await api.post('/maritime/documents/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
       return response.data;
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H3',location:'frontend/src/services/documentApi.ts:uploadDocument:catch',message:'upload request failed',data:{status:error?.response?.status,errorData:error?.response?.data,errorMessage:error?.message},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       throw error;
     }
   },
 
   // Run CrewAI document analysis
   analyzeDocuments: async (params: AnalyzeDocumentsParams): Promise<DocumentAnalysisResponse> => {
-    const response = await api.post('/v2/maritime/documents/analyze', params);
+    const response = await api.post('/maritime/documents/analyze', params);
     return response.data;
   },
 
   // Get all documents for a vessel
   getVesselDocuments: async (vesselId: number, documentType?: string): Promise<DocumentInfo[]> => {
     const params = documentType ? { document_type: documentType } : {};
-    const response = await api.get(`/v2/maritime/documents/vessel/${vesselId}`, { params });
+    const response = await api.get(`/maritime/documents/vessel/${vesselId}`, { params });
     return response.data;
   },
 
   // Get all documents for a customer (user)
   getCustomerDocuments: async (customerId: number, documentType?: string): Promise<DocumentInfo[]> => {
     const params = documentType ? { document_type: documentType } : {};
-    const response = await api.get(`/v2/maritime/documents/customer/${customerId}`, { params });
+    const response = await api.get(`/maritime/documents/customer/${customerId}`, { params });
     return response.data;
   },
 
   // Get single document with full details
   getDocument: async (documentId: string): Promise<DocumentInfo & { extracted_text: string; extracted_fields: Record<string, any> }> => {
-    const response = await api.get(`/v2/maritime/documents/${documentId}`);
+    const response = await api.get(`/maritime/documents/${documentId}`);
     return response.data;
   },
 
   // Delete a document
   deleteDocument: async (documentId: string): Promise<{ status: string; document_id: string }> => {
-    const response = await api.delete(`/v2/maritime/documents/${documentId}`);
+    const response = await api.delete(`/maritime/documents/${documentId}`);
     return response.data;
   },
 
   // Get all vessels for a customer
   getVessels: async (customerId: number): Promise<Vessel[]> => {
-    const response = await api.get('/v2/maritime/vessels', { params: { customer_id: customerId } });
+    const response = await api.get('/maritime/vessels', { params: { customer_id: customerId } });
     return response.data;
   },
 
   // Get vessel details
   getVessel: async (vesselId: number): Promise<Vessel> => {
-    const response = await api.get(`/v2/maritime/vessels/${vesselId}`);
+    const response = await api.get(`/maritime/vessels/${vesselId}`);
     return response.data;
   },
 
@@ -293,7 +289,7 @@ export const documentAPI = {
     const params: Record<string, any> = {};
     if (region) params.region = region;
     if (limit) params.limit = limit;
-    const response = await api.get('/v2/maritime/ports', { params });
+    const response = await api.get('/maritime/ports', { params });
     return response.data;
   },
 
@@ -313,7 +309,7 @@ export const documentAPI = {
     }>;
   }> => {
     const params = vesselType ? { vessel_type: vesselType } : {};
-    const response = await api.get(`/v2/maritime/kb/port/${portCode}/requirements`, { params });
+    const response = await api.get(`/maritime/kb/port/${portCode}/requirements`, { params });
     return response.data;
   },
 
@@ -325,7 +321,7 @@ export const documentAPI = {
       description: string;
     }>;
   }> => {
-    const response = await api.get('/v2/maritime/kb/document-types');
+    const response = await api.get('/maritime/kb/document-types');
     return response.data;
   },
 
@@ -333,14 +329,14 @@ export const documentAPI = {
 
   // Get all routes for a vessel
   getVesselRoutes: async (vesselId: number): Promise<VesselRoute[]> => {
-    const response = await api.get(`/v2/maritime/vessels/${vesselId}/routes`);
+    const response = await api.get(`/maritime/vessels/${vesselId}/routes`);
     return response.data;
   },
 
   // Get active route for a vessel
   getActiveRoute: async (vesselId: number): Promise<VesselRoute | null> => {
     try {
-      const response = await api.get(`/v2/maritime/vessels/${vesselId}/routes/active`);
+      const response = await api.get(`/maritime/vessels/${vesselId}/routes/active`);
       return response.data;
     } catch {
       return null;
@@ -349,19 +345,19 @@ export const documentAPI = {
 
   // Create a new route for a vessel
   createRoute: async (vesselId: number, params: CreateRouteParams): Promise<VesselRoute> => {
-    const response = await api.post(`/v2/maritime/vessels/${vesselId}/routes`, params);
+    const response = await api.post(`/maritime/vessels/${vesselId}/routes`, params);
     return response.data;
   },
 
   // Activate a route
   activateRoute: async (vesselId: number, routeId: number): Promise<VesselRoute> => {
-    const response = await api.put(`/v2/maritime/vessels/${vesselId}/routes/${routeId}/activate`);
+    const response = await api.put(`/maritime/vessels/${vesselId}/routes/${routeId}/activate`);
     return response.data;
   },
 
   // Delete a route
   deleteRoute: async (vesselId: number, routeId: number): Promise<{ status: string; route_id: number }> => {
-    const response = await api.delete(`/v2/maritime/vessels/${vesselId}/routes/${routeId}`);
+    const response = await api.delete(`/maritime/vessels/${vesselId}/routes/${routeId}`);
     return response.data;
   },
 
@@ -369,7 +365,7 @@ export const documentAPI = {
 
   // Detect missing documents for a vessel's route
   detectMissingDocuments: async (params: DetectMissingParams): Promise<MissingDocsResponse> => {
-    const response = await api.post('/v2/maritime/documents/detect-missing', params);
+    const response = await api.post('/maritime/documents/detect-missing', params);
     return response.data;
   },
 
@@ -387,7 +383,7 @@ export const documentAPI = {
     crewai_missing_docs_available: boolean;
     timestamp: string;
   }> => {
-    const response = await api.get('/v2/maritime/health');
+    const response = await api.get('/maritime/health');
     return response.data;
   }
 };

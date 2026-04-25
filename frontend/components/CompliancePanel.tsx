@@ -144,9 +144,7 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
         setCustomerId(res.customer_id);
         if (res.vessel_id) setVesselId(res.vessel_id);
       } catch {
-        // fallback
-        setCustomerId(1);
-        setVesselId(1);
+        setAnalysisError("Failed to provision your maritime profile.");
       }
     };
     provision();
@@ -746,5 +744,4 @@ function DocStatBadge({ label, count, color }: { label: string; count: number; c
 }
 
 export default CompliancePanel;
-
 

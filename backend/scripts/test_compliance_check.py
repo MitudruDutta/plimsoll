@@ -9,10 +9,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.orm import Session
 from shared.database.database import SessionLocal, engine, Base
-from shared.database.models import Vessel, VesselType, UserDocument, DocumentType, Port, Customer
-from modules.maritime.compliance_service import ComplianceService, get_compliance_service
+from shared.database.models import Vessel, VesselType, Customer
+from modules.maritime.compliance_service import ComplianceService
+from modules.maritime.document_service import DocumentService
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 def setup_test_data(db: Session):
@@ -43,7 +44,7 @@ def setup_test_data(db: Session):
             vessel_type=VesselType.CONTAINER,
             flag_state="Panama",
             gross_tonnage=45000.0,
-            deadweight_tonnage=52000.0,
+            dwt=52000.0,
             year_built=2018
         )
         db.add(vessel)
@@ -53,59 +54,11 @@ def setup_test_data(db: Session):
     else:
         print(f"Using existing vessel: {vessel.name} (ID: {vessel.id})")
 
-    # Add some test documents (simulating uploaded certificates)
-    existing_docs = db.query(UserDocument).filter(UserDocument.vessel_id == vessel.id).count()
-
-    if existing_docs == 0:
-        # Add some documents - but intentionally leave gaps for testing
-        test_documents = [
-            {
-                "document_type": DocumentType.SAFETY_CERTIFICATE,
-                "original_filename": "solas_cert.pdf",
-                "extracted_text": "SOLAS Safety Certificate for MV Test Explorer IMO 9876543",
-                "expiry_date": datetime.now() + timedelta(days=365),  # Valid
-                "is_verified": True
-            },
-            {
-                "document_type": DocumentType.ISM_CERTIFICATE,
-                "original_filename": "ism_cert.pdf",
-                "extracted_text": "ISM Safety Management Certificate for MV Test Explorer",
-                "expiry_date": datetime.now() + timedelta(days=180),  # Valid
-                "is_verified": True
-            },
-            {
-                "document_type": DocumentType.ISPS_CERTIFICATE,
-                "original_filename": "isps_cert.pdf",
-                "extracted_text": "ISPS International Ship Security Certificate",
-                "expiry_date": datetime.now() + timedelta(days=30),  # Expiring soon!
-                "is_verified": True
-            },
-            {
-                "document_type": DocumentType.MARPOL_CERTIFICATE,
-                "original_filename": "iopp_cert.pdf",
-                "extracted_text": "International Oil Pollution Prevention Certificate",
-                "expiry_date": datetime.now() - timedelta(days=10),  # EXPIRED!
-                "is_verified": True
-            },
-        ]
-
-        for doc_data in test_documents:
-            doc = UserDocument(
-                vessel_id=vessel.id,
-                file_path=f"/test/path/{doc_data['original_filename']}",
-                **doc_data
-            )
-            db.add(doc)
-
-        db.commit()
-        print(f"Created {len(test_documents)} test documents for vessel")
-        print("  - SOLAS Certificate: Valid (expires in 365 days)")
-        print("  - ISM Certificate: Valid (expires in 180 days)")
-        print("  - ISPS Certificate: EXPIRING SOON (30 days)")
-        print("  - MARPOL Certificate: EXPIRED (10 days ago)")
-        print("  - Missing: Load Line, Crew Certificates, Registry, etc.")
-    else:
-        print(f"Vessel already has {existing_docs} documents")
+    doc_service = DocumentService()
+    existing_docs = doc_service.get_vessel_documents(vessel.id)
+    print(f"Vessel has {len(existing_docs)} uploaded documents in the document store")
+    if not existing_docs:
+        print("Upload documents through the API/UI before expecting a compliant result.")
 
     return vessel
 
@@ -186,7 +139,7 @@ async def test_route_compliance(db: Session, vessel: Vessel):
     print("TEST 4: Route Compliance Check")
     print("="*70)
 
-    compliance_service = get_compliance_service()
+    compliance_service = ComplianceService(db)
 
     # Define test route: Singapore -> Rotterdam -> Hamburg
     route = ["SGSIN", "NLRTM", "DEHAM"]
@@ -196,13 +149,20 @@ async def test_route_compliance(db: Session, vessel: Vessel):
     print(f"Flag: {vessel.flag_state}")
     print(f"Route: {' -> '.join(route)}")
 
-    # Get vessel documents
-    documents = db.query(UserDocument).filter(UserDocument.vessel_id == vessel.id).all()
+    # Get vessel documents from Chroma-backed document service
+    documents = DocumentService().get_vessel_documents(vessel.id)
     print(f"\nVessel has {len(documents)} documents on file:")
     for doc in documents:
-        status = "✅ Valid" if doc.expiry_date and doc.expiry_date > datetime.now() else "❌ Expired"
-        days_left = (doc.expiry_date - datetime.now()).days if doc.expiry_date else "N/A"
-        print(f"  - {doc.document_type.value}: {status} ({days_left} days)")
+        expiry_date = None
+        expiry_value = doc.get("expiry_date")
+        if expiry_value:
+            try:
+                expiry_date = datetime.fromisoformat(expiry_value)
+            except ValueError:
+                expiry_date = None
+        status = "Valid" if expiry_date and expiry_date > datetime.now() else "Expired/Unknown"
+        days_left = (expiry_date - datetime.now()).days if expiry_date else "N/A"
+        print(f"  - {doc.get('document_type', 'unknown')}: {status} ({days_left} days)")
 
     # Run compliance check (non-AI mode for faster testing)
     print("\n" + "-"*50)
@@ -218,11 +178,10 @@ async def test_route_compliance(db: Session, vessel: Vessel):
         "gross_tonnage": vessel.gross_tonnage
     }
 
-    result = await compliance_service.check_route_compliance(
-        vessel_info=vessel_info,
+    result = compliance_service.check_route_compliance(
+        vessel_id=vessel.id,
         port_codes=route,
-        documents=documents,
-        db=db
+        route_name="Singapore to Hamburg"
     )
 
     # Display results

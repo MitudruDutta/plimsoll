@@ -1,12 +1,12 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from demo.autoplay_controller import CrisisAutoPlayController
+from modules.demo.autoplay_controller import CrisisAutoPlayController
 import uuid
 import logging
 import asyncio
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v2/demo", tags=["Demo"])
+router = APIRouter(prefix="/api/demo", tags=["Demo"])
 
 # Simple in-memory storage for active demo controllers
 # demo_id -> controller_instance
@@ -27,7 +27,7 @@ async def start_demo(scenario: str = "crisis_455pm"):
     return {
         "demo_id": demo_id,
         "status": "started",
-        "websocket_url": f"ws://localhost:8000/api/v2/demo/ws?demo_id={demo_id}",
+        "websocket_url": f"ws://localhost:8000/api/demo/ws?demo_id={demo_id}",
         "duration_seconds": 178
     }
 

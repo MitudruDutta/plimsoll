@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import Optional
@@ -15,8 +15,9 @@ class Settings(BaseSettings):
         extra="ignore",  # Ignore extra env vars not defined here
     )
     
-    # 
-    database_url: str = "postgresql://user:password@localhost:5432/dji_sales_mvp"
+    # Database connection. Override via DATABASE_URL env. SQLite default
+    # keeps local development friction-free; production must set Postgres.
+    database_url: str = "sqlite:///./data/sully.db"
     
     # LLM: ollama  openai
     llm_provider: str = "ollama"
@@ -56,11 +57,26 @@ class Settings(BaseSettings):
     
     # Clerk
     clerk_issuer_url: Optional[str] = None
-    admin_whitelist: str = "thaumatext@gmail.com"
+    # Comma-separated list of admin emails. Configure via env, never hardcode.
+    admin_whitelist: str = ""
+
+    # HTTP/CORS
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # 
     log_level: str = "INFO"
-    debug: bool = True
+    debug: bool = False
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug_flag(cls, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"release", "production", "prod", "off"}:
+                return False
+            if normalized in {"development", "dev", "debug", "on"}:
+                return True
+        return value
 
 
 @lru_cache()

@@ -90,7 +90,7 @@ def build_maritime_compliance_crew(
     if not HAS_CREWAI:
         raise RuntimeError("CrewAI not installed. Cannot build compliance crew.")
 
-    from modules.orchestration.maritime_tools import get_maritime_tools
+    from modules.maritime.maritime_tools import get_maritime_tools
 
     llm = _init_llm()
     tools = get_maritime_tools()

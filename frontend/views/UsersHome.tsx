@@ -80,9 +80,7 @@ export function UsersHome() {
         if (res.vessel_id) setVesselId(res.vessel_id);
       } catch (err) {
         console.error('Provisioning failed:', err);
-        // Fallback to default IDs if provisioning fails
-        setCustomerId(1);
-        setVesselId(1);
+        setAnalysisError('Failed to provision your maritime profile. Please sign in again or retry.');
       }
     };
     provision();

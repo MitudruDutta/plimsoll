@@ -4,10 +4,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import uuid
 import random
-import json
-import urllib.request
 
-router = APIRouter(prefix="/api/v2/market-sentinel", tags=["market-sentinel"])
+router = APIRouter(prefix="/api/market-sentinel", tags=["market-sentinel"])
 
 # --- Data Models ---
 class Lane(BaseModel):
@@ -32,25 +30,7 @@ class MarketSentinelResponse(BaseModel):
 
 
 def _agent_debug_log(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
-    payload = {
-        "runId": "pre-fix",
-        "hypothesisId": hypothesis_id,
-        "location": location,
-        "message": message,
-        "data": data,
-        "timestamp": int(datetime.utcnow().timestamp() * 1000),
-    }
-    try:
-        req = urllib.request.Request(
-            "http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=1):
-            pass
-    except Exception:
-        pass
+    return
 
 # --- Mock Logic ---
 
@@ -157,7 +137,7 @@ async def run_analysis(request: MarketSentinelRequest):
     # #region agent log
     _agent_debug_log(
         "H2",
-        "backend/api/v2/market_sentinel_routes.py:run_analysis",
+        "backend/api/market_sentinel_routes.py:run_analysis",
         "Received Market Sentinel request route context",
         {
             "lanesCount": len(lanes),
@@ -178,7 +158,7 @@ async def run_analysis(request: MarketSentinelRequest):
     # #region agent log
     _agent_debug_log(
         "H5",
-        "backend/api/v2/market_sentinel_routes.py:run_analysis",
+        "backend/api/market_sentinel_routes.py:run_analysis",
         "Route classification decision",
         {
             "origin": origin,

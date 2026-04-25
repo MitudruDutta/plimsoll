@@ -195,6 +195,8 @@ If no risks are detected, return: {"risks": [], "raw_analysis": "No supply chain
         logger.info(f"VisualRiskAnalyzer initialized (Gemini: {bool(self.api_key)}, Maps: {bool(self.maps_api_key)})")
 
     def _agent_debug_log(self, run_id: str, hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+        if not settings.debug:
+            return
         try:
             payload = {
                 "runId": run_id,

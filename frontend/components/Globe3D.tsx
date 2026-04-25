@@ -47,7 +47,7 @@ export const Globe3D: React.FC<Globe3DProps> = ({ ports, routes }) => {
     // 0. Country Borders (Background)
     new GeoJsonLayer({
       id: 'base-map',
-      data: 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson',
+      data: '/data/countries.geojson',
       stroked: true,
       filled: false, // Wireframe only for Aviation style
       lineWidthMinPixels: 1,

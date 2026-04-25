@@ -4,7 +4,8 @@
  * Provides functions to interact with the Visual Risk Analysis backend API (Gemini Vision)
  */
 
-const VISUAL_RISK_BASE_URL = '/api/v2/visual-risk';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+const VISUAL_RISK_BASE_URL = `${API_BASE_URL}/visual-risk`;
 
 // ========== Response Models ==========
 

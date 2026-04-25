@@ -7,8 +7,10 @@ import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { calculateRoutes, Route } from '../utils/routeCalculator';
 import { MOCK_SHIPS, Ship } from '../utils/shipData';
 
-const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
-const COUNTRIES_URL = 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson';
+// Use the locally bundled, India-correct boundary file rather than the
+// upstream Natural Earth dataset which mis-renders Indian territory.
+const GEO_URL = '/data/countries.geojson';
+const COUNTRIES_URL = '/data/countries.geojson';
 
 // Ship arrow icon as SVG data URL
 //  SVG  URL

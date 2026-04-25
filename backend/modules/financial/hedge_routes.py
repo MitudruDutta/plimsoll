@@ -10,7 +10,7 @@ from typing import Optional
 from datetime import datetime
 import logging
 
-from modules.orchestration.hedge_agent import get_hedge_agent
+from modules.financial.hedge_agent import get_hedge_agent
 from modules.financial.market_data_service import get_market_data_service
 
 logger = logging.getLogger(__name__)

@@ -37,7 +37,7 @@ export const AzureBadges: React.FC = () => {
     const fetchStats = async () => {
       try {
         // Mock API call or real endpoint
-        // const response = await fetch("http://localhost:8000/api/v2/azure/stats");
+        // const response = await fetch("http://localhost:8000/api/azure/stats");
         // const data = await response.json();
         
         // Mock data update

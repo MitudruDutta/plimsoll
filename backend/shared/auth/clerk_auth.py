@@ -6,9 +6,9 @@ from typing import Optional, Dict, Any
 from fastapi import Request, HTTPException, Security, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from functools import lru_cache
-from config import get_settings
+from shared.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ class User(BaseModel):
     id: str
     email: Optional[str] = None
     role: Optional[str] = "user"
+    claims: Dict[str, Any] = Field(default_factory=dict)
 
 class ClerkAuth:
     def __init__(self):
@@ -84,7 +85,11 @@ class ClerkAuth:
             
             # Extract user info
             user_id = payload.get("sub")
-            email = payload.get("email") # Clerk JWT should include email if configured
+            email = (
+                payload.get("email")
+                or payload.get("email_address")
+                or payload.get("primary_email_address")
+            )
             if not user_id:
                 raise HTTPException(status_code=401, detail="Token missing subject")
             
@@ -98,11 +103,13 @@ class ClerkAuth:
             if email and email.lower() in whitelist:
                 role = "admin"
             
-            return User(id=user_id, email=email, role=role)
+            return User(id=user_id, email=email, role=role, claims=payload)
 
         except JWTError as e:
             logger.warning(f"JWT verification failed: {e}")
             raise HTTPException(status_code=401, detail="Invalid token")
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Unexpected error during token verification: {e}")
             raise HTTPException(status_code=401, detail="Unauthorized")

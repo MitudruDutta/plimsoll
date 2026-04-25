@@ -18,6 +18,8 @@ DEBUG_LOG_PATH = "/tmp/naviguard_debug.log"
 
 
 def _debug_log(run_id: str, hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+    if not settings.debug:
+        return
     try:
         payload = {
             "runId": run_id,

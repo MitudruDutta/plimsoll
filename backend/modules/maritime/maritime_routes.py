@@ -16,14 +16,15 @@ from shared.database.database import get_db
 from shared.database.models import (
     Vessel, Port, VesselType, DocumentType, VesselRoute, Customer
 )
+from shared.auth.clerk_auth import User, get_current_user
 from modules.maritime.document_service import DocumentService
 from modules.maritime.compliance_service import ComplianceService
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
 from modules.maritime.compliance_report_generator import get_compliance_report_generator
-from modules.orchestration.crew_maritime_compliance import get_compliance_orchestrator
+from modules.maritime.crew_maritime_compliance import get_compliance_orchestrator
 from modules.orchestration.crew_document_agents import get_document_analysis_orchestrator
 from modules.orchestration.crew_missing_docs_workflow import get_missing_docs_orchestrator
-from models.compliance_report import (
+from shared.database.models.compliance_report import (
     ComplianceReport,
     ComplianceStatus,
     Priority,
@@ -36,7 +37,50 @@ from models.compliance_report import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v2/maritime", tags=["Maritime Compliance"])
+router = APIRouter(prefix="/api/maritime", tags=["Maritime Compliance"])
+
+
+def _customer_for_user(db: Session, user: User) -> Customer:
+    customer = db.query(Customer).filter(Customer.clerk_id == user.id).first()
+    if customer:
+        return customer
+    if user.email:
+        customer = db.query(Customer).filter(Customer.email == user.email).first()
+        if customer:
+            customer.clerk_id = user.id
+            db.commit()
+            db.refresh(customer)
+            return customer
+    raise HTTPException(status_code=404, detail="Customer profile not provisioned")
+
+
+def _assert_customer_id(db: Session, user: User, customer_id: int) -> Customer:
+    customer = _customer_for_user(db, user)
+    if customer.id != customer_id:
+        raise HTTPException(status_code=403, detail="Cannot access another customer's data")
+    return customer
+
+
+def _vessel_for_user(db: Session, user: User, vessel_id: int) -> Vessel:
+    customer = _customer_for_user(db, user)
+    vessel = db.query(Vessel).filter(
+        Vessel.id == vessel_id,
+        Vessel.customer_id == customer.id
+    ).first()
+    if not vessel:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+    return vessel
+
+
+def _assert_document_owner(document: dict, customer: Customer) -> None:
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    try:
+        document_customer_id = int(document.get("customer_id") or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=403, detail="Document ownership metadata is invalid")
+    if document_customer_id != customer.id:
+        raise HTTPException(status_code=403, detail="Cannot access another customer's document")
 
 
 # ========== Request/Response Models ==========
@@ -327,30 +371,38 @@ class ProvisionResponse(BaseModel):
 @router.post("/me/provision")
 async def provision_user(
     req: ProvisionRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """
     Auto-provision a Customer (and optionally a default Vessel) for the
     currently authenticated Clerk user.  If the customer already exists
     (by clerk_id or email), return the existing record.
     """
+    if req.clerk_id != user.id:
+        raise HTTPException(status_code=403, detail="Provision request does not match authenticated user")
+
+    email = user.email or req.email
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required to provision a customer")
+
     # 1. Try to find by clerk_id first
-    customer = db.query(Customer).filter(Customer.clerk_id == req.clerk_id).first()
+    customer = db.query(Customer).filter(Customer.clerk_id == user.id).first()
     is_new = False
 
     if not customer:
         # 2. Try to find by email (may exist from before clerk_id was added)
-        customer = db.query(Customer).filter(Customer.email == req.email).first()
+        customer = db.query(Customer).filter(Customer.email == email).first()
         if customer:
             # Backfill clerk_id
-            customer.clerk_id = req.clerk_id
+            customer.clerk_id = user.id
             db.commit()
         else:
             # 3. Create new customer
             customer = Customer(
-                clerk_id=req.clerk_id,
-                name=req.name or req.email.split("@")[0],
-                email=req.email,
+                clerk_id=user.id,
+                name=req.name or email.split("@")[0],
+                email=email,
             )
             db.add(customer)
             db.commit()
@@ -395,9 +447,12 @@ async def provision_user(
 async def create_vessel(
     vessel: VesselCreate,
     customer_id: int = Query(..., description="Customer ID"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Register a new vessel"""
+    _assert_customer_id(db, user, customer_id)
+
     # Check for duplicate IMO number
     existing = db.query(Vessel).filter(Vessel.imo_number == vessel.imo_number).first()
     if existing:
@@ -441,9 +496,11 @@ async def create_vessel(
 @router.get("/vessels", response_model=List[VesselResponse])
 async def list_vessels(
     customer_id: int = Query(..., description="Customer ID"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """List all vessels for a customer"""
+    _assert_customer_id(db, user, customer_id)
     vessels = db.query(Vessel).filter(Vessel.customer_id == customer_id).all()
     doc_service = DocumentService()
 
@@ -470,11 +527,13 @@ async def list_vessels(
 
 
 @router.get("/vessels/{vessel_id}", response_model=VesselResponse)
-async def get_vessel(vessel_id: int, db: Session = Depends(get_db)):
+async def get_vessel(
+    vessel_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
     """Get vessel details"""
-    vessel = db.query(Vessel).filter(Vessel.id == vessel_id).first()
-    if not vessel:
-        raise HTTPException(status_code=404, detail="Vessel not found")
+    vessel = _vessel_for_user(db, user, vessel_id)
 
     doc_service = DocumentService()
     doc_count = len(doc_service.get_vessel_documents(vessel_id))
@@ -502,12 +561,11 @@ async def get_vessel(vessel_id: int, db: Session = Depends(get_db)):
 async def create_vessel_route(
     vessel_id: int,
     route: VesselRouteCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Create a new route for a vessel"""
-    vessel = db.query(Vessel).filter(Vessel.id == vessel_id).first()
-    if not vessel:
-        raise HTTPException(status_code=404, detail="Vessel not found")
+    _vessel_for_user(db, user, vessel_id)
 
     # Parse departure date
     parsed_departure = None
@@ -556,12 +614,11 @@ async def create_vessel_route(
 @router.get("/vessels/{vessel_id}/routes", response_model=List[VesselRouteResponse])
 async def list_vessel_routes(
     vessel_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """List all routes for a vessel"""
-    vessel = db.query(Vessel).filter(Vessel.id == vessel_id).first()
-    if not vessel:
-        raise HTTPException(status_code=404, detail="Vessel not found")
+    _vessel_for_user(db, user, vessel_id)
 
     routes = db.query(VesselRoute).filter(VesselRoute.vessel_id == vessel_id).order_by(VesselRoute.created_at.desc()).all()
 
@@ -584,9 +641,11 @@ async def list_vessel_routes(
 @router.get("/vessels/{vessel_id}/routes/active", response_model=VesselRouteResponse)
 async def get_active_route(
     vessel_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Get the active route for a vessel"""
+    _vessel_for_user(db, user, vessel_id)
     route = db.query(VesselRoute).filter(
         VesselRoute.vessel_id == vessel_id,
         VesselRoute.is_active == True
@@ -612,9 +671,11 @@ async def get_active_route(
 async def activate_vessel_route(
     vessel_id: int,
     route_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Set a route as the active route for a vessel"""
+    _vessel_for_user(db, user, vessel_id)
     route = db.query(VesselRoute).filter(
         VesselRoute.id == route_id,
         VesselRoute.vessel_id == vessel_id
@@ -651,9 +712,11 @@ async def activate_vessel_route(
 async def delete_vessel_route(
     vessel_id: int,
     route_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Delete a vessel route"""
+    _vessel_for_user(db, user, vessel_id)
     route = db.query(VesselRoute).filter(
         VesselRoute.id == route_id,
         VesselRoute.vessel_id == vessel_id
@@ -681,38 +744,15 @@ async def upload_document(
     document_number: Optional[str] = Form(None),
     issuing_authority: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """
     Upload a document (certificate, permit) with OCR processing.
     Supported formats: PDF, PNG, JPG
     """
-    # region agent log
-    try:
-        with open("/tmp/naviguard_debug.log", "a", encoding="utf-8") as f:
-            f.write(json.dumps({
-                "runId": "pre-fix",
-                "hypothesisId": "H5",
-                "location": "backend/api/v2/maritime_routes.py:upload_document:entry",
-                "message": "upload handler entered",
-                "data": {
-                    "customerId": customer_id,
-                    "vesselId": vessel_id,
-                    "documentType": document_type.value if hasattr(document_type, "value") else str(document_type),
-                    "titlePresent": bool(title),
-                    "filename": file.filename if file else None,
-                    "contentType": file.content_type if file else None,
-                },
-                "timestamp": int(time.time() * 1000),
-            }, ensure_ascii=True) + "\n")
-    except Exception:
-        pass
-    # endregion
-
-    # Validate vessel exists
-    vessel = db.query(Vessel).filter(Vessel.id == vessel_id).first()
-    if not vessel:
-        vessel = 1
+    _assert_customer_id(db, user, customer_id)
+    _vessel_for_user(db, user, vessel_id)
     # Parse dates
     parsed_issue_date = None
     parsed_expiry_date = None
@@ -767,8 +807,11 @@ async def upload_document(
 async def get_vessel_documents(
     vessel_id: int,
     document_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """Get all documents for a vessel"""
+    _vessel_for_user(db, user, vessel_id)
     doc_service = DocumentService()
     documents = doc_service.get_vessel_documents(vessel_id, document_type)
 
@@ -795,8 +838,11 @@ async def get_vessel_documents(
 async def get_customer_documents(
     customer_id: int,
     document_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """Get all documents for a customer (user)"""
+    _assert_customer_id(db, user, customer_id)
     doc_service = DocumentService()
     documents = doc_service.get_customer_documents(customer_id, document_type)
 
@@ -820,13 +866,17 @@ async def get_customer_documents(
 
 
 @router.get("/documents/{document_id}")
-async def get_document(document_id: str):
+async def get_document(
+    document_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     """Get document details including extracted text"""
     doc_service = DocumentService()
     document = doc_service.get_document(document_id)
 
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+    customer = _customer_for_user(db, user)
+    _assert_document_owner(document, customer)
 
     # Parse extracted_fields from JSON string
     extracted_fields = document.get("extracted_fields", "{}")
@@ -857,9 +907,16 @@ async def get_document(document_id: str):
 
 
 @router.delete("/documents/{document_id}")
-async def delete_document(document_id: str):
+async def delete_document(
+    document_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     """Delete a document"""
     doc_service = DocumentService()
+    customer = _customer_for_user(db, user)
+    document = doc_service.get_document(document_id)
+    _assert_document_owner(document, customer)
     success = doc_service.delete_document(document_id)
 
     if not success:
@@ -871,7 +928,8 @@ async def delete_document(document_id: str):
 @router.post("/documents/analyze", response_model=DocumentAnalysisResponse)
 async def analyze_documents_with_agents(
     request: DocumentAnalysisRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """
     Analyze vessel documents using CrewAI agents.
@@ -885,9 +943,7 @@ async def analyze_documents_with_agents(
     of what documents are present, missing, or expired.
     """
     # Validate vessel exists
-    vessel = db.query(Vessel).filter(Vessel.id == request.vessel_id).first()
-    if not vessel:
-        raise HTTPException(status_code=404, detail="Vessel not found")
+    vessel = _vessel_for_user(db, user, request.vessel_id)
 
     # Get orchestrator
     orchestrator = get_document_analysis_orchestrator()
@@ -915,7 +971,11 @@ async def analyze_documents_with_agents(
         documents = []
         for doc_id in request.document_ids:
             doc = doc_service.get_document(doc_id)
-            if doc and doc.get("vessel_id") == request.vessel_id:
+            try:
+                doc_vessel_id = int(doc.get("vessel_id") or 0) if doc else 0
+            except (TypeError, ValueError):
+                doc_vessel_id = 0
+            if doc and doc_vessel_id == request.vessel_id:
                 documents.append(doc)
     else:
         # Get all vessel documents
@@ -1040,7 +1100,8 @@ async def analyze_documents_with_agents(
 @router.post("/documents/detect-missing", response_model=MissingDocsResponse)
 async def detect_missing_documents(
     request: MissingDocsRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """
     Detect missing documents for a route using a dedicated agentic workflow.
@@ -1068,6 +1129,7 @@ async def detect_missing_documents(
 
     # Mode 1: Vesselless analysis with port_codes and customer_id
     if request.port_codes and request.customer_id:
+        _assert_customer_id(db, user, request.customer_id)
         port_codes = [p.strip().upper() for p in request.port_codes if p.strip()]
         route_name = f"Route: {' → '.join(port_codes[:3])}{'...' if len(port_codes) > 3 else ''}"
         
@@ -1088,9 +1150,7 @@ async def detect_missing_documents(
     # Mode 2: Vessel-based analysis
     elif request.vessel_id:
         # Validate vessel exists
-        vessel = db.query(Vessel).filter(Vessel.id == request.vessel_id).first()
-        if not vessel:
-            raise HTTPException(status_code=404, detail="Vessel not found")
+        vessel = _vessel_for_user(db, user, request.vessel_id)
 
         # Get route
         if request.route_id:
@@ -1327,17 +1387,16 @@ async def detect_missing_documents(
 async def check_route_compliance(
     request: RouteComplianceRequest,
     customer_id: int = Query(..., description="Customer ID"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """
     Check route compliance against maritime regulations.
     Returns both structured JSON and natural language report.
     Optionally uses CrewAI agents for comprehensive analysis.
     """
-    # Validate vessel exists
-    vessel = db.query(Vessel).filter(Vessel.id == request.vessel_id).first()
-    if not vessel:
-        raise HTTPException(status_code=404, detail="Vessel not found")
+    _assert_customer_id(db, user, customer_id)
+    vessel = _vessel_for_user(db, user, request.vessel_id)
 
     compliance_service = ComplianceService(db)
 
@@ -1449,12 +1508,11 @@ async def check_route_compliance(
 async def check_port_compliance(
     vessel_id: int = Query(...),
     port_code: str = Query(..., min_length=2),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Quick compliance check for a single port"""
-    vessel = db.query(Vessel).filter(Vessel.id == vessel_id).first()
-    if not vessel:
-        raise HTTPException(status_code=404, detail="Vessel not found")
+    _vessel_for_user(db, user, vessel_id)
 
     compliance_service = ComplianceService(db)
     result = compliance_service.check_port_compliance(vessel_id, port_code)
@@ -1466,9 +1524,11 @@ async def check_port_compliance(
 async def get_compliance_history(
     vessel_id: int,
     limit: int = Query(default=10, ge=1, le=50),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Get compliance check history for a vessel"""
+    _vessel_for_user(db, user, vessel_id)
     compliance_service = ComplianceService(db)
     checks = compliance_service.get_compliance_history(vessel_id, limit)
 
@@ -1768,7 +1828,8 @@ async def get_route_compliance_summary(
 @router.post("/reports/compliance-report", response_model=ComplianceReport, summary="Generate full compliance report")
 async def generate_full_compliance_report(
     request: StructuredReportRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """
     Generate a comprehensive structured compliance report for a vessel and route.
@@ -1786,10 +1847,7 @@ async def generate_full_compliance_report(
     The report follows the ComplianceReport model structure, making it
     suitable for programmatic processing or display in business dashboards.
     """
-    # Validate vessel exists
-    vessel = db.query(Vessel).filter(Vessel.id == request.vessel_id).first()
-    if not vessel:
-        raise HTTPException(status_code=404, detail="Vessel not found")
+    vessel = _vessel_for_user(db, user, request.vessel_id)
     
     # Parse voyage start date
     voyage_start = None

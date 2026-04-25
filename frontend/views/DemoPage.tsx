@@ -474,7 +474,7 @@ export const DemoPage: React.FC = () => {
 
   const startBackendDemo = async () => {
     try {
-      const response = await fetch('/api/v2/demo/start', {
+      const response = await fetch('/api/demo/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: 'crisis_455pm' }),
@@ -577,18 +577,12 @@ export const DemoPage: React.FC = () => {
 
     try {
       let response: MarketSentinelResponse;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H1',location:'frontend/src/pages/DemoPage.tsx:runMarketSentinel',message:'Market Sentinel run started',data:{originName:origin?.name ?? null,destinationName:destination?.name ?? null,hasSelectedRoute:Boolean(selectedRoute),selectedRouteName:selectedRoute?.name ?? null},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       // If we have origin/destination, run with lane watchlist
       if (origin && destination) {
         // Extract port codes from names (e.g., "Shanghai" -> "CNSHA")
         const originCode = getPortCode(origin.name);
         const destinationCode = getPortCode(destination.name);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H1',location:'frontend/src/pages/DemoPage.tsx:runMarketSentinel',message:'Port code resolution result',data:{originName:origin.name,destinationName:destination.name,originCode,destinationCode},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         if (originCode && destinationCode) {
           // Include route waypoint context if a route is selected
@@ -600,28 +594,16 @@ export const DemoPage: React.FC = () => {
             });
           }
           const params = createLaneWatchlist(originCode, destinationCode, ['general cargo'], routeEntities);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H2',location:'frontend/src/pages/DemoPage.tsx:runMarketSentinel',message:'Calling runAnalysis with lane watchlist',data:{lanes:params.watchlist.lanes,entities:params.watchlist.entities},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           response = await runAnalysis(params);
         } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H1',location:'frontend/src/pages/DemoPage.tsx:runMarketSentinel',message:'Falling back to runSimpleAnalysis because port code missing',data:{originName:origin.name,destinationName:destination.name,originCode,destinationCode},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           response = await runSimpleAnalysis();
         }
       } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H3',location:'frontend/src/pages/DemoPage.tsx:runMarketSentinel',message:'Falling back to runSimpleAnalysis because origin/destination missing',data:{hasOrigin:Boolean(origin),hasDestination:Boolean(destination)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         response = await runSimpleAnalysis();
       }
 
       clearTimeout(timeoutId); // Clear safety timeout on success
       setMarketSentinelData(response);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05d36e09-cd94-4f96-af55-b3946c76739f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:'pre-fix',hypothesisId:'H4',location:'frontend/src/pages/DemoPage.tsx:runMarketSentinel',message:'Market Sentinel response received',data:{summary:response.signal_packet?.summary ?? null,severity:response.signal_packet?.severity ?? null,affectedLanes:response.signal_packet?.affected_lanes ?? []},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setMarketSentinelError(errorMessage);
@@ -1084,5 +1066,3 @@ export const DemoPage: React.FC = () => {
     </div>
   );
 };
-
-
