@@ -7,14 +7,36 @@ export const useWebSocket = () => {
   const [events, setEvents] = useState<any[]>([]);
   const ws = useRef<WebSocket | null>(null);
 
+  const resolveWebSocketUrl = (url: string) => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+    try {
+      const parsedUrl = new URL(url, window.location.origin);
+      const apiUrl = apiBaseUrl ? new URL(apiBaseUrl) : null;
+
+      if (apiUrl && (parsedUrl.port === "8000" || parsedUrl.origin === window.location.origin)) {
+        parsedUrl.protocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
+        parsedUrl.hostname = apiUrl.hostname;
+        parsedUrl.port = apiUrl.port;
+      } else if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
+        parsedUrl.protocol = parsedUrl.protocol === "https:" ? "wss:" : "ws:";
+      }
+
+      return parsedUrl.toString();
+    } catch {
+      return url;
+    }
+  };
+
   const connect = (url: string) => {
     if (ws.current) {
         ws.current.close();
     }
-    ws.current = new WebSocket(url);
+    const resolvedUrl = resolveWebSocketUrl(url);
+    ws.current = new WebSocket(resolvedUrl);
 
     ws.current.onopen = () => {
-      console.log("WebSocket connected");
+      console.log("WebSocket connected:", resolvedUrl);
       setIsConnected(true);
       // 
       ws.current?.send(JSON.stringify({ action: "play" }));
@@ -32,11 +54,20 @@ export const useWebSocket = () => {
     };
 
     ws.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      console.warn("WebSocket connection issue:", {
+        url: resolvedUrl,
+        readyState: ws.current?.readyState,
+        error,
+      });
     };
 
-    ws.current.onclose = () => {
-      console.log("WebSocket closed");
+    ws.current.onclose = (event) => {
+      console.log("WebSocket closed", {
+        url: resolvedUrl,
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+      });
       setIsConnected(false);
     };
   };

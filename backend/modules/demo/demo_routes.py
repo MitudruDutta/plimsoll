@@ -1,8 +1,9 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from modules.demo.autoplay_controller import CrisisAutoPlayController
 import uuid
 import logging
 import asyncio
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/api/demo", tags=["Demo"])
 active_sessions = {}
 
 @router.post("/start")
-async def start_demo(scenario: str = "crisis_455pm"):
+async def start_demo(request: Request, scenario: str = "crisis_455pm"):
     """
     Demo
      demo_id  WebSocket URL
@@ -23,11 +24,18 @@ async def start_demo(scenario: str = "crisis_455pm"):
     
     controller = CrisisAutoPlayController()
     active_sessions[demo_id] = controller
+    ws_base_url = os.getenv("PUBLIC_WS_BASE_URL")
+    if not ws_base_url:
+        host = request.url.hostname or "127.0.0.1"
+        if host in {"localhost", "0.0.0.0", "::1"}:
+            host = "127.0.0.1"
+        port = os.getenv("PORT") or str(request.url.port or 8001)
+        ws_base_url = f"ws://{host}:{port}"
 
     return {
         "demo_id": demo_id,
         "status": "started",
-        "websocket_url": f"ws://localhost:8000/api/demo/ws?demo_id={demo_id}",
+        "websocket_url": f"{ws_base_url.rstrip('/')}/api/demo/ws?demo_id={demo_id}",
         "duration_seconds": 178
     }
 

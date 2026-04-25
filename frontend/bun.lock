@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "frontend1",
+      "name": "frontend",
       "dependencies": {
         "@ant-design/charts": "^2.6.7",
         "@ant-design/icons": "^5.2.6",

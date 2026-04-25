@@ -128,7 +128,12 @@ function RoutedApp() {
   return (
     <ConfigProvider locale={enUS}>
       <HeaderProvider>
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_relativeSplatPath: true,
+            v7_startTransition: true,
+          }}
+        >
           <CommonHeader />
           <RouteTracker />
           <Routes>

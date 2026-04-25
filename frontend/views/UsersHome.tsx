@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { useUser, SignOutButton } from '@clerk/clerk-react';
+import { useAuth, useUser, SignOutButton } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 import {
   Zap,
@@ -28,14 +28,16 @@ import {
   Search,
   RefreshCw
 } from 'lucide-react';
-import { documentAPI } from '../services/documentApi';
+import { documentAPI, setDocumentAuthToken } from '../services/documentApi';
 import { GapAnalysisReport } from '../components/documents';
 import { MAJOR_PORTS } from '../data/ports';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function UsersHome() {
   const { user, isLoaded } = useUser();
+  const { getToken, isSignedIn } = useAuth();
   const navigate = useNavigate();
+  const provisionedUserRef = useRef(null);
   
   // --- States ---
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'vessel', or 'compliance'
@@ -68,23 +70,36 @@ export function UsersHome() {
 
   // Provision customer + vessel on mount once Clerk user is loaded
   useEffect(() => {
-    if (!user) return;
+    if (!isLoaded || !isSignedIn || !user) return;
+    if (provisionedUserRef.current === user.id) return;
+
+    let cancelled = false;
     const provision = async () => {
       try {
+        const token = await getToken();
+        if (cancelled) return;
+        setDocumentAuthToken(token);
+
         const res = await documentAPI.provisionUser({
           clerk_id: user.id,
           email: user.primaryEmailAddress?.emailAddress || '',
           name: user.fullName || undefined,
         });
+        if (cancelled) return;
+        provisionedUserRef.current = user.id;
         setCustomerId(res.customer_id);
         if (res.vessel_id) setVesselId(res.vessel_id);
       } catch (err) {
+        if (cancelled) return;
         console.error('Provisioning failed:', err);
         setAnalysisError('Failed to provision your maritime profile. Please sign in again or retry.');
       }
     };
     provision();
-  }, [user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken, isLoaded, isSignedIn, user]);
 
   // Pre-compute available ports from MAJOR_PORTS (no useEffect needed)
   const countryCodeMap = {

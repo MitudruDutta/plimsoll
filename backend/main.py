@@ -11,6 +11,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
 import json
+import os
 import time
 from dotenv import load_dotenv
 
@@ -762,4 +763,6 @@ def classify_customer_bg(customer_id: int):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "8001"))
+    uvicorn.run(app, host=host, port=port)

@@ -1,0 +1,27 @@
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Local databases / uploads / caches
+data/*.db
+data/*.db-journal
+data/uploads/
+data/vectordb/
+/tmp/naviguard_debug.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
