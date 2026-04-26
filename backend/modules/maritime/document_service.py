@@ -16,7 +16,7 @@ from fastapi import UploadFile
 from shared.config import get_settings
 from modules.analytics.ocr_service import get_ocr_service, OCRResult
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
-from modules.orchestration.document_tools import classify_document_from_text
+from modules.maritime.document_classifier import classify_document_from_text
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

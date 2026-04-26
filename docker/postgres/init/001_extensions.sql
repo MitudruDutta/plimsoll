@@ -1,0 +1,13 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Supabase Queues is backed by pgmq. The pgvector image does not include pgmq,
+-- so the extension is enabled opportunistically when the image provides it.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pgmq') THEN
+    CREATE EXTENSION IF NOT EXISTS pgmq;
+  END IF;
+END $$;

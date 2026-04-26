@@ -18,9 +18,9 @@ settings = get_settings()
 try:
     from crewai import Agent, Task, Crew, LLM
     HAS_CREWAI = True
-except ImportError:
+except Exception as exc:
     HAS_CREWAI = False
-    logger.warning("crewai not found. Maritime compliance crew will not be available.")
+    logger.warning("CrewAI maritime compliance crew unavailable: %s", exc)
 
 
 def test_gemini_connection(api_key: str, timeout: int = 10) -> None:

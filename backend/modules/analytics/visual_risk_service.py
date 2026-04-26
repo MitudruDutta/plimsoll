@@ -14,16 +14,13 @@ import httpx
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 import json
-import os
-import time
 
 from shared.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-DEBUG_LOG_PATH = "/tmp/naviguard_debug.log"
 
 
 @dataclass
@@ -36,7 +33,7 @@ class VisualRiskResult:
     affected_ports: List[str] = field(default_factory=list)
     confidence: float = 0.0
     raw_analysis: str = ""
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     source_type: str = "satellite"  # satellite, news, camera
     recommendations: List[str] = field(default_factory=list)
     
@@ -197,19 +194,15 @@ If no risks are detected, return: {"risks": [], "raw_analysis": "No supply chain
     def _agent_debug_log(self, run_id: str, hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
         if not settings.debug:
             return
-        try:
-            payload = {
-                "runId": run_id,
-                "hypothesisId": hypothesis_id,
+        logger.debug(
+            message,
+            extra={
+                "run_id": run_id,
+                "hypothesis_id": hypothesis_id,
                 "location": location,
-                "message": message,
-                "data": data,
-                "timestamp": int(time.time() * 1000),
-            }
-            with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-                f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-        except Exception:
-            pass
+                "debug_data": data,
+            },
+        )
     
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:

@@ -27,9 +27,9 @@ settings = get_settings()
 try:
     from crewai import Agent, Task, Crew, LLM
     HAS_CREWAI = True
-except ImportError:
+except Exception as exc:
     HAS_CREWAI = False
-    logger.warning("crewai not found. Missing docs workflow will not be available.")
+    logger.warning("CrewAI missing docs workflow unavailable: %s", exc)
 
 
 def _test_gemini_connection(api_key: str, timeout: int = 10) -> None:

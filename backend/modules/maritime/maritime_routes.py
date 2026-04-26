@@ -21,9 +21,6 @@ from modules.maritime.document_service import DocumentService
 from modules.maritime.compliance_service import ComplianceService
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
 from modules.maritime.compliance_report_generator import get_compliance_report_generator
-from modules.maritime.crew_maritime_compliance import get_compliance_orchestrator
-from modules.orchestration.crew_document_agents import get_document_analysis_orchestrator
-from modules.orchestration.crew_missing_docs_workflow import get_missing_docs_orchestrator
 from shared.database.models.compliance_report import (
     ComplianceReport,
     ComplianceStatus,
@@ -37,7 +34,11 @@ from shared.database.models.compliance_report import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/maritime", tags=["Maritime Compliance"])
+router = APIRouter(
+    prefix="/api/maritime",
+    tags=["Maritime Compliance"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 def _customer_for_user(db: Session, user: User) -> Customer:
@@ -946,6 +947,8 @@ async def analyze_documents_with_agents(
     vessel = _vessel_for_user(db, user, request.vessel_id)
 
     # Get orchestrator
+    from modules.orchestration.crew_document_agents import get_document_analysis_orchestrator
+
     orchestrator = get_document_analysis_orchestrator()
 
     if not orchestrator.is_available:
@@ -1218,6 +1221,8 @@ async def detect_missing_documents(
         })
 
     # Get orchestrator
+    from modules.orchestration.crew_missing_docs_workflow import get_missing_docs_orchestrator
+
     orchestrator = get_missing_docs_orchestrator()
 
     if not orchestrator.is_available:
@@ -1402,6 +1407,8 @@ async def check_route_compliance(
 
     if request.use_crewai:
         # Use CrewAI for comprehensive analysis
+        from modules.maritime.crew_maritime_compliance import get_compliance_orchestrator
+
         orchestrator = get_compliance_orchestrator()
 
         if not orchestrator.is_available:
@@ -1984,20 +1991,10 @@ async def quick_compliance_check(
 
 @router.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    kb = get_maritime_knowledge_base()
-    compliance_orchestrator = get_compliance_orchestrator()
-    document_orchestrator = get_document_analysis_orchestrator()
-    missing_docs_orchestrator = get_missing_docs_orchestrator()
-
+    """Cheap module health check that avoids booting KB or CrewAI."""
     return {
         "status": "healthy",
-        "knowledge_base": {
-            "collections": list(kb.COLLECTIONS.keys()),
-            "embeddings_configured": kb.embeddings is not None,
-        },
-        "crewai_compliance_available": compliance_orchestrator.is_available,
-        "crewai_document_analysis_available": document_orchestrator.is_available,
-        "crewai_missing_docs_available": missing_docs_orchestrator.is_available,
+        "knowledge_base": "lazy",
+        "crewai": "lazy",
         "timestamp": datetime.now().isoformat(),
     }

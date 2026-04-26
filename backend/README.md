@@ -1,6 +1,6 @@
-# Sully / NaviGuard Backend
+# Plimsoll Backend
 
-FastAPI backend for the NaviGuard / Sully maritime risk, compliance, document,
+FastAPI backend for the Plimsoll maritime risk, compliance, document,
 analytics, demo and financial hedging APIs.
 
 ---
@@ -59,7 +59,7 @@ The ones you almost always want to set for local dev are:
 | `ADMIN_WHITELIST`  | Comma-separated emails forced to `role=admin`| *(empty)*                           |
 | `GOOGLE_API_KEY`   | Gemini key for CrewAI                        | *(unset)*                           |
 | `OPENAI_API_KEY`   | OpenAI key for CrewAI                        | *(unset)*                           |
-| `HOST` / `PORT`    | Used by `start_server.py` / `python main.py` | `127.0.0.1` / `8001`                |
+| `HOST` / `PORT`    | Used by `start_server.py` / `python main.py` | `127.0.0.1` / `8000`                |
 
 If `DATABASE_URL` is not set, the backend defaults to the bundled SQLite file
 at `./data/sully.db` (already created on first run). Point it at Postgres for
@@ -69,12 +69,38 @@ production, e.g. `postgresql://user:password@host:5432/sully`.
 
 ## 3. Run the server
 
+### Option 0 — Docker Compose stack
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+This starts Postgres 15 with pgvector, PgBouncer, Redis, the FastAPI backend,
+and the worker container. The frontend is available as an optional profile:
+
+```bash
+docker compose --profile frontend up --build
+```
+
+Backend: <http://127.0.0.1:18000> by default, override with `BACKEND_PORT`.
+Postgres: `localhost:15432` by default, override with `POSTGRES_PORT`.
+PgBouncer: `localhost:16543` by default, override with `PGBOUNCER_PORT`.
+Redis: `localhost:16379` by default, override with `REDIS_PORT`.
+
+The Docker backend image still listens on port `8000` inside the Compose
+network. It installs `requirements.docker.txt` by default so the
+local stack boots without CUDA-heavy ML packages. Build with
+`--build-arg BACKEND_REQUIREMENTS=requirements.txt` when you want the full AI
+runtime inside the container.
+
 ### Option A — uvicorn directly (recommended for development)
 
 ```bash
 cd backend
 source .venv/bin/activate
-python -m uvicorn main:app --host 127.0.0.1 --port 8001 --reload
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 ### Option B — the convenience launcher
@@ -86,22 +112,22 @@ python start_server.py
 ```
 
 `start_server.py` loads `.env` automatically and respects `HOST`, `PORT`,
-`RELOAD`, and `LOG_LEVEL` environment variables (defaults: `127.0.0.1:8001`,
+`RELOAD`, and `LOG_LEVEL` environment variables (defaults: `127.0.0.1:8000`,
 reload off, `info`).
 
 ### Verify it is up
 
 ```bash
-curl http://127.0.0.1:8001/
+curl http://127.0.0.1:8000/
 ```
 
 Expected response:
 
 ```json
-{"message":"NaviGuard Maritime Risk Intelligence API","version":"0.1.0","status":"running"}
+{"message":"Plimsoll Maritime Risk Intelligence API","version":"0.1.0","status":"running"}
 ```
 
-Interactive docs: <http://127.0.0.1:8001/docs>
+Interactive docs: <http://127.0.0.1:8000/docs>
 
 ---
 
@@ -169,17 +195,24 @@ Run the included test:
 pytest tests/
 ```
 
+Audit API routes for missing authentication:
+
+```bash
+python scripts/audit_unauthed_routes.py
+```
+
 Smoke-test the server is importable (no network, no DB needed beyond SQLite):
 
 ```bash
 python -c "import main; print('import OK')"
 ```
 
-Run in Docker:
+Run the backend image directly:
 
 ```bash
-docker build -t sully-backend .
-docker run --rm -p 8000:8000 --env-file .env sully-backend
+cd backend
+docker build -t plimsoll-backend .
+docker run --rm -p 8000:8000 --env-file .env plimsoll-backend
 ```
 
 ---

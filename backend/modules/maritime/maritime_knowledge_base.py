@@ -7,32 +7,23 @@ import json
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
 from shared.config import get_settings
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_chroma import Chroma
-from langchain_core.documents import Document
-from sentence_transformers import CrossEncoder
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-DEBUG_LOG_PATH = "/tmp/naviguard_debug.log"
 
 
 def _debug_log(run_id: str, hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
     if not settings.debug:
         return
-    try:
-        payload = {
-            "runId": run_id,
-            "hypothesisId": hypothesis_id,
+    logger.debug(
+        message,
+        extra={
+            "run_id": run_id,
+            "hypothesis_id": hypothesis_id,
             "location": location,
-            "message": message,
-            "data": data,
-            "timestamp": __import__("time").time_ns() // 1_000_000,
-        }
-        with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-    except Exception:
-        pass
+            "debug_data": data,
+        },
+    )
 
 
 @dataclass
@@ -67,10 +58,15 @@ class MaritimeKnowledgeBase:
 
     def __init__(self):
         """Initialize the Maritime Knowledge Base with Gemini embeddings."""
-        self.collections: Dict[str, Chroma] = {}
+        from langchain_chroma import Chroma
+        from langchain_core.documents import Document
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+        self.Document = Document
+        self.collections: Dict[str, Any] = {}
         self.reranker = None
         self.bm25_indices: Dict[str, Any] = {}
-        self.doc_maps: Dict[str, Dict[str, Document]] = {}
+        self.doc_maps: Dict[str, Dict[str, Any]] = {}
         
         # Initialize Gemini embeddings
         self.embeddings = GoogleGenerativeAIEmbeddings(
@@ -103,7 +99,7 @@ class MaritimeKnowledgeBase:
             logger.info(f"Initialized collection: {collection_name}")
 
         # Initialize cross-encoder reranker
-        self.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+        self.reranker = None
 
 
     def search_by_port(
@@ -306,7 +302,7 @@ class MaritimeKnowledgeBase:
     def add_documents(
         self,
         collection_name: str,
-        documents: List[Document]
+        documents: List[Any]
     ) -> int:
         """
         Add documents to a collection
@@ -816,7 +812,7 @@ class MaritimeKnowledgeBase:
                 )
                 # endregion
             
-            doc = Document(page_content=content, metadata=metadata)
+            doc = self.Document(page_content=content, metadata=metadata)
             # region agent log
             _debug_log(
                 "pre-fix",

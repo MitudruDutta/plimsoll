@@ -876,7 +876,7 @@ Maritime data carries crew PII, certificate documents, and commercially sensitiv
 | 2 | B2.4–B2.6, **B3 schema + RLS incl. B3.6 vessel-membership refactor + B3.7 UN/LOCODE seed + B3.9 tenant-from-JWT**, B4.1–B4.2 pgvector | F1.4–F1.6, F2.3–F2.5 finish auth, **F2.7 remove `vesselId\|\|1`**, F3 data layer | Generate OpenAPI + Supabase types, wire CI. **B11.5 eval skeleton on CI (red baseline ok).** |
 | 3 | B4.3–B4.9 KB ingestion (incl. **B4.8 embedding versioning + B4.9 evidence binding**), **B5 storage pipeline incl. B5.5 streaming uploads + B5.6 worker OCR + B5.7 Chinese OCR** | F4 design system, F5 realtime + uploads, **F2.6 real usage metrics or removal**, **F2.8 drop `/pay` from v1** | Cut compliance read path to pgvector behind flag. **B13.1–B13.4 (integrations skeleton + fuel + FX + freight) start in parallel.** |
 | 4 | B6 jobs, **B7 LLM refactor incl. B7.6 cost ledger + B7.7 citations + B7.8 fix orchestrator AttributeError**, **B8 demo incl. B8.4 signed tokens + B8.5 demo labels** | F6 maps, F7 perf, **F2.9 `mode: "demo"` banners**, **F2.10 demo token UI** | First end-to-end "upload → OCR → realtime → compliance" demo on `/next`. **B13.5–B13.6 (AIS + satellite) feed real visual-risk path.** |
-| 5 | B9 observability, **B10 security incl. B10.6 PII redactor + B10.7 RTBF + B10.8 doc deletion + B10.9 sanctions screening**, B11 tests (**incl. B11.5 compliance eval gate ≥ 92% + B11.6 load tests**) | F8 tests, F9 i18n, **legal pages `/legal/privacy|dpa|security`** | A/B legacy vs `/next`; ship `/next` to staging. **B13.7–B13.8 (regulatory + crisis intel) replace mock market-sentinel.** |
+| 5 | B9 observability, **B10 security incl. B10.6 PII redactor + B10.7 RTBF + B10.8 doc deletion + B10.9 sanctions screening**, B11 tests (**incl. B11.5 compliance eval gate ≥ 92% + B11.6 load tests**) | F8 tests, F9 i18n, **legal pages `/legal/privacy`, `/legal/dpa`, `/legal/security`** | A/B legacy vs `/next`; ship `/next` to staging. **B13.7–B13.8 (regulatory + crisis intel) replace mock market-sentinel.** |
 | 6 | B12 deploy, **B13.9–B13.11 (cost guards + integration health + flip `mode: "live"` per pillar)**, cleanup | Cleanup, hand-off | Promote `/next` → `/`; delete Clerk + Chroma + antd + MUI; archive legacy SPA; **tag `v1.0.0` and ship Plimsoll 1.0**. **Hedging + visual-risk surfaces ship `mode: "live"` if vendor contracts cleared, otherwise `mode: "demo"` with banner.** |
 | 7–8 (post-1.0) | Remaining B13 sub-tasks if vendor contracts slipped; second-region (APAC) Supabase project; per-tenant region pinning. | Locale polish, advanced map layers (port congestion, AIS heatmap). | **v1.1 cut: lift demo banners off pillars whose live data is now wired.** |
 
@@ -1039,12 +1039,12 @@ Plimsoll 1.0 ships when **all** of the following are true on `prod`:
 - [ ] `rg "@ts-nocheck"` returns 0 matches.
 - [ ] `rg "react-router-dom"` returns 0 matches.
 - [ ] `rg "frontend1"` returns 0 matches.
-- [ ] `rg "random\.gauss\|random\.randint" backend/modules/financial backend/modules/analytics` returns 0 matches (no synthetic data left in pillar code paths).
+- [ ] `rg "random\.(gauss|randint)" backend/modules/financial backend/modules/analytics` returns 0 matches (no synthetic data left in pillar code paths).
 - [ ] One UI kit (shadcn/ui), one map renderer (MapLibre+deck.gl), one motion lib (`motion`).
 
 **Auth gates**
 - [ ] `scripts/audit_unauthed_routes.py` passes — every route except the documented allowlist (`/healthz`, `/readyz`, `/openapi.json`, `/docs`, `/redoc`) carries `Depends(get_current_user)`.
-- [ ] `rg "customer_id.*Form\|customer_id.*Query" backend/modules` returns 0 matches — tenant identity comes from JWT only.
+- [ ] `rg "customer_id.*(Form|Query)" backend/modules` returns 0 matches — tenant identity comes from JWT only.
 - [ ] RLS denies cross-tenant reads **and writes** in an automated test (incl. the historical `vesselId=1` cross-tenant scenario).
 
 **Data + retrieval gates**
@@ -1076,7 +1076,7 @@ Plimsoll 1.0 ships when **all** of the following are true on `prod`:
 - [ ] `/pay` route either backed by Stripe + `subscriptions/plans/invoices/payment_methods` tables, or removed from v1 with `payment.css` deleted.
 
 **Honesty gates** (no demo content shipped as live)
-- [ ] Hedging, visual-risk, market-sentinel API responses include `mode: "demo"\|"live"`; FE renders a banner whenever `mode == "demo"`.
+- [ ] Hedging, visual-risk, market-sentinel API responses include `mode: "demo" | "live"`; FE renders a banner whenever `mode == "demo"`.
 - [ ] No code path returns `DEMO_SUEZ_BLOCKAGE_RESULT` (or any other canned narrative) on a `mode: "live"` endpoint.
 - [ ] Demo WebSocket sessions require a signed token; `demo_id` UUIDs alone are rejected.
 

@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 from fastapi import WebSocket
 from modules.demo.crisis_455pm_data import CRISIS_TIMELINE
 from modules.demo.cot_data import (

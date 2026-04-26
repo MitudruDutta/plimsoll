@@ -387,3 +387,50 @@ class ComplianceCheck(Base):
     # Relationships
     customer = relationship("Customer")
     vessel = relationship("Vessel", back_populates="compliance_checks")
+
+
+# ========== LLM cost ledger ==========
+
+
+class LLMCall(Base):
+    """Per-call ledger of LLM invocations for cost + latency observability.
+
+    Every LLM call (chat, embedding, vision, OCR, agent) should record one
+    row here so the ops dashboard can answer:
+      - Which surface burns the most tokens? (group by ``surface``)
+      - Which model has the worst p95 latency? (``latency_ms``)
+      - Which tenant is generating the bill? (``customer_id``)
+      - Did this call succeed? (``status`` + ``error_code``)
+
+    The table is intentionally lightweight: we do not store prompts here
+    (PII surface). For prompt audit we point ``trace_id`` at the request
+    trace in OTel/Sentry.
+    """
+
+    __tablename__ = "llm_calls"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Tenancy + correlation
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True, index=True)
+    trace_id = Column(String(64), index=True, nullable=True)
+    surface = Column(String(64), index=True, nullable=False)  # e.g. "compliance", "hedge", "ocr"
+
+    # Provider + model
+    provider = Column(String(32), nullable=False)  # openai | google | anthropic | local | ollama
+    model = Column(String(128), nullable=False)
+    operation = Column(String(32), nullable=False)  # chat | embedding | vision | rerank
+
+    # Tokens + cost
+    prompt_tokens = Column(Integer, default=0)
+    completion_tokens = Column(Integer, default=0)
+    total_tokens = Column(Integer, default=0)
+    cost_usd = Column(Float, default=0.0)
+
+    # Outcome
+    status = Column(String(16), default="ok")  # ok | error | timeout | rate_limited
+    error_code = Column(String(64), nullable=True)
+    latency_ms = Column(Integer, default=0)
+
+    # Timestamp
+    created_at = Column(DateTime, default=datetime.now, index=True)

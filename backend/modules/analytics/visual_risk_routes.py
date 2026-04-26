@@ -4,16 +4,20 @@ Visual Risk API Routes
 Endpoints for visual risk analysis using Gemini Vision.
 Supports satellite imagery and video analysis for supply chain risks.
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
-from typing import Optional
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 import logging
 
-from modules.analytics.visual_risk_service import get_visual_risk_analyzer, VisualRiskResult
+from modules.analytics.visual_risk_service import get_visual_risk_analyzer
+from shared.auth.clerk_auth import get_current_user
+from shared.observability.mode import demo_response, tag_response
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/visual-risk", tags=["Visual Risk"])
+router = APIRouter(
+    prefix="/api/visual-risk",
+    tags=["Visual Risk"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.get("/status")
@@ -31,7 +35,8 @@ async def get_service_status():
         except:
             pass
 
-    return {
+    mode = "live" if analyzer.api_key else "demo"
+    return tag_response({
         "status": "operational",
         "service": "visual_risk_analyzer",
         "model": analyzer.model,
@@ -42,9 +47,9 @@ async def get_service_status():
             "canal_blockage_detection",
             "port_congestion_detection",
             "weather_hazard_detection",
-            "real_time_satellite_fetching"
-        ]
-    }
+            "real_time_satellite_fetching",
+        ],
+    }, mode)
 
 
 @router.get("/demo")
@@ -62,13 +67,13 @@ async def get_demo_analysis(scenario: str = "suez_blockage"):
         scenario = "suez_blockage"
     
     result = await analyzer.get_demo_analysis(scenario)
-    
-    return {
+
+    return demo_response({
         "success": True,
         "scenario": scenario,
         "analysis": result.to_dict(),
-        "demo_mode": True
-    }
+        "demo_mode": True,
+    })
 
 
 @router.post("/analyze")
@@ -112,30 +117,29 @@ async def analyze_image(
             mime_type=file.content_type or "image/jpeg"
         )
         result.source_type = source_type
-        
-        return {
+        mode = "live" if analyzer.api_key else "demo"
+        return tag_response({
             "success": True,
             "filename": file.filename,
-            "analysis": result.to_dict()
-        }
-        
+            "analysis": result.to_dict(),
+        }, mode)
+
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
-        # Return demo result on error
         demo_result = await analyzer.get_demo_analysis()
-        return {
+        return demo_response({
             "success": True,
             "filename": file.filename,
             "analysis": demo_result.to_dict(),
             "fallback": True,
-            "error": str(e)
-        }
+            "error": str(e),
+        })
 
 
 @router.get("/scenarios")
 async def list_demo_scenarios():
     """List available demo scenarios for visual risk analysis"""
-    return {
+    return demo_response({
         "scenarios": [
             {
                 "id": "suez_blockage",
@@ -146,10 +150,10 @@ async def list_demo_scenarios():
             },
             {
                 "id": "port_congestion",
-                "name": "Rotterdam Port Congestion", 
+                "name": "Rotterdam Port Congestion",
                 "description": "Severe congestion at Rotterdam port with vessel queues",
                 "severity": "high",
                 "image_type": "drone/camera"
             }
         ]
-    }
+    })

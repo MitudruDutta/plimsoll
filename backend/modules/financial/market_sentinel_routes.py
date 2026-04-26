@@ -1,11 +1,16 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
-import random
+from shared.auth.clerk_auth import get_current_user
+from shared.observability.mode import demo_response
 
-router = APIRouter(prefix="/api/market-sentinel", tags=["market-sentinel"])
+router = APIRouter(
+    prefix="/api/market-sentinel",
+    tags=["market-sentinel"],
+    dependencies=[Depends(get_current_user)],
+)
 
 # --- Data Models ---
 class Lane(BaseModel):
@@ -181,17 +186,17 @@ async def run_analysis(request: MarketSentinelRequest):
         packet = generate_normal_packet(origin, destination)
         raw_text = "AI ANALYSIS: Routine patterns observed. No anomalies."
 
-    return {
+    return demo_response({
         "thread_id": str(uuid.uuid4()),
         "signal_packet": packet,
         "raw_text": raw_text,
         "request_echo": request.dict()
-    }
+    })
 
 @router.get("/health")
 async def health_check():
-    return {"status": "healthy", "mode": "high_fidelity_mock"}
+    return demo_response({"status": "healthy"})
 
 @router.get("/agents/status")
 async def get_agents_status():
-    return {"agents": [{"name": "MockAgent", "status": "active"}]}
+    return demo_response({"agents": [{"name": "MockAgent", "status": "active"}]})

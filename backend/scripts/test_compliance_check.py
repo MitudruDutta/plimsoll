@@ -1,38 +1,53 @@
+"""Smoke test for the maritime compliance pipeline.
+
+Exercises the knowledge base and ``ComplianceService`` end-to-end against
+whatever data is on the local box. This is *not* a unit test; it is a
+manual repro tool. Run with::
+
+    python -m scripts.test_compliance_check
+
+Expectations:
+- Local DB exists (SQLite is fine).
+- Maritime knowledge base has been ingested (see ``load_maritime_regulations.py``).
+- A test customer + vessel exists or will be created.
+
+The script fails fast if the schema drifts: it only relies on attributes
+that ``compliance_service.PortComplianceResult`` and
+``RouteComplianceResult`` actually define.
 """
-Test script for Route Compliance Check
-Run with: python scripts/test_compliance_check.py
-"""
-import sys
-import os
+from __future__ import annotations
+
 import asyncio
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from datetime import datetime
+
 from sqlalchemy.orm import Session
-from shared.database.database import SessionLocal, engine, Base
-from shared.database.models import Vessel, VesselType, Customer
+
 from modules.maritime.compliance_service import ComplianceService
 from modules.maritime.document_service import DocumentService
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
-from datetime import datetime
+from shared.database.database import Base, SessionLocal, engine
+from shared.database.models import Customer, Vessel, VesselType
 
 
-def setup_test_data(db: Session):
-    """Create test vessel and documents"""
-
-    # Check if test customer exists
+def setup_test_data(db: Session) -> Vessel:
+    """Create a stable test customer + vessel if missing."""
     customer = db.query(Customer).filter(Customer.name == "Test Shipping Co").first()
     if not customer:
         customer = Customer(
             name="Test Shipping Co",
-            email="test@shipping.com",
-            phone="123-456-7890"
+            email="test@shipping.example",
+            phone="000-000-0000",
         )
         db.add(customer)
         db.commit()
         db.refresh(customer)
         print(f"Created test customer: {customer.name} (ID: {customer.id})")
 
-    # Check if test vessel exists
     vessel = db.query(Vessel).filter(Vessel.imo_number == "9876543").first()
     if not vessel:
         vessel = Vessel(
@@ -45,7 +60,7 @@ def setup_test_data(db: Session):
             flag_state="Panama",
             gross_tonnage=45000.0,
             dwt=52000.0,
-            year_built=2018
+            year_built=2018,
         )
         db.add(vessel)
         db.commit()
@@ -59,30 +74,24 @@ def setup_test_data(db: Session):
     print(f"Vessel has {len(existing_docs)} uploaded documents in the document store")
     if not existing_docs:
         print("Upload documents through the API/UI before expecting a compliant result.")
-
     return vessel
 
 
-async def test_knowledge_base_search():
-    """Test the maritime knowledge base search"""
-    print("\n" + "="*70)
+async def test_knowledge_base_search() -> None:
+    print("\n" + "=" * 70)
     print("TEST 1: Maritime Knowledge Base Search")
-    print("="*70)
+    print("=" * 70)
 
     kb = get_maritime_knowledge_base()
+    if getattr(kb, "mock_mode", False):
+        print("\n[!] Knowledge Base is running in MOCK MODE")
+        print("    (langchain/chromadb dependencies may not be installed)")
 
-    # Check if running in mock mode
-    if kb.mock_mode:
-        print("\n⚠️  Knowledge Base is running in MOCK MODE")
-        print("   (langchain/chromadb dependencies may not be installed)")
-
-    # Get collection stats
     stats = kb.get_collection_stats()
-    print(f"\nCollection Statistics:")
+    print("\nCollection Statistics:")
     for name, count in stats.items():
         print(f"  - {name}: {count} documents")
 
-    # Test search
     print("\nSearching for 'SOLAS fire safety requirements'...")
     results = kb.search_general("SOLAS fire safety requirements", top_k=3)
 
@@ -96,15 +105,12 @@ async def test_knowledge_base_search():
             print(f"    Metadata: {result.metadata}")
 
 
-async def test_port_requirements():
-    """Test port-specific requirement search"""
-    print("\n" + "="*70)
+async def test_port_requirements() -> None:
+    print("\n" + "=" * 70)
     print("TEST 2: Port Requirements Search")
-    print("="*70)
+    print("=" * 70)
 
     kb = get_maritime_knowledge_base()
-
-    # Search for Rotterdam (ECA zone, Paris MOU)
     print("\nSearching requirements for Rotterdam (NLRTM)...")
     results = kb.search_by_port("NLRTM", vessel_type="container", top_k=5)
 
@@ -114,34 +120,43 @@ async def test_port_requirements():
         print(f"     {result.content[:200]}...")
 
 
-async def test_required_documents():
-    """Test required documents lookup"""
-    print("\n" + "="*70)
+async def test_required_documents() -> None:
+    print("\n" + "=" * 70)
     print("TEST 3: Required Documents for Port Call")
-    print("="*70)
+    print("=" * 70)
 
     kb = get_maritime_knowledge_base()
-
     print("\nGetting required documents for container vessel at Singapore (SGSIN)...")
     docs = kb.search_required_documents("SGSIN", "container")
 
     print(f"\nRequired Documents ({len(docs)} total):")
     for doc in docs:
-        print(f"  - {doc['document_type']}")
-        print(f"    Source: {doc['regulation_source']}")
-        print(f"    Description: {doc['description'][:80]}...")
+        print(f"  - {doc.get('document_type', 'unknown')}")
+        print(f"    Source: {doc.get('regulation_source', 'unknown')}")
+        description = (doc.get("description") or "")[:80]
+        print(f"    Description: {description}...")
         print()
 
 
+def _document_status(doc: dict) -> tuple[str, str]:
+    expiry_value = doc.get("expiry_date")
+    if not expiry_value:
+        return ("Unknown", "N/A")
+    try:
+        expiry_date = datetime.fromisoformat(expiry_value)
+    except (TypeError, ValueError):
+        return ("Unknown", "N/A")
+
+    days_left = (expiry_date - datetime.now()).days
+    return ("Valid" if days_left >= 0 else "Expired", str(days_left))
+
+
 async def test_route_compliance(db: Session, vessel: Vessel):
-    """Test full route compliance check"""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST 4: Route Compliance Check")
-    print("="*70)
+    print("=" * 70)
 
     compliance_service = ComplianceService(db)
-
-    # Define test route: Singapore -> Rotterdam -> Hamburg
     route = ["SGSIN", "NLRTM", "DEHAM"]
 
     print(f"\nVessel: {vessel.name} (IMO: {vessel.imo_number})")
@@ -149,103 +164,82 @@ async def test_route_compliance(db: Session, vessel: Vessel):
     print(f"Flag: {vessel.flag_state}")
     print(f"Route: {' -> '.join(route)}")
 
-    # Get vessel documents from Chroma-backed document service
     documents = DocumentService().get_vessel_documents(vessel.id)
     print(f"\nVessel has {len(documents)} documents on file:")
     for doc in documents:
-        expiry_date = None
-        expiry_value = doc.get("expiry_date")
-        if expiry_value:
-            try:
-                expiry_date = datetime.fromisoformat(expiry_value)
-            except ValueError:
-                expiry_date = None
-        status = "Valid" if expiry_date and expiry_date > datetime.now() else "Expired/Unknown"
-        days_left = (expiry_date - datetime.now()).days if expiry_date else "N/A"
-        print(f"  - {doc.get('document_type', 'unknown')}: {status} ({days_left} days)")
+        status, days = _document_status(doc)
+        print(f"  - {doc.get('document_type', 'unknown')}: {status} ({days} days)")
 
-    # Run compliance check (non-AI mode for faster testing)
-    print("\n" + "-"*50)
+    print("\n" + "-" * 50)
     print("Running compliance check...")
-    print("-"*50)
-
-    vessel_info = {
-        "id": vessel.id,
-        "name": vessel.name,
-        "imo_number": vessel.imo_number,
-        "vessel_type": vessel.vessel_type.value,
-        "flag_state": vessel.flag_state,
-        "gross_tonnage": vessel.gross_tonnage
-    }
+    print("-" * 50)
 
     result = compliance_service.check_route_compliance(
         vessel_id=vessel.id,
         port_codes=route,
-        route_name="Singapore to Hamburg"
+        route_name="Singapore to Hamburg",
     )
 
-    # Display results
-    print(f"\n{'='*50}")
-    print(f"COMPLIANCE RESULT: {result.overall_status.upper()}")
-    print(f"{'='*50}")
+    print(f"\n{'=' * 50}")
+    print(f"COMPLIANCE RESULT: {result.overall_status.value.upper()}")
+    print(f"Compliance score: {result.compliance_score:.1f}")
+    print(f"Risk level: {result.risk_level}")
+    print(f"{'=' * 50}")
 
     for port_result in result.port_results:
-        port_status_icon = "✅" if port_result.status == "compliant" else "❌"
-        print(f"\n{port_status_icon} Port: {port_result.port_code} ({port_result.port_name})")
-        print(f"   Status: {port_result.status}")
-        print(f"   PSC Regime: {port_result.psc_regime or 'Unknown'}")
-        print(f"   Is ECA Zone: {'Yes' if port_result.is_eca else 'No'}")
+        ok = port_result.status.value == "compliant"
+        marker = "[OK]" if ok else "[!!]"
+        print(f"\n{marker} Port: {port_result.port_code} ({port_result.port_name})")
+        print(f"   Status: {port_result.status.value}")
+
+        if port_result.special_requirements:
+            print(f"   Special requirements ({len(port_result.special_requirements)}):")
+            for req in port_result.special_requirements[:5]:
+                print(f"      - {req}")
+
+        if port_result.risk_factors:
+            print(f"   Risk factors ({len(port_result.risk_factors)}):")
+            for factor in port_result.risk_factors[:5]:
+                print(f"      - {factor}")
 
         if port_result.missing_documents:
-            print(f"   ❌ Missing Documents ({len(port_result.missing_documents)}):")
-            for doc in port_result.missing_documents[:5]:  # Show first 5
-                print(f"      - {doc}")
-
-        if port_result.expiring_documents:
-            print(f"   ⚠️  Expiring Documents ({len(port_result.expiring_documents)}):")
-            for doc in port_result.expiring_documents:
+            print(f"   Missing documents ({len(port_result.missing_documents)}):")
+            for doc in port_result.missing_documents[:5]:
                 print(f"      - {doc}")
 
         if port_result.expired_documents:
-            print(f"   🚫 Expired Documents ({len(port_result.expired_documents)}):")
+            print(f"   Expired documents ({len(port_result.expired_documents)}):")
             for doc in port_result.expired_documents:
                 print(f"      - {doc}")
 
-    # Print narrative report
-    if result.narrative_report:
-        print(f"\n{'='*50}")
-        print("NARRATIVE REPORT")
-        print(f"{'='*50}")
-        print(result.narrative_report)
+    if result.summary_report:
+        print(f"\n{'=' * 50}")
+        print("SUMMARY REPORT")
+        print(f"{'=' * 50}")
+        print(result.summary_report)
 
     return result
 
 
-async def main():
-    """Main test runner"""
-    print("\n" + "="*70)
+async def main() -> None:
+    print("\n" + "=" * 70)
     print("MARITIME COMPLIANCE SYSTEM - TEST SUITE")
-    print("="*70)
+    print("=" * 70)
 
-    # Create tables if needed
     Base.metadata.create_all(bind=engine)
-
     db = SessionLocal()
     try:
-        # Setup test data
         print("\nSetting up test data...")
         vessel = setup_test_data(db)
 
-        # Run tests
         await test_knowledge_base_search()
         await test_port_requirements()
         await test_required_documents()
         await test_route_compliance(db, vessel)
 
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("ALL TESTS COMPLETED")
-        print("="*70)
-
+        print("=" * 70)
     finally:
         db.close()
 

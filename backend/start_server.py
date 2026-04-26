@@ -27,7 +27,7 @@ if __name__ == "__main__":
     import uvicorn
 
     host = os.environ.get("HOST", "127.0.0.1")
-    port = int(os.environ.get("PORT", "8001"))
+    port = int(os.environ.get("PORT", "8000"))
     reload = _parse_bool(os.environ.get("RELOAD", "false"))
     log_level = os.environ.get("LOG_LEVEL", "info").lower()
 

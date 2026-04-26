@@ -4,7 +4,7 @@ Financial Hedging API Routes
 API endpoints for financial risk hedging functionality.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -12,10 +12,16 @@ import logging
 
 from modules.financial.hedge_agent import get_hedge_agent
 from modules.financial.market_data_service import get_market_data_service
+from shared.auth.clerk_auth import get_current_user
+from shared.observability.mode import demo_response, tag_response
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/hedge", tags=["Financial Hedging"])
+router = APIRouter(
+    prefix="/api/hedge",
+    tags=["Financial Hedging"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 # ========== Request Models ==========
@@ -59,6 +65,8 @@ def assess_hedging_risk(params: HedgeOperationParams):
         hedge_agent = get_hedge_agent()
         operation_dict = params.dict()
         risk_assessment = hedge_agent.assess_risk(operation_dict)
+        if isinstance(risk_assessment, dict):
+            return demo_response(risk_assessment)
         return risk_assessment
     except Exception as e:
         logger.error(f"Risk assessment failed: {e}")
@@ -93,6 +101,8 @@ def recommend_hedging_strategy(params: HedgeOperationParams, crisis_override: bo
         hedge_agent = get_hedge_agent()
         operation_dict = params.dict()
         strategy = hedge_agent.recommend_hedging_strategy(operation_dict, crisis_override)
+        if isinstance(strategy, dict):
+            return demo_response(strategy)
         return strategy
     except Exception as e:
         logger.error(f"Strategy recommendation failed: {e}")
@@ -126,6 +136,8 @@ def activate_crisis_hedging(request: CrisisActivationRequest):
         hedge_agent = get_hedge_agent(crisis_scenario=request.crisis_scenario)
         operation_dict = request.operation_params.dict()
         crisis_plan = hedge_agent.activate_crisis_hedging(operation_dict)
+        if isinstance(crisis_plan, dict):
+            return demo_response(crisis_plan)
         return crisis_plan
     except Exception as e:
         logger.error(f"Crisis activation failed: {e}")
@@ -156,6 +168,9 @@ def get_market_data(crisis_scenario: Optional[str] = None):
     try:
         market_service = get_market_data_service(crisis_scenario)
         market_summary = market_service.get_market_summary()
+        if isinstance(market_summary, dict):
+            mode = "live" if not getattr(market_service, "demo_mode", True) else "demo"
+            return tag_response(market_summary, mode)
         return market_summary
     except Exception as e:
         logger.error(f"Market data retrieval failed: {e}")
@@ -181,10 +196,10 @@ def generate_hedge_report(params: HedgeOperationParams):
         hedge_agent = get_hedge_agent()
         operation_dict = params.dict()
         report_text = hedge_agent.generate_agent_report(operation_dict)
-        return {
+        return demo_response({
             "report": report_text,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+            "timestamp": datetime.utcnow().isoformat(),
+        })
     except Exception as e:
         logger.error(f"Report generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Report generation failed: {e}")
@@ -205,17 +220,17 @@ def hedge_module_health():
         market_service = get_market_data_service()
         market_data = market_service.get_market_summary()
         
-        return {
+        return demo_response({
             "status": "healthy",
             "hedge_agent": "initialized",
             "market_data_service": "initialized",
             "current_regime": market_data.get("market_regime", "unknown"),
-            "timestamp": datetime.utcnow().isoformat()
-        }
+            "timestamp": datetime.utcnow().isoformat(),
+        })
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        return {
+        return demo_response({
             "status": "unhealthy",
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
-        }
+            "timestamp": datetime.utcnow().isoformat(),
+        })

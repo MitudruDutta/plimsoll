@@ -8,6 +8,8 @@ import re
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any, ClassVar
 
+from modules.maritime.document_classifier import DOCUMENT_TYPES, classify_document_from_text
+
 logger = logging.getLogger(__name__)
 
 # Try to import CrewAI tools
@@ -15,9 +17,9 @@ try:
     from crewai.tools import BaseTool
     from pydantic import Field
     HAS_CREWAI = True
-except ImportError:
+except Exception as exc:
     HAS_CREWAI = False
-    logger.warning("crewai not found. Document tools will not be available.")
+    logger.warning("CrewAI document tools unavailable: %s", exc)
 
     # Mock BaseTool for when crewai is not installed
     class BaseTool:
@@ -26,51 +28,6 @@ except ImportError:
 
         def _run(self, *args, **kwargs):
             raise NotImplementedError
-
-
-# Maritime document type constants
-DOCUMENT_TYPES = {
-    "safety_management_certificate": ["ISM", "SMC", "Safety Management Certificate"],
-    "safety_construction_certificate": ["SOLAS", "Safety Construction", "Cargo Ship Safety Construction"],
-    "safety_equipment_certificate": ["Safety Equipment", "Cargo Ship Safety Equipment"],
-    "safety_radio_certificate": ["Safety Radio", "Cargo Ship Safety Radio"],
-    "load_line_certificate": ["Load Line", "International Load Line", "ILL"],
-    "tonnage_certificate": ["Tonnage", "International Tonnage", "ITC"],
-    "iopp_certificate": ["IOPP", "Oil Pollution Prevention", "MARPOL Annex I"],
-    "ispp_certificate": ["ISPP", "Sewage Pollution Prevention", "MARPOL Annex IV"],
-    "iapp_certificate": ["IAPP", "Air Pollution Prevention", "MARPOL Annex VI"],
-    "civil_liability_certificate": ["CLC", "Civil Liability", "Bunker Convention"],
-    "isps_certificate": ["ISPS", "Security", "International Ship Security"],
-    "mlc_certificate": ["MLC", "Maritime Labour Convention", "DMLC"],
-    "continuous_synopsis_record": ["CSR", "Continuous Synopsis Record"],
-    "registry_certificate": ["Registry", "Certificate of Registry", "Flag State"],
-    "minimum_safe_manning": ["Safe Manning", "Minimum Safe Manning", "MSM"],
-    "stcw_certificate": ["STCW", "Seafarer", "Competency Certificate"],
-}
-
-
-def classify_document_from_text(text: str) -> str:
-    """
-    Classify a maritime document type from text using keyword matching.
-
-    Args:
-        text: Text to analyze (OCR text, title, filename, etc.)
-
-    Returns:
-        The best-matching document type key from DOCUMENT_TYPES,
-        or "unknown" if no match is found.
-    """
-    if not text:
-        return "unknown"
-    text_upper = text.upper()
-    best_type = "unknown"
-    best_score = 0
-    for doc_type, keywords in DOCUMENT_TYPES.items():
-        score = sum(1 for kw in keywords if kw.upper() in text_upper)
-        if score > best_score:
-            best_score = score
-            best_type = doc_type
-    return best_type
 
 
 if HAS_CREWAI:

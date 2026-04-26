@@ -1,0 +1,38 @@
+# Lean runtime dependencies for the local Docker stack.
+# Full AI/ML dependencies stay in requirements.txt for specialized images.
+
+# Core Web Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.3
+starlette==0.41.3
+sse-starlette==3.0.3
+python-multipart==0.0.21
+anyio>=3.7.1,<5
+numpy>=1.26.0
+
+# Data validation
+pydantic==2.11.10
+pydantic-settings==2.10.1
+
+# Database
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.11
+psycopg[binary,pool]==3.2.3
+alembic==1.13.1
+
+# Security
+python-jose[cryptography]==3.3.0
+python-dotenv==1.1.1
+
+# Rate limiting
+slowapi>=0.1.9
+
+# WebSockets
+websockets==16.0
+
+# HTTP Client
+httpx==0.28.1
+httpx-sse==0.4.3
+
+# Platform-specific
+uvloop==0.22.1; platform_system != "Windows"

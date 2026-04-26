@@ -18,6 +18,17 @@ class Settings(BaseSettings):
     # Database connection. Override via DATABASE_URL env. SQLite default
     # keeps local development friction-free; production must set Postgres.
     database_url: str = "sqlite:///./data/sully.db"
+    auto_create_tables: bool = True
+    database_pool_size: int = 20
+    database_max_overflow: int = 10
+
+    # 1.0 migration toggles. These let us move one subsystem at a time while
+    # keeping the current prototype runnable.
+    auth_backend: str = "clerk"  # clerk | supabase | dual
+    kb_backend: str = "chroma"  # chroma | pgvector | dual
+    upload_backend: str = "disk"  # disk | supabase_storage
+    queue_backend: str = "none"  # none | pgmq | arq
+    redis_url: Optional[str] = None
     
     # LLM: ollama  openai
     llm_provider: str = "ollama"
@@ -36,6 +47,15 @@ class Settings(BaseSettings):
     
     # Google Maps API (for Static Maps - can be same or different from google_api_key)
     google_maps_api_key: Optional[str] = None
+
+    # Supabase / storage integration placeholders for the 1.0 migration.
+    supabase_url: Optional[str] = None
+    supabase_anon_key: Optional[str] = None
+    supabase_service_role_key: Optional[str] = None
+    supabase_jwks_url: Optional[str] = None
+    storage_bucket_documents: str = "documents"
+    storage_bucket_satellite_cache: str = "satellite-cache"
+    storage_bucket_reports: str = "reports"
 
     # 
     chroma_persist_dir: str = "./data/vectordb"
@@ -59,6 +79,10 @@ class Settings(BaseSettings):
     clerk_issuer_url: Optional[str] = None
     # Comma-separated list of admin emails. Configure via env, never hardcode.
     admin_whitelist: str = ""
+
+    # Demo sessions
+    demo_session_secret: str = "dev-demo-session-secret"
+    demo_session_ttl_seconds: int = 3600
 
     # HTTP/CORS
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"

@@ -1,4 +1,4 @@
-﻿"""4:55 PM CrisisMock"""
+"""4:55 PM CrisisMock"""
 
 from datetime import datetime, timedelta
 from typing import Dict, List

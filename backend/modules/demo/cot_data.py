@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Chain-of-Thought (CoT) Demo Data
 
 Detailed CoT mock data for Imagine Cup demonstration

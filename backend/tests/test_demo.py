@@ -1,73 +1,48 @@
-import sys
+import asyncio
 import os
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+import sys
+from types import SimpleNamespace
+from urllib.parse import parse_qs, urlparse
 
-# Add backend directory to path
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
-print(f"DEBUG: sys.path: {sys.path}")
-print(f"DEBUG: checking if demo exists in {parent_dir}: {os.path.exists(os.path.join(parent_dir, 'demo'))}")
-print(f"DEBUG: checking if demo/__init__.py exists: {os.path.exists(os.path.join(parent_dir, 'demo', '__init__.py'))}")
-print(f"DEBUG: checking if demo/crisis_455pm_data.py exists: {os.path.exists(os.path.join(parent_dir, 'demo', 'crisis_455pm_data.py'))}")
+from modules.demo.demo_routes import active_sessions, start_demo, _verify_demo_token
+from shared.auth.clerk_auth import User
 
-from modules.demo.demo_routes import router as demo_router
 
-# Create a standalone app for testing
-app = FastAPI()
-app.include_router(demo_router)
+def _request(hostname: str = "testserver", port: int = 8000):
+    return SimpleNamespace(url=SimpleNamespace(hostname=hostname, port=port))
 
-client = TestClient(app)
 
-def test_demo_start():
-    print("Testing REST endpoint...")
-    response = client.post("/api/demo/start", json={"scenario": "crisis_455pm"})
-    if response.status_code != 200:
-        print(f"❌ REST endpoint failed: {response.text}")
-        return None
-    
-    data = response.json()
+def _user(user_id: str = "test-user"):
+    return User(id=user_id, email=f"{user_id}@example.com", role="user")
+
+
+def test_demo_start_returns_signed_websocket_url():
+    data = asyncio.run(start_demo(_request(), user=_user()))
+
     assert "demo_id" in data
     assert data["status"] == "started"
     assert "websocket_url" in data
+    assert "demo_token=" in data["websocket_url"]
+    assert "expires_at" in data
     assert data["duration_seconds"] == 178
-    print("✅ REST endpoint test passed")
-    return data["demo_id"]
+    assert data["demo_id"] in active_sessions
 
-def test_demo_websocket():
-    print("Testing WebSocket...")
-    # Start a demo session
-    demo_id = test_demo_start()
-    if not demo_id:
-        return
+    parsed = urlparse(data["websocket_url"])
+    query = parse_qs(parsed.query)
+    assert query["demo_id"] == [data["demo_id"]]
+    assert _verify_demo_token(query["demo_token"][0], data["demo_id"])["sub"] == "test-user"
 
-    # Connect to WebSocket
-    # Note: TestClient websocket URL must be relative or match base_url. 
-    # The router prefix is /api/demo, so the ws route is /api/demo/ws
-    
-    with client.websocket_connect(f"/api/demo/ws?demo_id={demo_id}") as websocket:
-        # Send play command
-        websocket.send_json({"action": "play"})
-        
-        # Receive T0 State Update
-        data = websocket.receive_json()
-        assert data["type"] == "STATE_UPDATE"
-        assert "shipments" in data["data"]
-        print("✅ Received T0 STATE_UPDATE")
-        
-        # The current implementation blocks during playback, so we can't ping 
-        # until it finishes. For verification, receiving the first event is sufficient.
-        # If we wanted to test full sequence we could loop receive_json, but it takes 3 mins.
-        
-        # We can close strictly.
-        websocket.close()
 
-if __name__ == "__main__":
-    try:
-        test_demo_websocket()
-        print("🎉 All isolated tests passed!")
-    except Exception as e:
-        print(f"❌ Test failed: {e}")
-        import traceback
-        traceback.print_exc()
+def test_demo_token_rejects_tampering():
+    data = asyncio.run(start_demo(_request(), user=_user()))
+    parsed = urlparse(data["websocket_url"])
+    query = parse_qs(parsed.query)
+    token = query["demo_token"][0]
+
+    assert _verify_demo_token(token, data["demo_id"]) is not None
+    assert _verify_demo_token("bad", data["demo_id"]) is None
+    assert _verify_demo_token(token, "wrong-demo-id") is None

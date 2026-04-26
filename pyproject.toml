@@ -1,0 +1,76 @@
+[project]
+name = "plimsoll-backend"
+version = "0.1.0"
+description = "Plimsoll Maritime Risk Intelligence backend (FastAPI)."
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    "data",
+    "frontend",
+    "supabase",
+    "**/__pycache__",
+    "**/migrations",
+    "backend/data",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear
+    "UP",   # pyupgrade
+    "C4",   # comprehensions
+    "SIM",  # simplify
+    "TCH",  # type-checking imports
+    "RUF",
+]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # FastAPI Depends() in defaults is the supported pattern
+    "RUF012", # mutable class defaults: SQLAlchemy attrs trigger this
+]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/scripts/*" = ["E402", "T201"]
+"backend/tests/*" = ["E402", "S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["shared", "modules"]
+
+[tool.mypy]
+python_version = "3.11"
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = false
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = [
+    "backend/data",
+    "backend/scripts/data",
+    "frontend",
+    "supabase",
+]
+
+[[tool.mypy.overrides]]
+module = ["crewai.*", "chromadb.*", "langchain.*", "langchain_chroma.*", "langchain_google_genai.*", "google.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+filterwarnings = [
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore::DeprecationWarning:sqlalchemy.*",
+]
+
+[tool.bandit]
+exclude_dirs = ["backend/tests", "backend/scripts/data"]
+skips = ["B101"]  # assert in tests is fine

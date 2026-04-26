@@ -13,9 +13,9 @@ try:
     from crewai.tools import BaseTool
     from pydantic import Field
     HAS_CREWAI = True
-except ImportError:
+except Exception as exc:
     HAS_CREWAI = False
-    logger.warning("crewai not found. Maritime tools will not be available.")
+    logger.warning("CrewAI maritime tools unavailable: %s", exc)
 
     # Mock BaseTool for when crewai is not installed
     class BaseTool:

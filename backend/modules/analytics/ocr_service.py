@@ -56,37 +56,61 @@ class OCRService:
         "image/jpg": "jpeg",
     }
 
-    # Patterns for extracting structured fields from maritime documents
+    # Patterns for extracting structured fields from maritime documents.
+    # Each list is tried in order; the first match wins. Chinese variants are
+    # added because a meaningful share of port-state and crew documents
+    # circulate in zh (Maritime Safety Administration of the PRC, MSA).
     FIELD_PATTERNS = {
         "document_number": [
             r"(?:Certificate|Document)\s*(?:No|Number|#)[:\s]*([A-Z0-9\-/]+)",
             r"(?:No|Number)[:\s]*([A-Z0-9\-/]{5,})",
+            r"(?:\u8bc1\u4e66|\u8bc1\u4ef6)\s*(?:\u7f16)?\s*\u53f7[:\uff1a\s]*([A-Z0-9\-/\u4e00-\u9fff]{4,})",
         ],
         "issue_date": [
             r"(?:Issue|Issued|Date of Issue)[:\s]*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})",
             r"(?:Issue|Issued)[:\s]*(\d{1,2}\s+\w+\s+\d{4})",
+            r"\u53d1\u8bc1\u65e5\u671f[:\uff1a\s]*(\d{4}\s*\u5e74\s*\d{1,2}\s*\u6708\s*\d{1,2}\s*\u65e5)",
+            r"(?:\u53d1\u8bc1|\u7b7e\u53d1)\s*\u65e5\s*\u671f?[:\uff1a\s]*(\d{4}[\-/\.]\d{1,2}[\-/\.]\d{1,2})",
         ],
         "expiry_date": [
             r"(?:Expir|Valid Until|Valid To|Validity)[:\s]*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})",
             r"(?:Expir|Valid Until)[:\s]*(\d{1,2}\s+\w+\s+\d{4})",
+            r"(?:\u6709\u6548\u671f\u6ee1|\u5230\u671f|\u5230\u671f\u65e5)[:\uff1a\s]*(\d{4}\s*\u5e74\s*\d{1,2}\s*\u6708\s*\d{1,2}\s*\u65e5)",
+            r"(?:\u6709\u6548\u671f\u6ee1|\u5230\u671f)[:\uff1a\s]*(\d{4}[\-/\.]\d{1,2}[\-/\.]\d{1,2})",
         ],
         "vessel_name": [
             r"(?:Vessel|Ship)\s*(?:Name)?[:\s]*([A-Z][A-Z\s\-\.]+)",
             r"M/V\s+([A-Z][A-Z\s\-\.]+)",
+            r"(?:\u8239\u540d|\u8239\u8236\u540d\u79f0)[:\uff1a\s]*([\u4e00-\u9fffA-Z][\u4e00-\u9fffA-Za-z0-9\s\-\.]{1,40})",
         ],
         "imo_number": [
             r"IMO\s*(?:No|Number|#)?[:\s]*(\d{7})",
+            r"IMO[\s\u53f7\uff1a:]*?(\d{7})",
         ],
         "flag_state": [
             r"(?:Flag|Registry|Port of Registry)[:\s]*([A-Z][a-zA-Z\s]+)",
+            r"(?:\u8239\u65d7|\u822a\u8239\u56fd\u65d7)[:\uff1a\s]*([\u4e00-\u9fffA-Za-z\s]{2,40})",
         ],
         "issuing_authority": [
             r"(?:Issued by|Authority|Administration)[:\s]*([A-Z][a-zA-Z\s\-\.]+(?:Authority|Administration|Society|Bureau)?)",
+            r"(?:\u53d1\u8bc1\u673a\u5173|\u9881\u53d1\u673a\u6784|\u4e3b\u7ba1\u673a\u5173)[:\uff1a\s]*([\u4e00-\u9fffA-Za-z\s]{2,80})",
         ],
         "gross_tonnage": [
             r"(?:Gross\s*Tonnage|GT)[:\s]*([\d,\.]+)",
+            r"(?:\u603b\u5428|\u603b\u5428\u4f4d)[:\uff1a\s]*([\d,\.]+)",
         ],
     }
+
+    # Plausible Chinese keywords that appear on certificates issued by China
+    # MSA / classification societies; if any are present we treat the doc as
+    # Chinese so the date parser tries the zh formats first.
+    _CHINESE_KEYWORDS = (
+        "\u8bc1\u4e66",      # certificate
+        "\u8239\u540d",      # vessel name
+        "\u53d1\u8bc1",      # issued
+        "\u6709\u6548\u671f",  # validity period
+        "\u8239\u65d7",      # flag
+    )
 
     def __init__(self):
         self.api_key = settings.google_api_key
@@ -274,20 +298,20 @@ class OCRService:
         return self._mock_extract_from_bytes(content, mime_type, filename)
 
     def _extract_structured_fields(self, text: str) -> Dict[str, Any]:
-        """Extract structured fields from text using regex patterns"""
-        fields = {}
+        """Extract structured fields from text using regex patterns."""
+        fields: Dict[str, Any] = {}
+        fields["language"] = self._detect_language(text)
 
         for field_name, patterns in self.FIELD_PATTERNS.items():
             for pattern in patterns:
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     value = match.group(1).strip()
-                    value = re.sub(r'\s+', ' ', value)
+                    value = re.sub(r"\s+", " ", value)
                     fields[field_name] = value
                     break
 
-        # Parse dates to standard format
-        for date_field in ["issue_date", "expiry_date"]:
+        for date_field in ("issue_date", "expiry_date"):
             if date_field in fields:
                 parsed_date = self._parse_date(fields[date_field])
                 if parsed_date:
@@ -296,21 +320,46 @@ class OCRService:
         return fields
 
     def _parse_date(self, date_str: str) -> Optional[datetime]:
-        """Parse date string to datetime"""
+        """Parse date string to datetime, handling EN + ZH formats."""
+        if not date_str:
+            return None
+
+        normalized = self._normalize_chinese_date(date_str)
         date_formats = [
+            "%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d",
             "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y",
             "%m/%d/%Y", "%m-%d-%Y",
             "%d %B %Y", "%d %b %Y",
-            "%Y-%m-%d",
         ]
 
         for fmt in date_formats:
             try:
-                return datetime.strptime(date_str, fmt)
+                return datetime.strptime(normalized, fmt)
             except ValueError:
                 continue
 
         return None
+
+    @staticmethod
+    def _normalize_chinese_date(date_str: str) -> str:
+        """Convert ``YYYY\u5e74M\u6708D\u65e5`` to ``YYYY-MM-DD``."""
+        if not date_str:
+            return date_str
+        year = date_str
+        for source, target in (("\u5e74", "-"), ("\u6708", "-"), ("\u65e5", "")):
+            year = year.replace(source, target)
+        return re.sub(r"\s+", "", year).strip("-")
+
+    def _detect_language(self, text: str) -> str:
+        """Cheap language sniffer. ``zh`` if any Han characters or known
+        Chinese keywords show up, otherwise ``en``."""
+        if not text:
+            return "en"
+        if any(keyword in text for keyword in self._CHINESE_KEYWORDS):
+            return "zh"
+        if re.search(r"[\u4e00-\u9fff]", text):
+            return "zh"
+        return "en"
 
     def _detect_mime_type(self, file_path: str) -> str:
         """Detect MIME type from file extension"""

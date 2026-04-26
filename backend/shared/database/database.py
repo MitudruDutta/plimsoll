@@ -4,6 +4,7 @@ Engine is constructed lazily so test fixtures and env reloads can override
 ``DATABASE_URL`` before the first connection is opened.
 """
 from functools import lru_cache
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -23,12 +24,18 @@ def _build_engine() -> Engine:
     # SQLite needs same-thread relaxed for FastAPI's threadpool dependencies.
     if settings.database_url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
-    return create_engine(
-        settings.database_url,
-        pool_pre_ping=True,
-        echo=settings.debug,
-        connect_args=connect_args,
-    )
+        db_path = settings.database_url.removeprefix("sqlite:///")
+        if db_path and db_path != ":memory:":
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    engine_kwargs = {
+        "pool_pre_ping": True,
+        "echo": settings.debug,
+        "connect_args": connect_args,
+    }
+    if not settings.database_url.startswith("sqlite"):
+        engine_kwargs["pool_size"] = settings.database_pool_size
+        engine_kwargs["max_overflow"] = settings.database_max_overflow
+    return create_engine(settings.database_url, **engine_kwargs)
 
 
 # Module-level handles preserved for callers that import ``engine`` /
