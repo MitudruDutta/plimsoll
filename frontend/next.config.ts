@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8001";
+const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18000";
 
 const nextConfig: NextConfig = {
   /* Proxy /api requests to FastAPI backend */

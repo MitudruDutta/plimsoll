@@ -389,7 +389,7 @@ if HAS_CREWAI:
 
                 kb = get_maritime_knowledge_base()
 
-                # Build the ChromaDB where filter
+                # Build the user-document metadata filter
                 where_filter = None
                 vid = int(vessel_id)
                 cid = int(customer_id)

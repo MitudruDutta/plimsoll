@@ -414,7 +414,7 @@ def create_documents_from_data(data_list: list[dict], collection_name: str) -> l
 
 
 class MaritimeDataIngester:
-    """Ingest maritime regulation data into ChromaDB"""
+    """Ingest maritime regulation data into Postgres/pgvector"""
 
     def __init__(self):
         self.kb = get_maritime_knowledge_base()

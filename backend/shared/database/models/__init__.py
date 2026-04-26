@@ -3,8 +3,30 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
 
 from shared.database.database import Base
+
+try:
+    from pgvector.sqlalchemy import Vector
+except ImportError:  # pragma: no cover - dependency is declared, fallback keeps imports robust
+    Vector = None  # type: ignore[assignment]
+
+
+class PgVector(TypeDecorator):
+    """pgvector column on Postgres, text fallback for SQLite/local smoke tests."""
+
+    impl = Text
+    cache_ok = True
+
+    def __init__(self, dim: int = 768) -> None:
+        super().__init__()
+        self.dim = dim
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql" and Vector is not None:
+            return dialect.type_descriptor(Vector(self.dim))
+        return dialect.type_descriptor(Text())
 
 
 class CustomerCategory(str, enum.Enum):
@@ -137,7 +159,7 @@ class Customer(Base):
     #
     conversations = relationship("Conversation", back_populates="customer")
     vessels = relationship("Vessel", back_populates="customer")
-    # user_documents now stored in ChromaDB (not PostgreSQL)
+    user_documents = relationship("UserDocument", back_populates="customer")
 
 
 class Conversation(Base):
@@ -252,7 +274,7 @@ class Vessel(Base):
 
     # Relationships
     customer = relationship("Customer", back_populates="vessels")
-    # documents now stored in ChromaDB (not PostgreSQL)
+    documents = relationship("UserDocument", back_populates="vessel")
     compliance_checks = relationship("ComplianceCheck", back_populates="vessel")
     routes = relationship("VesselRoute", back_populates="vessel")
 
@@ -341,8 +363,8 @@ class MaritimeRegulation(Base):
     amendment_date = Column(DateTime)
     source_url = Column(String(500))
 
-    # Vector embedding reference
-    chroma_doc_id = Column(String(100))  # Reference to ChromaDB
+    # Vector document reference
+    vector_doc_id = Column(String(100))
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.now)
@@ -371,8 +393,8 @@ class PortRegulation(Base):
     authority_name = Column(String(200))
     authority_contact = Column(String(200))
 
-    # Vector embedding reference
-    chroma_doc_id = Column(String(100))
+    # Vector document reference
+    vector_doc_id = Column(String(100))
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.now)
@@ -381,6 +403,55 @@ class PortRegulation(Base):
     # Relationships
     port = relationship("Port", back_populates="regulations")
     maritime_regulation = relationship("MaritimeRegulation")
+
+
+class KnowledgeDocument(Base):
+    """Maritime regulation/search chunk stored in Postgres + pgvector."""
+
+    __tablename__ = "knowledge_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    collection_name = Column(String(80), index=True, nullable=False)
+    content = Column(Text, nullable=False)
+    metadata_json = Column(Text, default="{}")
+    content_hash = Column(String(64), unique=True, index=True, nullable=True)
+    embedding = Column(PgVector(768), nullable=True)
+    embedding_model = Column(String(128), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class UserDocument(Base):
+    """Uploaded document text and metadata stored in Postgres + pgvector."""
+
+    __tablename__ = "user_documents"
+
+    id = Column(String(64), primary_key=True, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), index=True, nullable=False)
+    vessel_id = Column(Integer, ForeignKey("vessels.id"), index=True, nullable=True)
+    title = Column(String(300), nullable=False)
+    document_type = Column(String(80), index=True, nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_name = Column(String(255), nullable=True)
+    file_size = Column(Integer, nullable=True)
+    mime_type = Column(String(120), nullable=True)
+    extracted_text = Column(Text, default="")
+    ocr_provider = Column(String(80), nullable=True)
+    ocr_confidence = Column(Float, nullable=True)
+    issuing_authority = Column(String(255), nullable=True)
+    issue_date = Column(String(64), nullable=True)
+    expiry_date = Column(String(64), nullable=True)
+    document_number = Column(String(120), nullable=True)
+    is_validated = Column(Boolean, default=False)
+    validation_notes = Column(Text, default="")
+    extracted_fields_json = Column(Text, default="{}")
+    embedding = Column(PgVector(768), nullable=True)
+    embedding_model = Column(String(128), nullable=True)
+    created_at = Column(DateTime, default=datetime.now, index=True)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    customer = relationship("Customer", back_populates="user_documents")
+    vessel = relationship("Vessel", back_populates="documents")
 
 
 class ComplianceCheck(Base):

@@ -274,7 +274,6 @@ export function UsersHome() {
 
       // Step 1: Upload document to backend with OCR processing
       const uploadResult = await documentAPI.uploadDocument({
-        customer_id: customerId,
         vessel_id: vesselId,
         document_type: 'other',
         title: file.name,
@@ -358,14 +357,13 @@ export function UsersHome() {
     setMissingDocsResult(null);
     
     try {
-      // Use port_codes and customer_id for vesselless analysis
+      // Backend derives tenant identity from the authenticated user.
       const portCodes = hasRoute 
         ? selectedRoute.port_codes 
         : selectedRoutePorts.map(p => p.un_locode);
       
       const result = await documentAPI.detectMissingDocuments({
-        port_codes: portCodes,
-        customer_id: customerId
+        port_codes: portCodes
       });
       
       setMissingDocsResult(result);

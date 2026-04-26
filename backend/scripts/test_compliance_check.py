@@ -86,7 +86,7 @@ async def test_knowledge_base_search() -> None:
     kb = get_maritime_knowledge_base()
     if getattr(kb, "mock_mode", False):
         print("\n[!] Knowledge Base is running in MOCK MODE")
-        print("    (langchain/chromadb dependencies may not be installed)")
+        print("    (pgvector tables or optional embedding dependencies may not be installed)")
 
     stats = kb.get_collection_stats()
     print("\nCollection Statistics:")

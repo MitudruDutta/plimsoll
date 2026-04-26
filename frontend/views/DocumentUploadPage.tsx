@@ -92,7 +92,7 @@ export function DocumentUploadPage() {
           name: user.fullName || undefined,
         });
         setCustomerId(provisioned.customer_id);
-        const data = await documentAPI.getVessels(provisioned.customer_id);
+        const data = await documentAPI.getVessels();
         setVessels(data);
         const defaultVessel = data.find(v => v.id === provisioned.vessel_id) || data[0];
         if (defaultVessel) {
@@ -214,7 +214,6 @@ export function DocumentUploadPage() {
       const result = routeMode === 'manual'
         ? await documentAPI.detectMissingDocuments({
             port_codes: portCodes.split(',').map(p => p.trim().toUpperCase()).filter(Boolean),
-            customer_id: customerId,
           })
         : await documentAPI.detectMissingDocuments({
             vessel_id: selectedVessel.id,
@@ -268,7 +267,6 @@ export function DocumentUploadPage() {
         );
 
         const result = await documentAPI.uploadDocument({
-          customer_id: customerId,
           vessel_id: selectedVessel.id,
           document_type: selectedDocType,
           title: documentTitle || uploadedFile.file.name,

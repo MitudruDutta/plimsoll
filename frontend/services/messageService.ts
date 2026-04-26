@@ -40,7 +40,7 @@ export class WebSocketStrategy {
   subscribe(customerId, callback) {
     const baseWsUrl =
       process.env.NEXT_PUBLIC_WS_URL ||
-      'ws://127.0.0.1:8001/ws';
+      'ws://127.0.0.1:18000/ws';
     const wsUrl = `${baseWsUrl}/${customerId}`;
     const ws = new WebSocket(wsUrl);
     

@@ -5,7 +5,7 @@ Usage:
     python scripts/load_knowledge_base.py
 
 This script loads PDF, DOCX, and TXT files from the data/maritime_regulations directory
-into the ChromaDB vector store using Gemini embeddings.
+into the Postgres pgvector knowledge store.
 """
 
 import os

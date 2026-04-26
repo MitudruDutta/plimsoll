@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     """All env-driven settings."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     # --- 1.0 migration toggles --------------------------------------------
     auth_backend: str = "supabase"  # supabase | dual
-    kb_backend: str = "chroma"  # chroma | pgvector | dual | disabled
+    kb_backend: str = "pgvector"  # pgvector | disabled
     upload_backend: str = "disk"  # disk | supabase_storage
     queue_backend: str = "none"  # none | pgmq | arq
     redis_url: str | None = None
@@ -61,11 +61,8 @@ class Settings(BaseSettings):
     storage_bucket_reports: str = "reports"
 
     # --- Vector store -----------------------------------------------------
-    chroma_persist_dir: str = "./data/vectordb"
-    maritime_kb_persist_dir: str = "./data/vectordb/maritime"
-    chroma_api_key: str | None = None
-    chroma_tenant: str | None = None
-    chroma_database: str | None = None
+    embedding_model: str = "models/gemini-embedding-001"
+    embedding_dim: int = 768
 
     # --- Uploads ----------------------------------------------------------
     upload_dir: str = "./data/uploads"
@@ -74,7 +71,7 @@ class Settings(BaseSettings):
     maritime_regulations_dir: str = "./data/maritime_regulations"
 
     # --- Feature flags ----------------------------------------------------
-    document_analysis_use_crewai: bool = True
+    document_analysis_use_crewai: bool = False
 
     # --- Auth -------------------------------------------------------------
     admin_whitelist: str = ""

@@ -51,7 +51,7 @@ cd backend
 python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-For a lean install without CrewAI/Chroma/sentence-transformers:
+For a lean install without optional agent packages:
 
 ```bash
 source ~/python/bin/activate
@@ -71,7 +71,7 @@ Important defaults:
 | `SUPABASE_URL` / `SUPABASE_JWKS_URL` / `SUPABASE_JWT_SECRET` | JWT verification | required outside local smoke tests |
 | `REDIS_URL` | Queue/cache/rate-limit Redis | `redis://redis:6379/0` in Compose |
 | `RATE_LIMIT_STORAGE_URL` | SlowAPI distributed storage | falls back to `REDIS_URL` when set |
-| `KB_BACKEND` | Knowledge-base backend flag | `chroma`, `pgvector`, `dual`, or `disabled` |
+| `KB_BACKEND` | Knowledge-base backend flag | `pgvector` or `disabled` |
 | `QUEUE_BACKEND` | Worker queue flag | `none`, `pgmq`, or `arq` |
 | `PUBLIC_WS_BASE_URL` | Demo WebSocket base URL | set by Compose |
 
@@ -124,7 +124,7 @@ docker build -f backend/Dockerfile -t plimsoll-backend .
 ```
 
 The default image installs the lean runtime dependencies. Build with the AI
-extra when you want CrewAI/Chroma/sentence-transformers inside the image:
+extra when you want LangChain/Gemini/OpenAI agent dependencies inside the image:
 
 ```bash
 docker build -f backend/Dockerfile --build-arg INSTALL_AI=true -t plimsoll-backend:ai .

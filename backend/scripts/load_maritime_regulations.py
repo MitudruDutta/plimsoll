@@ -2,7 +2,7 @@
 """
 Comprehensive Maritime Regulations Knowledge Base Loader
 
-This script uploads detailed maritime compliance data to ChromaDB collections:
+This script uploads detailed maritime compliance data to pgvector-backed collections:
 - imo_conventions: SOLAS, MARPOL, STCW, ISM, ISPS, Load Line, Tonnage conventions
 - psc_requirements: Port State Control requirements by MOU region
 - port_regulations: Port-specific regulations and procedures

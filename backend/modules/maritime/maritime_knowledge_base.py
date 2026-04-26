@@ -1,38 +1,43 @@
-"""
-Maritime Knowledge Base Service - RAG for maritime regulations
-Uses ChromaDB for vector storage with Gemini embeddings
+"""Postgres/pgvector-backed maritime knowledge base.
+
+This module intentionally has no external vector-database dependency. It stores regulation chunks
+and uploaded document OCR text in Postgres tables with pgvector columns. Vector
+ranking can be added once embedding generation is configured; until then the
+service uses deterministic metadata filters plus lightweight lexical scoring so
+local development stays bootable without cloud LLM credentials.
 """
 
+from __future__ import annotations
+
+import hashlib
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
+from functools import lru_cache
 from typing import Any
 
+from sqlalchemy import func, or_
+
 from shared.config import get_settings
+from shared.database.database import SessionLocal
+from shared.database.models import KnowledgeDocument, UserDocument
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-def _debug_log(
-    run_id: str, hypothesis_id: str, location: str, message: str, data: dict[str, Any]
-) -> None:
-    if not settings.debug:
-        return
-    logger.debug(
-        message,
-        extra={
-            "run_id": run_id,
-            "hypothesis_id": hypothesis_id,
-            "location": location,
-            "debug_data": data,
-        },
-    )
+@dataclass
+class SimpleDocument:
+    """Small compatibility type matching the LangChain Document surface we use."""
+
+    page_content: str
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class SearchResult:
-    """Search result with metadata"""
+    """Search result with metadata."""
 
     content: str
     metadata: dict[str, Any]
@@ -41,16 +46,7 @@ class SearchResult:
 
 
 class MaritimeKnowledgeBase:
-    """
-    Maritime Law/Regulation RAG Knowledge Base
-
-    Collections:
-    - imo_conventions: SOLAS, MARPOL, STCW, etc.
-    - psc_requirements: Port State Control requirements
-    - port_regulations: Port-specific rules
-    - regional_requirements: EU MRV, US CFR, etc.
-    - customs_documentation: Customs requirements
-    """
+    """Maritime regulation and user-document search backed by Postgres."""
 
     COLLECTIONS = {
         "imo_conventions": "IMO conventions (SOLAS, MARPOL, STCW, etc.)",
@@ -61,190 +57,156 @@ class MaritimeKnowledgeBase:
         "user_documents": "User-uploaded certificates and permits",
     }
 
-    def __init__(self):
-        """Initialize the Maritime Knowledge Base with Gemini embeddings."""
-        from langchain_chroma import Chroma
-        from langchain_core.documents import Document
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+    Document = SimpleDocument
 
-        self.Document = Document
-        self.collections: dict[str, Any] = {}
-        self.reranker = None
-        self.bm25_indices: dict[str, Any] = {}
-        self.doc_maps: dict[str, dict[str, Any]] = {}
+    def __init__(self) -> None:
+        self.mock_mode = settings.kb_backend == "disabled"
+        self.embedding_model = settings.embedding_model
+        self.embedding_dim = settings.embedding_dim
+        # Compatibility for older scripts that check `kb.embeddings is None`.
+        self.embeddings = None if self.mock_mode else "pgvector"
 
-        # Initialize Gemini embeddings
-        self.embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/gemini-embedding-001", google_api_key=settings.google_api_key
-        )
-        # region agent log
-        _debug_log(
-            "pre-fix",
-            "H2",
-            "maritime_knowledge_base.py:__init__",
-            "Embeddings object created",
-            {
-                "embeddings_class": type(self.embeddings).__name__,
-                "embeddings_model_attr": str(getattr(self.embeddings, "model", None)),
-                "has_client_attr": hasattr(self.embeddings, "client"),
-            },
-        )
-        # endregion
+    def _metadata_to_json(self, metadata: dict[str, Any]) -> str:
+        return json.dumps(metadata or {}, default=str, ensure_ascii=False, sort_keys=True)
 
-        # Create a Chroma collection for each defined collection
-        for collection_name in self.COLLECTIONS:
-            self.collections[collection_name] = Chroma(
-                collection_name=collection_name,
-                embedding_function=self.embeddings,
-                chroma_cloud_api_key=settings.chroma_api_key,
-                tenant=settings.chroma_tenant,
-                database=settings.chroma_database,
-            )
-            logger.info(f"Initialized collection: {collection_name}")
-
-        # Initialize cross-encoder reranker
-        self.reranker = None
-
-    def search_by_port(
-        self, port_code: str, vessel_type: str | None = None, top_k: int = 10
-    ) -> list[SearchResult]:
-        """
-        Search regulations applicable to a specific port
-
-        Args:
-            port_code: UN/LOCODE of the port
-            vessel_type: Optional vessel type filter
-            top_k: Number of results to return
-        """
-        # Build query and filters
-        query = f"Port requirements regulations for port {port_code}"
-        filters = {"port_code": port_code}
-        if vessel_type:
-            filters["vessel_type"] = vessel_type
-
-        # Search across relevant collections
-        results = []
-        for collection_name in ["port_regulations", "psc_requirements", "customs_documentation"]:
-            collection = self.collections.get(collection_name)
-            if collection:
-                try:
-                    docs = collection.similarity_search_with_score(
-                        query,
-                        k=top_k,
-                        filter=filters if self._collection_supports_filter(collection) else None,
-                    )
-                    for doc, score in docs:
-                        results.append(
-                            SearchResult(
-                                content=doc.page_content,
-                                metadata=doc.metadata,
-                                score=score,
-                                source=collection_name,
-                            )
-                        )
-                except Exception as e:
-                    logger.error(f"Error searching {collection_name}: {e}")
-
-        # Sort by score and return top_k
-        results.sort(key=lambda x: x.score, reverse=True)
-        return results[:top_k]
-
-    def search_by_route(
-        self, port_codes: list[str], vessel_info: dict[str, Any], top_k_per_port: int = 5
-    ) -> dict[str, list[SearchResult]]:
-        """
-        Search regulations for an entire route
-
-        Args:
-            port_codes: List of UN/LOCODE port codes in route order
-            vessel_info: Dict with vessel_type, gross_tonnage, flag_state
-            top_k_per_port: Number of results per port
-
-        Returns:
-            Dict mapping port_code to list of applicable regulations
-        """
-        route_results = {}
-        vessel_type = vessel_info.get("vessel_type")
-
-        for port_code in port_codes:
-            port_results = self.search_by_port(port_code, vessel_type, top_k_per_port)
-
-            # Also search for regional requirements based on port's region
-            regional_results = self.search_regional_requirements(port_code, vessel_info, top_k=3)
-
-            route_results[port_code] = port_results + regional_results
-
-        return route_results
-
-    def search_required_documents(self, port_code: str, vessel_type: str) -> list[dict[str, Any]]:
-        """
-        Get list of required documents for a port call
-
-        Returns list of dicts with document_type, regulation_source, description
-        """
-        query = f"Required documents certificates for {vessel_type} vessel at port {port_code}"
-
-        results = []
-        for collection_name in self.COLLECTIONS:
-            collection = self.collections.get(collection_name)
-            if collection:
-                try:
-                    docs = collection.similarity_search(query, k=5)
-                    for doc in docs:
-                        if "required_documents" in doc.metadata:
-                            req_docs = doc.metadata.get("required_documents", [])
-                            if isinstance(req_docs, str):
-                                req_docs = json.loads(req_docs)
-                            for req_doc in req_docs:
-                                results.append(
-                                    {
-                                        "document_type": req_doc,
-                                        "regulation_source": doc.metadata.get(
-                                            "source_convention", collection_name
-                                        ),
-                                        "description": doc.page_content[:200],
-                                        "port_code": port_code,
-                                    }
-                                )
-                except Exception as e:
-                    logger.error(f"Error getting required documents from {collection_name}: {e}")
-
-        # Deduplicate by document_type
-        seen = set()
-        unique_results = []
-        for r in results:
-            if r["document_type"] not in seen:
-                seen.add(r["document_type"])
-                unique_results.append(r)
-
-        return unique_results
-
-    def search_regional_requirements(
-        self, port_code: str, vessel_info: dict[str, Any], top_k: int = 5
-    ) -> list[SearchResult]:
-        """Search for regional requirements (ECA, emissions, etc.)"""
-        query = f"Regional requirements for port {port_code} {vessel_info.get('vessel_type', '')} vessel"
-
-        collection = self.collections.get("regional_requirements")
-        if not collection:
-            return []
-
-        results = []
+    def _metadata_from_json(self, value: str | None) -> dict[str, Any]:
+        if not value:
+            return {}
         try:
-            docs = collection.similarity_search_with_score(query, k=top_k)
-            for doc, score in docs:
-                results.append(
-                    SearchResult(
-                        content=doc.page_content,
-                        metadata=doc.metadata,
-                        score=score,
-                        source="regional_requirements",
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, dict) else {}
+        except json.JSONDecodeError:
+            return {}
+
+    def _content_hash(self, collection_name: str, content: str, metadata: dict[str, Any]) -> str:
+        digest = hashlib.sha256()
+        digest.update(collection_name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(content.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(self._metadata_to_json(metadata).encode("utf-8"))
+        return digest.hexdigest()
+
+    def _row_to_result(self, row: KnowledgeDocument, query: str = "") -> SearchResult:
+        metadata = self._metadata_from_json(row.metadata_json)
+        return SearchResult(
+            content=row.content,
+            metadata=metadata,
+            score=self._lexical_score(query, row.content, metadata) if query else 1.0,
+            source=row.collection_name,
+        )
+
+    def _user_row_to_dict(self, row: UserDocument) -> dict[str, Any]:
+        return {
+            "id": row.id,
+            "customer_id": row.customer_id,
+            "vessel_id": row.vessel_id,
+            "title": row.title,
+            "document_type": row.document_type,
+            "file_path": row.file_path,
+            "file_name": row.file_name,
+            "file_size": row.file_size,
+            "mime_type": row.mime_type,
+            "text": row.extracted_text or "",
+            "ocr_provider": row.ocr_provider,
+            "ocr_confidence": row.ocr_confidence,
+            "issuing_authority": row.issuing_authority,
+            "issue_date": row.issue_date or "",
+            "expiry_date": row.expiry_date or "",
+            "document_number": row.document_number,
+            "is_validated": bool(row.is_validated),
+            "validation_notes": row.validation_notes,
+            "extracted_fields_json": row.extracted_fields_json or "{}",
+            "created_at": row.created_at.isoformat() if row.created_at else "",
+            "updated_at": row.updated_at.isoformat() if row.updated_at else "",
+        }
+
+    def _matches_filters(self, metadata: dict[str, Any], filters: dict[str, Any]) -> bool:
+        for key, value in filters.items():
+            candidate = metadata.get(key)
+            if candidate is None:
+                return False
+            if isinstance(candidate, str) and isinstance(value, str):
+                if value.lower() not in candidate.lower():
+                    return False
+            elif candidate != value:
+                return False
+        return True
+
+    def _lexical_score(self, query: str, content: str, metadata: dict[str, Any]) -> float:
+        haystack = f"{content} {self._metadata_to_json(metadata)}".lower()
+        terms = [term for term in query.lower().replace("/", " ").split() if len(term) > 2]
+        if not terms:
+            return 0.0
+        matches = sum(1 for term in terms if term in haystack)
+        return matches / len(terms)
+
+    # ------------------------------------------------------------------
+    # Regulation/document chunk search
+    # ------------------------------------------------------------------
+
+    def add_documents(self, collection_name: str, documents: list[Any]) -> int:
+        if self.mock_mode:
+            logger.warning("KB_BACKEND=disabled; skipping %s documents", len(documents))
+            return 0
+        if collection_name not in self.COLLECTIONS:
+            logger.error("Unknown collection %s", collection_name)
+            return 0
+
+        added = 0
+        session = SessionLocal()
+        try:
+            for doc in documents:
+                content = getattr(doc, "page_content", None) or getattr(doc, "content", "") or ""
+                metadata = dict(getattr(doc, "metadata", {}) or {})
+                if not content.strip():
+                    continue
+                content_hash = self._content_hash(collection_name, content, metadata)
+                exists = (
+                    session.query(KnowledgeDocument)
+                    .filter(KnowledgeDocument.content_hash == content_hash)
+                    .first()
+                )
+                if exists:
+                    continue
+                session.add(
+                    KnowledgeDocument(
+                        collection_name=collection_name,
+                        content=content,
+                        metadata_json=self._metadata_to_json(metadata),
+                        content_hash=content_hash,
+                        embedding=None,
+                        embedding_model=self.embedding_model,
                     )
                 )
-        except Exception as e:
-            logger.error(f"Error searching regional requirements: {e}")
+                added += 1
+            session.commit()
+            return added
+        except Exception:
+            session.rollback()
+            logger.exception("Failed to add documents to %s", collection_name)
+            return 0
+        finally:
+            session.close()
 
-        return results
+    def get_collection_stats(self) -> dict[str, int]:
+        stats = dict.fromkeys(self.COLLECTIONS, 0)
+        if self.mock_mode:
+            return stats
+
+        session = SessionLocal()
+        try:
+            rows = (
+                session.query(KnowledgeDocument.collection_name, func.count(KnowledgeDocument.id))
+                .group_by(KnowledgeDocument.collection_name)
+                .all()
+            )
+            for name, count in rows:
+                stats[name] = int(count)
+            stats["user_documents"] = session.query(UserDocument).count()
+            return stats
+        finally:
+            session.close()
 
     def search_general(
         self,
@@ -253,125 +215,103 @@ class MaritimeKnowledgeBase:
         top_k: int = 5,
         collections: list[str] | None = None,
     ) -> list[SearchResult]:
-        """
-        General semantic search across all collections
+        if self.mock_mode:
+            return []
 
-        Args:
-            query: Search query
-            filters: Optional filters (port, region, regulation_type, vessel_type)
-            top_k: Number of results
-            collections: Optional list of collection names to search (default: all)
-        """
-        search_collections = collections or list(self.COLLECTIONS.keys())
+        selected = collections or [name for name in self.COLLECTIONS if name != "user_documents"]
+        selected = [name for name in selected if name in self.COLLECTIONS and name != "user_documents"]
+        if not selected:
+            return []
 
-        all_results = []
-        for collection_name in search_collections:
-            collection = self.collections.get(collection_name)
-            if not collection:
-                continue
-
-            try:
-                docs = collection.similarity_search_with_score(query, k=top_k)
-                for doc, score in docs:
-                    # Apply filters if provided
-                    if filters and not self._matches_filters(doc.metadata, filters):
-                        continue
-
-                    all_results.append(
-                        SearchResult(
-                            content=doc.page_content,
-                            metadata=doc.metadata,
-                            score=score,
-                            source=collection_name,
-                        )
-                    )
-            except Exception as e:
-                logger.error(f"Error searching {collection_name}: {e}")
-
-        # Rerank results if reranker is available
-        if self.reranker and len(all_results) > 0:
-            all_results = self._rerank(query, all_results, top_k)
-        else:
-            all_results.sort(key=lambda x: x.score, reverse=True)
-            all_results = all_results[:top_k]
-
-        return all_results
-
-    def add_documents(self, collection_name: str, documents: list[Any]) -> int:
-        """
-        Add documents to a collection
-
-        Args:
-            collection_name: Name of the collection
-            documents: List of Document objects
-
-        Returns:
-            Number of documents added
-        """
-        # Check if collection_name exists in the dictionary
-        if collection_name not in self.collections:
-            logger.error(
-                f"Collection {collection_name} not found. Available: {list(self.collections.keys())}"
-            )
-            return 0
-
-        collection = self.collections[collection_name]
-
+        session = SessionLocal()
         try:
-            collection.add_documents(documents)
-            logger.info(f"Added {len(documents)} documents to {collection_name}")
-            return len(documents)
-        except Exception as e:
-            logger.error(f"Error adding documents to {collection_name}: {e}")
-            return 0
-
-    def get_collection_stats(self) -> dict[str, int]:
-        """Get document counts for all collections"""
-        stats = {}
-        for name, collection in self.collections.items():
-            try:
-                if hasattr(collection, "_collection"):
-                    stats[name] = collection._collection.count()
-                else:
-                    stats[name] = 0
-            except Exception:
-                logger.debug("Collection stats failed for %s", name, exc_info=True)
-                stats[name] = 0
-        return stats
-
-    def _rerank(self, query: str, results: list[SearchResult], top_k: int) -> list[SearchResult]:
-        """Rerank results using cross-encoder"""
-        if len(results) == 0:
+            db_query = session.query(KnowledgeDocument).filter(
+                KnowledgeDocument.collection_name.in_(selected)
+            )
+            terms = [term for term in query.split() if len(term) > 2][:6]
+            if terms:
+                db_query = db_query.filter(
+                    or_(*[KnowledgeDocument.content.ilike(f"%{term}%") for term in terms])
+                )
+            rows = db_query.order_by(KnowledgeDocument.updated_at.desc()).limit(max(top_k * 4, 20)).all()
+            results = []
+            for row in rows:
+                result = self._row_to_result(row, query)
+                if filters and not self._matches_filters(result.metadata, filters):
+                    continue
+                results.append(result)
+            results.sort(key=lambda item: item.score, reverse=True)
             return results[:top_k]
+        finally:
+            session.close()
 
-        pairs = [[query, r.content] for r in results]
-        scores = self.reranker.predict(pairs)
+    def search_by_port(
+        self, port_code: str, vessel_type: str | None = None, top_k: int = 10
+    ) -> list[SearchResult]:
+        filters: dict[str, Any] = {"port_code": port_code}
+        if vessel_type:
+            filters["vessel_type"] = vessel_type
+        return self.search_general(
+            query=f"port requirements regulations {port_code} {vessel_type or ''}",
+            filters=filters,
+            top_k=top_k,
+            collections=["port_regulations", "psc_requirements", "customs_documentation"],
+        )
 
-        for i, score in enumerate(scores):
-            results[i].score = float(score)
+    def search_by_route(
+        self, port_codes: list[str], vessel_info: dict[str, Any], top_k_per_port: int = 5
+    ) -> dict[str, list[SearchResult]]:
+        return {
+            port_code: self.search_by_port(
+                port_code, vessel_info.get("vessel_type"), top_k=top_k_per_port
+            )
+            + self.search_regional_requirements(port_code, vessel_info, top_k=3)
+            for port_code in port_codes
+        }
 
-        results.sort(key=lambda x: x.score, reverse=True)
-        return results[:top_k]
+    def search_required_documents(self, port_code: str, vessel_type: str) -> list[dict[str, Any]]:
+        results = self.search_general(
+            query=f"required documents certificates {vessel_type} {port_code}",
+            top_k=20,
+            collections=["port_regulations", "psc_requirements", "customs_documentation"],
+        )
+        required = []
+        seen = set()
+        for result in results:
+            raw_docs = result.metadata.get("required_documents", [])
+            if isinstance(raw_docs, str):
+                try:
+                    raw_docs = json.loads(raw_docs)
+                except json.JSONDecodeError:
+                    raw_docs = [raw_docs]
+            for doc_type in raw_docs or []:
+                if doc_type in seen:
+                    continue
+                seen.add(doc_type)
+                required.append(
+                    {
+                        "document_type": doc_type,
+                        "regulation_source": result.metadata.get(
+                            "source_convention", result.source
+                        ),
+                        "description": result.content[:200],
+                        "port_code": port_code,
+                    }
+                )
+        return required
 
-    def _matches_filters(self, metadata: dict, filters: dict) -> bool:
-        """Check if document metadata matches filters"""
-        for key, value in filters.items():
-            if key in metadata:
-                meta_value = metadata[key]
-                if isinstance(meta_value, str) and isinstance(value, str):
-                    if value.lower() not in meta_value.lower():
-                        return False
-                elif meta_value != value:
-                    return False
-        return True
+    def search_regional_requirements(
+        self, port_code: str, vessel_info: dict[str, Any], top_k: int = 5
+    ) -> list[SearchResult]:
+        return self.search_general(
+            query=f"regional requirements {port_code} {vessel_info.get('vessel_type', '')}",
+            top_k=top_k,
+            collections=["regional_requirements"],
+        )
 
-    def _collection_supports_filter(self, collection) -> bool:
-        """Check if collection supports metadata filtering"""
-        return True  # ChromaDB supports filtering
-
-    # =============================================================================
-    # Business-Friendly Query Methods
-    # =============================================================================
+    # ------------------------------------------------------------------
+    # Business-friendly helpers used by tools/routes
+    # ------------------------------------------------------------------
 
     def query_for_business(
         self,
@@ -380,754 +320,242 @@ class MaritimeKnowledgeBase:
         port_codes: list[str] | None = None,
         top_k: int = 10,
     ) -> dict[str, Any]:
-        """
-        Process a natural language query and return a business-friendly structured response.
-
-        This method transforms raw search results into actionable business intelligence
-        with clear categorization, priorities, and next steps.
-
-        Args:
-            query: Natural language query from the user
-            vessel_type: Optional vessel type for filtering
-            port_codes: Optional list of relevant port codes
-            top_k: Number of results to consider
-
-        Returns:
-            Structured dict with:
-            - query_summary: Brief interpretation of what was asked
-            - regulations: Relevant regulations found
-            - requirements: Specific requirements with applicability
-            - documents_needed: List of documents required
-            - action_items: Prioritized actions to take
-            - risk_factors: Potential risks identified
-            - sources: Source references for traceability
-        """
-        # Perform semantic search across all relevant collections
-        results = self.search_general(query=query, top_k=top_k)
-
-        # Parse and categorize results
-        regulations = []
-        documents_needed = set()
-        action_items = []
-        risk_factors = []
-        sources = set()
-
+        search_query = " ".join([query, vessel_type or "", " ".join(port_codes or [])]).strip()
+        results = self.search_general(search_query, top_k=top_k)
+        docs_needed = []
         for result in results:
-            # Extract regulation info
-            reg_info = {
-                "regulation": result.metadata.get(
-                    "convention", result.metadata.get("source", result.source)
-                ),
-                "title": result.metadata.get(
-                    "chapter_title", result.metadata.get("title", "Maritime Regulation")
-                ),
-                "content": result.content[:500],
-                "applicability": result.metadata.get("applicability", "All vessels"),
-                "requirement_type": result.metadata.get("requirement_type", "MANDATORY"),
-                "relevance_score": round(result.score, 2),
-            }
-            regulations.append(reg_info)
-
-            # Extract document requirements
-            if "required_documents" in result.metadata:
-                docs = result.metadata["required_documents"]
-                if isinstance(docs, str):
-                    try:
-                        docs = json.loads(docs)
-                    except json.JSONDecodeError:
-                        docs = [docs]
-                for doc in docs:
-                    documents_needed.add(doc)
-
-            # Extract certificate mentions from content
-            cert_keywords = ["Certificate", "Document", "Record Book", "Plan", "Manual"]
-            for keyword in cert_keywords:
-                if keyword.lower() in result.content.lower():
-                    # Try to extract the full certificate name
-                    content_lower = result.content.lower()
-                    idx = content_lower.find(keyword.lower())
-                    if idx > 0:
-                        # Look for certificate name before the keyword
-                        start = max(0, idx - 50)
-                        result.content[start : idx + len(keyword)]
-                        # Simple extraction - look for capitalized words before keyword
-                        pass
-
-            # Add sources
-            source = result.metadata.get(
-                "source_document", result.metadata.get("convention", result.source)
-            )
-            sources.add(source)
-
-            # Identify risks based on content
-            risk_keywords = [
-                "detention",
-                "penalty",
-                "fine",
-                "deficiency",
-                "violation",
-                "non-compliance",
-            ]
-            for keyword in risk_keywords:
-                if keyword in result.content.lower():
-                    risk_factors.append(
-                        {
-                            "risk": f"Potential {keyword} risk identified",
-                            "context": result.content[:200],
-                            "source": source,
-                        }
-                    )
-                    break
-
-        # Generate action items based on findings
-        if documents_needed:
-            action_items.append(
-                {
-                    "priority": "HIGH",
-                    "category": "Documentation",
-                    "action": f"Ensure the following documents are current and available: {', '.join(list(documents_needed)[:5])}",
-                    "reason": "Required by identified regulations",
-                }
-            )
-
-        if risk_factors:
-            action_items.append(
-                {
-                    "priority": "CRITICAL",
-                    "category": "Compliance",
-                    "action": "Review identified risk areas and ensure full compliance",
-                    "reason": f"{len(risk_factors)} potential risk factor(s) identified",
-                }
-            )
-
-        # Build response
+            for item in result.metadata.get("required_documents", []) or []:
+                if item not in docs_needed:
+                    docs_needed.append(item)
         return {
-            "query_summary": f"Found {len(results)} relevant regulations for: {query}",
-            "regulations": regulations[:5],  # Top 5 most relevant
+            "query_summary": f"Found {len(results)} relevant records for: {query}",
+            "regulations": [
+                {
+                    "regulation": r.metadata.get("source_convention", r.source),
+                    "title": r.metadata.get("title", "Maritime requirement"),
+                    "content": r.content[:500],
+                    "relevance_score": round(r.score, 3),
+                }
+                for r in results[:5]
+            ],
             "requirements": [
                 {
-                    "requirement": reg["title"],
-                    "regulation": reg["regulation"],
-                    "applicability": reg["applicability"],
-                    "type": reg["requirement_type"],
+                    "requirement": r.metadata.get("title", "Maritime requirement"),
+                    "regulation": r.metadata.get("source_convention", r.source),
+                    "applicability": r.metadata.get("applicability", "Unknown"),
+                    "type": r.metadata.get("requirement_type", "MANDATORY"),
                 }
-                for reg in regulations[:5]
+                for r in results[:5]
             ],
-            "documents_needed": list(documents_needed)[:10],
-            "action_items": action_items,
-            "risk_factors": risk_factors[:3],
-            "sources": list(sources),
-            "metadata": {
-                "total_results": len(results),
-                "query": query,
-                "vessel_type": vessel_type,
-                "ports": port_codes,
-            },
+            "documents_needed": docs_needed[:10],
+            "action_items": [],
+            "risk_factors": [],
+            "sources": list({r.metadata.get("source_document", r.source) for r in results}),
+            "metadata": {"backend": "pgvector", "top_k": top_k},
         }
 
     def get_structured_port_requirements(
-        self, port_code: str, vessel_type: str = "cargo_ship"
+        self, port_code: str, vessel_type: str = "container"
     ) -> dict[str, Any]:
-        """
-        Get structured, business-friendly port requirements.
-
-        Returns comprehensive port requirements organized by category
-        with clear compliance steps.
-        """
-        # Search for port-specific requirements
         port_results = self.search_by_port(port_code, vessel_type, top_k=10)
         required_docs = self.search_required_documents(port_code, vessel_type)
         regional_results = self.search_regional_requirements(
             port_code, {"vessel_type": vessel_type}, top_k=5
         )
-
-        # Categorize requirements
-        pre_arrival = []
-        documentation = []
-        environmental = []
-        safety = []
-        customs = []
-
-        for result in port_results:
-            content_lower = result.content.lower()
-
-            req_info = {
-                "requirement": result.metadata.get("requirement_name", "Port Requirement"),
-                "description": result.content[:300],
-                "source": result.metadata.get("source", result.source),
-                "mandatory": result.metadata.get("requirement_type", "MANDATORY") == "MANDATORY",
-            }
-
-            # Categorize based on content
-            if any(
-                kw in content_lower
-                for kw in [
-                    "pre-arrival",
-                    "notice",
-                    "notification",
-                    "48 hours",
-                    "24 hours",
-                    "96 hours",
-                ]
-            ):
-                pre_arrival.append(req_info)
-            elif any(
-                kw in content_lower for kw in ["emission", "eca", "sulphur", "scrubber", "ballast"]
-            ):
-                environmental.append(req_info)
-            elif any(kw in content_lower for kw in ["safety", "solas", "fire", "life-saving"]):
-                safety.append(req_info)
-            elif any(kw in content_lower for kw in ["customs", "declaration", "manifest", "cargo"]):
-                customs.append(req_info)
-            else:
-                documentation.append(req_info)
-
-        # Build action checklist
-        checklist = []
-        checklist.append(
-            {
-                "phase": "Before Voyage",
-                "actions": [
-                    "Verify all certificates are valid and will not expire during voyage",
-                    "Confirm vessel meets port-specific requirements",
-                    "Prepare all required documentation",
-                ],
-            }
-        )
-
-        if pre_arrival:
-            checklist.append(
-                {"phase": "Pre-Arrival", "actions": [req["requirement"] for req in pre_arrival]}
-            )
-
-        checklist.append(
-            {
-                "phase": "On Arrival",
-                "actions": [
-                    "Have all documents ready for PSC inspection",
-                    "Ensure environmental compliance (fuel, emissions)",
-                    "Complete customs declarations",
-                ],
-            }
-        )
-
         return {
             "port_code": port_code,
-            "port_name": self._get_port_name_from_code(port_code),
             "vessel_type": vessel_type,
             "summary": f"Found {len(port_results)} requirements for {port_code}",
             "requirements_by_category": {
-                "pre_arrival": pre_arrival,
-                "documentation": documentation,
-                "environmental": environmental,
-                "safety": safety,
-                "customs": customs,
+                "port_specific": [r.content[:300] for r in port_results],
+                "regional": [r.content[:300] for r in regional_results],
             },
             "required_documents": required_docs,
             "regional_requirements": [
-                {
-                    "requirement": r.metadata.get("requirement_name", "Regional Requirement"),
-                    "description": r.content[:200],
-                    "source": r.metadata.get("convention", r.source),
-                }
-                for r in regional_results
+                {"content": r.content[:300], "metadata": r.metadata} for r in regional_results
             ],
-            "compliance_checklist": checklist,
             "total_requirements": len(port_results),
         }
 
     def get_compliance_summary_for_route(
         self, port_codes: list[str], vessel_info: dict[str, Any]
     ) -> dict[str, Any]:
-        """
-        Generate a business-friendly compliance summary for an entire route.
-
-        Returns a structured report with:
-        - Route overview
-        - Port-by-port requirements
-        - Common requirements across all ports
-        - Prioritized action items
-        - Risk assessment
-        """
-        vessel_type = vessel_info.get("vessel_type", "cargo_ship")
-
-        # Get requirements for each port
         route_requirements = self.search_by_route(port_codes, vessel_info, top_k_per_port=5)
-
-        # Analyze route
-        port_summaries = {}
-        all_documents = set()
-        all_risks = []
-
-        for port_code, results in route_requirements.items():
-            port_docs = []
-            port_risks = []
-
-            for result in results:
-                # Collect documents
-                if "required_documents" in result.metadata:
-                    docs = result.metadata["required_documents"]
-                    if isinstance(docs, str):
-                        try:
-                            docs = json.loads(docs)
-                        except json.JSONDecodeError:
-                            docs = [docs]
-                    for doc in docs:
-                        all_documents.add(doc)
-                        port_docs.append(doc)
-
-                # Check for risk indicators
-                if any(
-                    kw in result.content.lower()
-                    for kw in ["detention", "deficiency", "fine", "penalty"]
-                ):
-                    port_risks.append(
-                        {
-                            "port": port_code,
-                            "risk": result.content[:150],
-                            "source": result.source,
-                        }
-                    )
-                    all_risks.append(port_risks[-1])
-
-            port_summaries[port_code] = {
-                "port_name": self._get_port_name_from_code(port_code),
-                "requirements_count": len(results),
-                "documents_needed": list(set(port_docs)),
-                "risk_level": "HIGH" if port_risks else "MEDIUM" if len(results) > 5 else "LOW",
-            }
-
-        # Generate prioritized actions
-        actions = []
-
-        if all_documents:
-            actions.append(
-                {
-                    "priority": "HIGH",
-                    "action": f"Ensure these documents are valid: {', '.join(list(all_documents)[:5])}{'...' if len(all_documents) > 5 else ''}",
-                    "applies_to": "All ports",
-                }
-            )
-
-        # Check for ECA ports
-        eca_ports = [p for p in port_codes if self._is_eca_port(p)]
-        if eca_ports:
-            actions.append(
-                {
-                    "priority": "CRITICAL",
-                    "action": f"Verify ECA compliance for ports: {', '.join(eca_ports)}",
-                    "applies_to": eca_ports,
-                    "details": "Ensure fuel sulphur content ≤0.10% or operational scrubber",
-                }
-            )
-
-        # Check for EU ports
-        eu_ports = [p for p in port_codes if self._is_eu_port(p)]
-        if eu_ports:
-            actions.append(
-                {
-                    "priority": "HIGH",
-                    "action": f"Verify EU MRV/ETS compliance for ports: {', '.join(eu_ports)}",
-                    "applies_to": eu_ports,
-                    "details": "Ensure EU MRV monitoring plan and ETS allowances are in order",
-                }
-            )
-
         return {
-            "route": port_codes,
-            "vessel_type": vessel_type,
-            "total_ports": len(port_codes),
-            "executive_summary": {
-                "total_requirements_found": sum(len(r) for r in route_requirements.values()),
-                "documents_needed": len(all_documents),
-                "risks_identified": len(all_risks),
-                "eca_ports": len(eca_ports),
-                "eu_ports": len(eu_ports),
+            "route_ports": port_codes,
+            "vessel_info": vessel_info,
+            "port_summaries": {
+                port: {"requirements_count": len(results)} for port, results in route_requirements.items()
             },
-            "port_summaries": port_summaries,
-            "common_documents": list(all_documents)[:15],
-            "prioritized_actions": sorted(
-                actions,
-                key=lambda x: {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}.get(
-                    x["priority"], 4
-                ),
-            ),
-            "risk_factors": all_risks[:5],
+            "total_requirements_found": sum(len(results) for results in route_requirements.values()),
             "recommendations": [
-                "Review all certificates at least 30 days before voyage",
-                "Verify fuel compliance for ECA zones" if eca_ports else None,
-                "Ensure EU MRV monitoring plan is updated" if eu_ports else None,
-                "Prepare pre-arrival notifications according to each port's requirements",
+                "Keep vessel certificates current for every port call.",
+                "Prepare pre-arrival notifications according to each port's requirements.",
             ],
         }
 
-    def _get_port_name_from_code(self, port_code: str) -> str:
-        """Get port name from code"""
-        port_names = {
-            "SGSIN": "Port of Singapore",
-            "NLRTM": "Port of Rotterdam",
-            "DEHAM": "Port of Hamburg",
-            "CNSHA": "Port of Shanghai",
-            "HKHKG": "Port of Hong Kong",
-            "USNYC": "Port of New York",
-            "USLAX": "Port of Los Angeles",
-            "BEANR": "Port of Antwerp",
-            "GBFXT": "Port of Felixstowe",
-            "FIHEL": "Port of Helsinki",
-            "SEGOT": "Port of Gothenburg",
-        }
-        return port_names.get(port_code, f"Port {port_code}")
-
-    def _is_eca_port(self, port_code: str) -> bool:
-        """Check if port is in an Emission Control Area"""
-        eca_ports = {
-            # Baltic Sea ECA
-            "FIHEL",
-            "SEGOT",
-            "DKCPH",
-            "PLGDN",
-            "EETAL",
-            "RULED",
-            # North Sea ECA
-            "NLRTM",
-            "DEHAM",
-            "BEANR",
-            "GBFXT",
-            "GBSOU",
-            # North American ECA
-            "USLAX",
-            "USNYC",
-            "USHOU",
-            "CAHAL",
-            "CAVAN",
-        }
-        return port_code in eca_ports
-
-    def _is_eu_port(self, port_code: str) -> bool:
-        """Check if port is subject to EU regulations"""
-        eu_country_codes = {
-            "NL",
-            "DE",
-            "BE",
-            "FR",
-            "ES",
-            "IT",
-            "PT",
-            "GR",
-            "PL",
-            "SE",
-            "FI",
-            "DK",
-            "IE",
-            "EE",
-            "LV",
-            "LT",
-            "HR",
-            "SI",
-            "CY",
-            "MT",
-            "RO",
-            "BG",
-        }
-        return port_code[:2] in eu_country_codes
-
-    # =========================================================================
-    # User Document CRUD (ChromaDB-backed)
-    # =========================================================================
-
-    def _user_docs_collection(self):
-        """Get the user_documents Chroma collection"""
-        return self.collections["user_documents"]
+    # ------------------------------------------------------------------
+    # Uploaded document CRUD/search
+    # ------------------------------------------------------------------
 
     def add_user_document(self, doc_id: str, text: str, metadata: dict[str, Any]) -> str:
-        """
-        Add a user-uploaded document to ChromaDB.
-
-        Args:
-            doc_id: UUID string identifier
-            text: OCR-extracted text (used as the document content for embeddings)
-            metadata: Flat dict of metadata fields. No None values or nested objects.
-
-        Returns:
-            The doc_id that was stored
-        """
-        collection = self._user_docs_collection()
+        session = SessionLocal()
         try:
-            # Handle empty text - use placeholder to avoid embedding API errors
-            content = text.strip() if text else ""
-            if not content:
-                content = (
-                    f"[Document: {metadata.get('title', 'Untitled')}] No text content extracted."
-                )
-                logger.warning(f"Document {doc_id} has no text content, using placeholder")
-                # region agent log
-                _debug_log(
-                    "pre-fix",
-                    "H4",
-                    "maritime_knowledge_base.py:add_user_document",
-                    "Using placeholder content branch",
-                    {
-                        "doc_id": doc_id,
-                        "title_present": bool(metadata.get("title")),
-                    },
-                )
-                # endregion
-
-            doc = self.Document(page_content=content, metadata=metadata)
-            # region agent log
-            _debug_log(
-                "pre-fix",
-                "H1",
-                "maritime_knowledge_base.py:add_user_document",
-                "Before add_documents",
-                {
-                    "doc_id": doc_id,
-                    "content_len": len(content),
-                    "content_is_placeholder": content.startswith("[Document:"),
-                    "embedding_model_attr": str(getattr(self.embeddings, "model", None)),
-                    "collection_name": "user_documents",
-                },
+            row = UserDocument(
+                id=doc_id,
+                customer_id=int(metadata["customer_id"]),
+                vessel_id=int(metadata["vessel_id"]) if metadata.get("vessel_id") else None,
+                title=metadata.get("title", "Untitled"),
+                document_type=metadata.get("document_type", "other"),
+                file_path=metadata.get("file_path", ""),
+                file_name=metadata.get("file_name"),
+                file_size=int(metadata.get("file_size") or 0),
+                mime_type=metadata.get("mime_type"),
+                extracted_text=text or "",
+                ocr_provider=metadata.get("ocr_provider"),
+                ocr_confidence=float(metadata.get("ocr_confidence") or 0.0),
+                issuing_authority=metadata.get("issuing_authority"),
+                issue_date=metadata.get("issue_date") or "",
+                expiry_date=metadata.get("expiry_date") or "",
+                document_number=metadata.get("document_number"),
+                is_validated=bool(metadata.get("is_validated", False)),
+                validation_notes=metadata.get("validation_notes", ""),
+                extracted_fields_json=metadata.get("extracted_fields_json", "{}"),
+                embedding=None,
+                embedding_model=self.embedding_model,
             )
-            # endregion
-            collection.add_documents([doc], ids=[doc_id])
-            # region agent log
-            _debug_log(
-                "pre-fix",
-                "H5",
-                "maritime_knowledge_base.py:add_user_document",
-                "add_documents succeeded",
-                {
-                    "doc_id": doc_id,
-                    "metadata_key_count": len(metadata.keys()),
-                },
-            )
-            # endregion
-            logger.info(f"Added user document {doc_id} to ChromaDB")
+            session.merge(row)
+            session.commit()
             return doc_id
-        except Exception as e:
-            # region agent log
-            _debug_log(
-                "pre-fix",
-                "H3",
-                "maritime_knowledge_base.py:add_user_document",
-                "add_documents failed",
-                {
-                    "doc_id": doc_id,
-                    "exception_type": type(e).__name__,
-                    "exception_message": str(e),
-                    "embedding_model_attr": str(getattr(self.embeddings, "model", None)),
-                },
-            )
-            # endregion
-            logger.error(f"Error adding user document {doc_id}: {e}")
+        except Exception:
+            session.rollback()
+            logger.exception("Failed to add user document %s", doc_id)
             raise
+        finally:
+            session.close()
 
     def get_user_document_by_id(self, doc_id: str) -> dict[str, Any] | None:
-        """
-        Get a single user document by its ID.
-
-        Returns:
-            Dict with 'id', 'text', and all metadata fields, or None if not found.
-        """
-        collection = self._user_docs_collection()
+        session = SessionLocal()
         try:
-            result = collection._collection.get(ids=[doc_id], include=["documents", "metadatas"])
-            if not result["ids"]:
-                return None
-            return {
-                "id": result["ids"][0],
-                "text": result["documents"][0] if result["documents"] else "",
-                **(result["metadatas"][0] if result["metadatas"] else {}),
-            }
-        except Exception as e:
-            logger.error(f"Error fetching user document {doc_id}: {e}")
-            return None
+            row = session.get(UserDocument, doc_id)
+            return self._user_row_to_dict(row) if row else None
+        finally:
+            session.close()
 
     def get_user_documents(
-        self,
-        where_filter: dict[str, Any],
-        limit: int = 100,
+        self, where_filter: dict[str, Any] | None = None, limit: int = 100
     ) -> list[dict[str, Any]]:
-        """
-        Get user documents matching a filter.
-
-        Args:
-            where_filter: ChromaDB where clause, e.g. {"vessel_id": 5}
-            limit: Max results
-
-        Returns:
-            List of dicts, each with 'id', 'text', and metadata fields.
-        """
-        collection = self._user_docs_collection()
+        session = SessionLocal()
         try:
-            result = collection._collection.get(
-                where=where_filter,
-                limit=limit,
-                include=["documents", "metadatas"],
-            )
-            docs = []
-            for i, doc_id in enumerate(result["ids"]):
-                docs.append(
-                    {
-                        "id": doc_id,
-                        "text": result["documents"][i] if result["documents"] else "",
-                        **(result["metadatas"][i] if result["metadatas"] else {}),
-                    }
-                )
-            return docs
-        except Exception as e:
-            logger.error(f"Error fetching user documents with filter {where_filter}: {e}")
-            return []
+            query = session.query(UserDocument)
+            for key, value in (where_filter or {}).items():
+                if hasattr(UserDocument, key):
+                    query = query.filter(getattr(UserDocument, key) == value)
+            rows = query.order_by(UserDocument.created_at.desc()).limit(limit).all()
+            return [self._user_row_to_dict(row) for row in rows]
+        finally:
+            session.close()
 
     def delete_user_document(self, doc_id: str) -> bool:
-        """Delete a user document by ID. Returns True on success."""
-        collection = self._user_docs_collection()
+        session = SessionLocal()
         try:
-            collection._collection.delete(ids=[doc_id])
-            logger.info(f"Deleted user document {doc_id}")
+            row = session.get(UserDocument, doc_id)
+            if not row:
+                return False
+            session.delete(row)
+            session.commit()
             return True
-        except Exception as e:
-            logger.error(f"Error deleting user document {doc_id}: {e}")
-            return False
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     def update_user_document_metadata(self, doc_id: str, metadata_updates: dict[str, Any]) -> bool:
-        """
-        Update metadata fields on an existing user document.
-
-        Args:
-            doc_id: Document ID
-            metadata_updates: Dict of fields to update (merged with existing)
-
-        Returns:
-            True on success
-        """
-        collection = self._user_docs_collection()
+        session = SessionLocal()
         try:
-            collection._collection.update(ids=[doc_id], metadatas=[metadata_updates])
-            logger.info(f"Updated metadata for user document {doc_id}")
+            row = session.get(UserDocument, doc_id)
+            if not row:
+                return False
+            mapping = {
+                "title",
+                "document_type",
+                "file_path",
+                "file_name",
+                "file_size",
+                "mime_type",
+                "ocr_provider",
+                "ocr_confidence",
+                "issuing_authority",
+                "issue_date",
+                "expiry_date",
+                "document_number",
+                "is_validated",
+                "validation_notes",
+                "extracted_fields_json",
+            }
+            for key, value in metadata_updates.items():
+                if key in mapping:
+                    setattr(row, key, value)
+            row.updated_at = datetime.now()
+            session.commit()
             return True
-        except Exception as e:
-            logger.error(f"Error updating user document {doc_id}: {e}")
-            return False
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     def count_user_documents(self, where_filter: dict[str, Any] | None = None) -> int:
-        """Count user documents matching an optional filter."""
-        collection = self._user_docs_collection()
-        try:
-            if where_filter:
-                result = collection._collection.get(where=where_filter, include=[])
-                return len(result["ids"])
-            else:
-                return collection._collection.count()
-        except Exception as e:
-            logger.error(f"Error counting user documents: {e}")
-            return 0
+        return len(self.get_user_documents(where_filter=where_filter, limit=1_000_000))
 
     def search_user_documents(
         self,
         query_text: str,
         where_filter: dict[str, Any] | None = None,
-        n_results: int = 10,
+        n_results: int = 5,
+        min_score: float = 0.0,
     ) -> list[dict[str, Any]]:
-        """
-        Semantic search over user documents (OCR text).
-
-        Args:
-            query_text: Search query
-            where_filter: Optional ChromaDB where clause
-            n_results: Number of results
-
-        Returns:
-            List of dicts with 'id', 'text', metadata, and 'score'.
-        """
-        collection = self._user_docs_collection()
-        try:
-            kwargs: dict[str, Any] = {"k": n_results}
-            if where_filter:
-                kwargs["filter"] = where_filter
-            results = collection.similarity_search_with_score(query_text, **kwargs)
-            docs = []
-            for doc, score in results:
-                doc_dict = {
-                    "text": doc.page_content,
-                    "score": score,
-                    **doc.metadata,
-                }
-                docs.append(doc_dict)
-            return docs
-        except Exception as e:
-            logger.error(f"Error searching user documents: {e}")
-            return []
+        docs = self.get_user_documents(where_filter=where_filter, limit=200)
+        scored = []
+        for doc in docs:
+            score = self._lexical_score(query_text, doc.get("text", ""), doc)
+            if score >= min_score:
+                doc["score"] = score
+                scored.append(doc)
+        scored.sort(key=lambda item: item.get("score", 0), reverse=True)
+        return scored[:n_results]
 
     def match_required_document(
         self,
         required_doc_type: str,
         where_filter: dict[str, Any] | None = None,
-        score_threshold: float = 0.6,
+        min_score: float = 0.35,
     ) -> dict[str, Any] | None:
-        """
-        Use semantic similarity to find a user document that matches a
-        required document type.
-
-        Args:
-            required_doc_type: The required document name,
-                e.g. "Safety Management Certificate" or "registry_certificate".
-            where_filter: ChromaDB where clause to scope the search,
-                e.g. {"vessel_id": 5} or {"customer_id": 3}.
-            score_threshold: Maximum distance score to consider a match.
-                Lower = stricter. ChromaDB returns L2 distances where
-                0 = identical. A value of ~0.6 works well for Gemini
-                embeddings with short document type names.
-
-        Returns:
-            The best-matching user document dict (with 'id', 'text',
-            metadata, 'score') if the score is within threshold,
-            otherwise None.
-        """
-        results = self.search_user_documents(
+        matches = self.search_user_documents(
             query_text=required_doc_type,
             where_filter=where_filter,
             n_results=1,
+            min_score=min_score,
         )
-        if results and results[0].get("score", float("inf")) <= score_threshold:
-            return results[0]
-        return None
+        return matches[0] if matches else None
 
     def match_documents_against_requirements(
         self,
         required_doc_types: list[str],
         where_filter: dict[str, Any] | None = None,
-        score_threshold: float = 0.6,
-    ) -> dict[str, dict[str, Any] | None]:
-        """
-        For each required document type, find the best-matching user
-        document via semantic similarity.
-
-        Args:
-            required_doc_types: List of required document type names.
-            where_filter: ChromaDB where clause to scope search.
-            score_threshold: Maximum distance to consider a match.
-
-        Returns:
-            Dict mapping each required type to its best match (or None).
-        """
-        matches: dict[str, dict[str, Any] | None] = {}
-        for req_type in required_doc_types:
-            matches[req_type] = self.match_required_document(
-                required_doc_type=req_type,
-                where_filter=where_filter,
-                score_threshold=score_threshold,
-            )
-        return matches
+        min_score: float = 0.35,
+    ) -> dict[str, dict[str, Any]]:
+        return {
+            doc_type: {
+                "required": True,
+                "match": self.match_required_document(doc_type, where_filter, min_score),
+            }
+            for doc_type in required_doc_types
+        }
 
 
-# Singleton instance
-_maritime_kb: MaritimeKnowledgeBase | None = None
-
-
+@lru_cache(maxsize=1)
 def get_maritime_knowledge_base() -> MaritimeKnowledgeBase:
-    """Get MaritimeKnowledgeBase singleton instance"""
-    global _maritime_kb
-    if _maritime_kb is None:
-        _maritime_kb = MaritimeKnowledgeBase()
-    return _maritime_kb
+    """Get or create the maritime knowledge base singleton."""
+    return MaritimeKnowledgeBase()

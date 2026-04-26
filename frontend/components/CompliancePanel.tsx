@@ -224,7 +224,7 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
     setMissingDocsResult(null);
     try {
       const portCodes = hasRoute ? selectedRoute!.port_codes : selectedRoutePorts.map((p) => p.un_locode);
-      const result = await documentAPI.detectMissingDocuments({ port_codes: portCodes, customer_id: customerId });
+      const result = await documentAPI.detectMissingDocuments({ port_codes: portCodes });
       setMissingDocsResult(result);
     } catch (err: any) {
       setAnalysisError(err?.response?.data?.detail || err?.message || "Analysis failed.");
@@ -290,7 +290,6 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
 
     try {
       await documentAPI.uploadDocument({
-        customer_id: customerId,
         vessel_id: vesselId,
         document_type: "other",
         title: uploadDescription.trim() || uploadFile.name,
@@ -744,4 +743,3 @@ function DocStatBadge({ label, count, color }: { label: string; count: number; c
 }
 
 export default CompliancePanel;
-

@@ -102,7 +102,6 @@ export interface DocumentAnalysisResponse {
 }
 
 export interface UploadDocumentParams {
-  customer_id: number;
   vessel_id: number;
   document_type: string;
   title: string;
@@ -143,7 +142,6 @@ export interface DetectMissingParams {
   vessel_id?: number;
   route_id?: number;
   port_codes?: string[];
-  customer_id?: number;
 }
 
 export interface MissingDocsResponse {
@@ -190,7 +188,7 @@ export interface ProvisionResponse {
 
 // Document API service
 export const documentAPI = {
-  // Auto-provision customer (and discover default vessel) for a Clerk user
+  // Auto-provision customer (and discover default vessel) for the authenticated user
   provisionUser: async (params: ProvisionParams): Promise<ProvisionResponse> => {
     const response = await api.post('/maritime/me/provision', params);
     return response.data;
@@ -199,17 +197,15 @@ export const documentAPI = {
   // Upload a document with OCR processing
   uploadDocument: async (params: UploadDocumentParams): Promise<DocumentInfo> => {
     if (
-      params.customer_id == null ||
       params.vessel_id == null ||
       !params.document_type ||
       !params.title ||
       !params.file
     ) {
-      throw new Error('Missing required fields: customer_id, vessel_id, document_type, title, and file are all required.');
+      throw new Error('Missing required fields: vessel_id, document_type, title, and file are all required.');
     }
 
     const formData = new FormData();
-    formData.append('customer_id', String(params.customer_id));
     formData.append('vessel_id', String(params.vessel_id));
     formData.append('document_type', params.document_type);
     formData.append('title', params.title);
@@ -254,9 +250,9 @@ export const documentAPI = {
   },
 
   // Get all documents for a customer (user)
-  getCustomerDocuments: async (customerId: number, documentType?: string): Promise<DocumentInfo[]> => {
+  getCustomerDocuments: async (_customerId?: number, documentType?: string): Promise<DocumentInfo[]> => {
     const params = documentType ? { document_type: documentType } : {};
-    const response = await api.get(`/maritime/documents/customer/${customerId}`, { params });
+    const response = await api.get('/maritime/documents/customer', { params });
     return response.data;
   },
 
@@ -273,8 +269,8 @@ export const documentAPI = {
   },
 
   // Get all vessels for a customer
-  getVessels: async (customerId: number): Promise<Vessel[]> => {
-    const response = await api.get('/maritime/vessels', { params: { customer_id: customerId } });
+  getVessels: async (_customerId?: number): Promise<Vessel[]> => {
+    const response = await api.get('/maritime/vessels');
     return response.data;
   },
 

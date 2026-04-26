@@ -15,20 +15,14 @@ pydantic-settings==2.10.1
 SQLAlchemy==2.0.23
 psycopg2-binary==2.9.11
 psycopg[binary,pool]==3.2.3
+pgvector>=0.4.0
 alembic==1.13.1
 
 # AI / LLM
-crewai==1.7.2
 openai==1.83.0
 langchain>=0.3.0
 langchain-google-genai>=2.0.0
 google-generativeai>=0.8.0
-
-# Vector store (current Chroma; old 0.3.x line is abandoned)
-chromadb>=0.5.0
-
-# Embeddings
-sentence-transformers>=3.0.0
 
 # Security
 python-jose[cryptography]==3.3.0

@@ -1,6 +1,6 @@
 """
 Document Service - User document upload and management
-Stores document metadata + OCR text in ChromaDB Cloud (user_documents collection).
+Stores document metadata + OCR text in Postgres (user_documents table).
 Physical files are saved to disk.
 """
 
@@ -27,12 +27,12 @@ settings = get_settings()
 
 class DocumentService:
     """
-    User document upload and management service backed by ChromaDB.
+    User document upload and management service backed by Postgres.
 
     Handles:
     - File upload and storage (disk)
     - OCR text extraction (LandingAI)
-    - Metadata + text stored in ChromaDB user_documents collection
+    - Metadata + text stored in Postgres user_documents table
     - Expiry tracking
     - Document-requirement matching
     """
@@ -58,7 +58,7 @@ class DocumentService:
 
     @staticmethod
     def _safe_meta(value: Any, default: Any = "") -> Any:
-        """Ensure a value is ChromaDB-safe (no None, no nested objects)."""
+        """Ensure a value is storage-safe (no None, no nested objects)."""
         if value is None:
             return default
         return value
@@ -81,7 +81,7 @@ class DocumentService:
         document_number: str | None,
         extracted_fields_json: str,
     ) -> dict[str, Any]:
-        """Build a flat, ChromaDB-safe metadata dict."""
+        """Build a flat storage-safe metadata dict."""
         return {
             "customer_id": customer_id,
             "vessel_id": self._safe_meta(vessel_id, 0),
@@ -107,7 +107,7 @@ class DocumentService:
     @staticmethod
     def _to_doc_dict(raw: dict[str, Any]) -> dict[str, Any]:
         """
-        Convert a ChromaDB result dict into the shape expected by API
+        Convert a stored document dict into the shape expected by API
         endpoints (mirrors the old UserDocument ORM columns).
         """
         return {
@@ -255,7 +255,7 @@ class DocumentService:
             extracted_fields_json=json.dumps(extracted_fields),
         )
 
-        # Store in ChromaDB
+        # Store metadata and OCR text in Postgres/pgvector.
         self.kb.add_user_document(
             doc_id=doc_id,
             text=ocr_result.text,
@@ -285,7 +285,7 @@ class DocumentService:
             where["document_type"] = document_type
         raw_docs = self.kb.get_user_documents(where, limit=200)
         docs = [self._to_doc_dict(d) for d in raw_docs]
-        # Sort by created_at descending (ChromaDB has no ORDER BY)
+        # Keep response order deterministic.
         docs.sort(key=lambda d: d.get("created_at", ""), reverse=True)
         return docs
 
@@ -346,7 +346,7 @@ class DocumentService:
         return result
 
     def delete_document(self, document_id: str) -> bool:
-        """Delete a document (ChromaDB record + file on disk)."""
+        """Delete a document record + file on disk."""
         raw = self.kb.get_user_document_by_id(document_id)
         if not raw:
             return False
@@ -361,7 +361,7 @@ class DocumentService:
             except Exception as e:
                 logger.error(f"Failed to delete file {file_abs}: {e}")
 
-        # Delete from ChromaDB
+        # Delete from Postgres.
         self.kb.delete_user_document(document_id)
         logger.info(f"Document deleted: {document_id}")
         return True

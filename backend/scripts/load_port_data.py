@@ -4,7 +4,7 @@ Script to load port information and regulations for major world ports into the K
 Usage:
     python scripts/load_port_data.py
 
-This script populates the ChromaDB vector store with:
+This script populates the Postgres pgvector knowledge store with:
 - Port-specific regulations and requirements
 - Required documents for port entry
 - Customs and immigration procedures
