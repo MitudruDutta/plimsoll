@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "antd/dist/reset.css";
 import "./globals.css";
 
-const sans = Inter({
+const sans = Geist({
   subsets: ["latin"],
   variable: "--font-sans-base",
   weight: ["400", "500", "600", "700"],
@@ -18,12 +18,14 @@ const serif = Instrument_Serif({
   display: "swap",
 });
 
-const mono = JetBrains_Mono({
+const mono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono-base",
   weight: ["400", "500"],
   display: "swap",
 });
+
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Plimsoll — Maritime Risk & Compliance Cockpit",
@@ -48,14 +50,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark h-full antialiased ${sans.variable} ${serif.variable} ${mono.variable}`}
+      className={`h-full antialiased ${sans.variable} ${serif.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
       <body
-        className="min-h-full flex flex-col bg-[var(--bg-0)] text-[var(--text-hi)] selection:bg-[rgba(167,139,250,0.25)]"
+        className="min-h-full flex flex-col bg-[var(--bg-0)] text-[var(--text-hi)] selection:bg-[rgba(37,99,235,0.18)]"
         suppressHydrationWarning
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

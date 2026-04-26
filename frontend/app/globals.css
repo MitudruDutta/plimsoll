@@ -10,16 +10,94 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Page-wide grain overlay on the body's ::before pseudo so any
- * dark page picks it up automatically without each view opting in. */
+/* Page-wide soft blueprint grid backdrop. Editorial, supermemory-style:
+ * a faint blue dot grid keeps long pages feeling structured without
+ * overpowering content surfaces. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
-  opacity: 0.025;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  background-size: 220px 220px;
+  z-index: 0;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(rgba(37, 99, 235, 0.06) 1px, transparent 1px),
+    radial-gradient(60% 50% at 50% -10%,
+      rgba(91, 141, 239, 0.10) 0%,
+      rgba(255, 255, 255, 0) 65%);
+  background-size: 24px 24px, 100% 100%;
+  background-position: 0 0, 0 0;
 }
+
+/* ---------------------------------------------------------------------------
+ * Legacy dark-utility shim
+ *
+ * Several components were built for a dark theme and still use Tailwind
+ * utilities like `text-white/40`, `bg-white/[0.03]`, and `border-white/10`.
+ * Against the new light supermemory-style background those classes render as
+ * invisible white-on-white. Until each component is fully reworked, remap the
+ * most common ones to readable, theme-aware values.
+ * ------------------------------------------------------------------------- */
+.text-white\/10,
+.text-white\/15,
+.text-white\/20,
+.text-white\/25,
+.text-white\/30,
+.text-white\/35,
+.text-white\/40 {
+  color: var(--text-low) !important;
+}
+
+.text-white\/45,
+.text-white\/50,
+.text-white\/55,
+.text-white\/60,
+.text-white\/65,
+.text-white\/70 {
+  color: var(--text-mid) !important;
+}
+
+.text-white\/75,
+.text-white\/80,
+.text-white\/85,
+.text-white\/90,
+.text-white\/95 {
+  color: var(--text-hi) !important;
+}
+
+.bg-white\/\[0\.02\],
+.bg-white\/\[0\.03\],
+.bg-white\/\[0\.04\],
+.bg-white\/\[0\.05\],
+.bg-white\/\[0\.06\],
+.bg-white\/\[0\.08\],
+.bg-white\/5,
+.bg-white\/10 {
+  background-color: var(--bg-1) !important;
+}
+
+.bg-white\/15,
+.bg-white\/20 {
+  background-color: var(--bg-2) !important;
+}
+
+.border-white\/5,
+.border-white\/10,
+.border-white\/15,
+.border-white\/20,
+.border-white\/\[0\.05\],
+.border-white\/\[0\.08\],
+.border-white\/\[0\.1\] {
+  border-color: var(--line) !important;
+}
+
+/* Dark page backgrounds bleeding through from older views — keep them light. */
+.bg-\[\#0a0a0a\],
+.bg-\[\#0b0b0b\],
+.bg-\[\#0c0c0d\],
+.bg-\[\#101013\],
+.bg-\[\#121214\] {
+  background-color: var(--bg-0) !important;
+  color: var(--text-hi);
+}
+

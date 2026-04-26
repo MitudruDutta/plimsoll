@@ -1,87 +1,89 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ──────────────────────────────────────────────────────────────
- * Plimsoll 1.0 — design tokens
- * Dark-first. Single violet→indigo gradient as the only color
- * signal. Hairline borders, glass surfaces, generous whitespace.
+ * Plimsoll 1.1 — design tokens (supermemory-inspired blue & white)
+ *
+ * Light-first. Crisp white surfaces, hairline blue borders, a
+ * single calm blue accent. Editorial typography: Geist Sans for
+ * UI body and Instrument Serif italic for hero accent words.
  * ────────────────────────────────────────────────────────────── */
 :root {
   --font-size: 16px;
 
   /* Surface (page → card → elevated) */
-  --bg-0:        #0A0A0B;
-  --bg-1:        #111114;
-  --bg-2:        #17171C;
+  --bg-0:        #FFFFFF;
+  --bg-1:        #F7F9FC;
+  --bg-2:        #EEF3FA;
 
   /* Hairlines */
-  --line:         rgba(255, 255, 255, 0.08);
-  --line-strong:  rgba(255, 255, 255, 0.14);
+  --line:         rgba(15, 23, 42, 0.08);
+  --line-strong:  rgba(15, 23, 42, 0.16);
 
   /* Type */
-  --text-hi:    #F5F5F7;
-  --text-mid:   #A1A1AA;
-  --text-low:   #6B6B75;
+  --text-hi:    #0B1220;
+  --text-mid:   #475569;
+  --text-low:   #94A3B8;
 
-  /* Single accent gradient */
-  --accent-1:    #A78BFA;
-  --accent-2:    #7C3AED;
-  --accent-3:    #4F46E5;
-  --accent-grad: linear-gradient(135deg, #A78BFA 0%, #7C3AED 50%, #4F46E5 100%);
+  /* Single accent — calm, paper-friendly blue */
+  --accent-1:    #5B8DEF;
+  --accent-2:    #2563EB;
+  --accent-3:    #1D4ED8;
+  --accent-grad: linear-gradient(135deg, #5B8DEF 0%, #2563EB 50%, #1D4ED8 100%);
 
   /* Status */
-  --success: #22D3A8;
-  --warn:    #F5B544;
-  --danger:  #FF5470;
-  --info:    #60A5FA;
+  --success: #16A34A;
+  --warn:    #D97706;
+  --danger:  #DC2626;
+  --info:    #2563EB;
 
   /* shadcn token bridge — map to Plimsoll surface so existing
    * <Card>/<Button> primitives inherit the new look automatically. */
   --background:               var(--bg-0);
   --foreground:               var(--text-hi);
-  --card:                     rgba(255, 255, 255, 0.03);
+  --card:                     #FFFFFF;
   --card-foreground:          var(--text-hi);
-  --popover:                  var(--bg-1);
+  --popover:                  var(--bg-0);
   --popover-foreground:       var(--text-hi);
   --primary:                  var(--accent-2);
   --primary-foreground:       #ffffff;
-  --secondary:                rgba(255, 255, 255, 0.06);
-  --secondary-foreground:     var(--text-hi);
-  --muted:                    rgba(255, 255, 255, 0.04);
+  --secondary:                rgba(37, 99, 235, 0.06);
+  --secondary-foreground:     var(--accent-3);
+  --muted:                    rgba(15, 23, 42, 0.04);
   --muted-foreground:         var(--text-mid);
-  --accent:                   rgba(124, 58, 237, 0.12);
-  --accent-foreground:        var(--accent-1);
+  --accent:                   rgba(37, 99, 235, 0.08);
+  --accent-foreground:        var(--accent-3);
   --destructive:              var(--danger);
   --destructive-foreground:   #ffffff;
   --border:                   var(--line);
-  --input:                    rgba(255, 255, 255, 0.06);
-  --input-background:         rgba(255, 255, 255, 0.02);
-  --switch-background:        rgba(255, 255, 255, 0.12);
-  --ring:                     var(--accent-1);
+  --input:                    rgba(15, 23, 42, 0.10);
+  --input-background:         #FFFFFF;
+  --switch-background:        rgba(15, 23, 42, 0.12);
+  --ring:                     var(--accent-2);
 
   /* Typography weights */
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
-  /* Radii (matches designprompt.md) */
+  /* Radii */
   --radius:      0.875rem;   /* 14px cards */
   --radius-btn:  0.625rem;   /* 10px buttons */
 
-  /* Editorial chart palette */
-  --chart-1: #A78BFA;
-  --chart-2: #4F46E5;
-  --chart-3: #60A5FA;
-  --chart-4: #22D3A8;
-  --chart-5: #F5B544;
+  /* Editorial chart palette — single-hue family with status accents */
+  --chart-1: #5B8DEF;
+  --chart-2: #2563EB;
+  --chart-3: #1D4ED8;
+  --chart-4: #16A34A;
+  --chart-5: #D97706;
 
   /* Sidebar */
   --sidebar:                       var(--bg-1);
   --sidebar-foreground:            var(--text-hi);
   --sidebar-primary:               var(--accent-2);
   --sidebar-primary-foreground:    #ffffff;
-  --sidebar-accent:                rgba(255, 255, 255, 0.04);
-  --sidebar-accent-foreground:     var(--text-hi);
+  --sidebar-accent:                rgba(37, 99, 235, 0.06);
+  --sidebar-accent-foreground:     var(--accent-3);
   --sidebar-border:                var(--line);
-  --sidebar-ring:                  var(--accent-1);
+  --sidebar-ring:                  var(--accent-2);
 }
 
 @theme inline {
@@ -124,9 +126,9 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: var(--font-sans-base, 'Inter', ui-sans-serif, system-ui, sans-serif);
+  --font-sans: var(--font-sans-base, 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif);
   --font-serif: var(--font-serif-base, 'Instrument Serif', ui-serif, Georgia, serif);
-  --font-mono: var(--font-mono-base, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+  --font-mono: var(--font-mono-base, 'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
 }
 
 @layer base {
@@ -136,7 +138,7 @@
 
   html {
     font-size: var(--font-size);
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
@@ -149,7 +151,7 @@
   }
 
   ::selection {
-    background: rgba(167, 139, 250, 0.25);
+    background: rgba(37, 99, 235, 0.18);
     color: var(--text-hi);
   }
 
@@ -187,18 +189,19 @@
  * ────────────────────────────────────────────────────────────── */
 @layer utilities {
   .surface-glass {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.78);
     border: 1px solid var(--line);
     backdrop-filter: saturate(140%) blur(20px);
     -webkit-backdrop-filter: saturate(140%) blur(20px);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.04) inset,
-      0 30px 60px -30px rgba(0, 0, 0, 0.6);
+      0 1px 0 rgba(255, 255, 255, 0.6) inset,
+      0 24px 48px -28px rgba(15, 23, 42, 0.14);
   }
 
   .surface-elevated {
-    background: var(--bg-2);
+    background: #FFFFFF;
     border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 
   .text-grad-accent {
@@ -214,51 +217,56 @@
   }
 
   .ring-accent-soft {
-    box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.35), 0 0 32px -8px rgba(124, 58, 237, 0.45);
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.30), 0 0 32px -8px rgba(37, 99, 235, 0.35);
   }
 
-  /* Subtle film grain — used as a body overlay on hero/landing
-   * surfaces. Very low opacity, doesn't tank perf because it's
-   * a single repeated svg in CSS data-uri. */
+  /* Subtle paper grain — kept extremely light on white */
   .grain-overlay::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.035;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    opacity: 0.025;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
     background-size: 220px 220px;
   }
 
   .glow-accent {
     background: radial-gradient(60% 50% at 50% 0%,
-      rgba(124, 58, 237, 0.25) 0%,
-      rgba(79, 70, 229, 0.10) 35%,
-      rgba(0, 0, 0, 0) 70%);
+      rgba(37, 99, 235, 0.16) 0%,
+      rgba(91, 141, 239, 0.08) 35%,
+      rgba(255, 255, 255, 0) 70%);
   }
 
   /* Hero backdrop conic glow */
   .glow-conic {
     background:
       conic-gradient(from 220deg at 50% 50%,
-        rgba(167, 139, 250, 0.18),
-        rgba(79, 70, 229, 0.10),
-        rgba(124, 58, 237, 0.22),
-        rgba(167, 139, 250, 0.18));
+        rgba(91, 141, 239, 0.18),
+        rgba(29, 78, 216, 0.08),
+        rgba(37, 99, 235, 0.16),
+        rgba(91, 141, 239, 0.18));
     filter: blur(60px);
+  }
+
+  /* Dotted blue grid backdrop — supermemory-style */
+  .bg-blueprint {
+    background-image:
+      radial-gradient(rgba(37, 99, 235, 0.10) 1px, transparent 1px);
+    background-size: 22px 22px;
   }
 
   /* Hairline divider */
   .hairline { border-color: var(--line); }
   .hairline-strong { border-color: var(--line-strong); }
 
-  /* Scroll behaviour for the dark theme */
+  /* Scroll behaviour for the light theme */
   .scrollbar-plimsoll::-webkit-scrollbar { width: 10px; height: 10px; }
   .scrollbar-plimsoll::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-plimsoll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.12);
     border-radius: 999px;
   }
-  .scrollbar-plimsoll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.16); }
+  .scrollbar-plimsoll::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.22); }
 }

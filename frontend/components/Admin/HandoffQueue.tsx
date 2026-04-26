@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Tag, Button, Space, message as antMessage, Badge, Card, Modal, Input } from 'antd';
 import { EyeOutlined, ReloadOutlined, ClockCircleOutlined, CheckCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { chatAPI } from '../../services/api';
 import HandoffStats from './HandoffStats';
 import styles from './HandoffQueue.module.css';
@@ -15,7 +15,8 @@ const HandoffQueue = () => {
   const [takeoverModalVisible, setTakeoverModalVisible] = useState(false);
   const [selectedHandoffId, setSelectedHandoffId] = useState(null);
   const [agentName, setAgentName] = useState('');
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (path: string) => router.push(path);
 
   const fetchHandoffs = async () => {
     try {

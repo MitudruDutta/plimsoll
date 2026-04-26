@@ -17,24 +17,24 @@ import { cn } from "./utils";
  *  - `link`        : inline text link.
  */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-btn,0.625rem)] text-sm font-medium tracking-[-0.005em] transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-1)]/60 focus-visible:ring-offset-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-btn,0.625rem)] text-sm font-medium tracking-[-0.005em] transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-2)]/40 focus-visible:ring-offset-0",
   {
     variants: {
       variant: {
         default:
           "bg-[var(--accent-2)] text-white hover:bg-[var(--accent-3)] active:bg-[var(--accent-3)]",
         gradient:
-          "bg-[var(--accent-grad)] text-white shadow-[0_0_0_1px_rgba(167,139,250,0.35),0_10px_30px_-12px_rgba(124,58,237,0.5)] hover:brightness-110 active:brightness-95",
+          "bg-[var(--accent-grad)] text-white shadow-[0_0_0_1px_rgba(37,99,235,0.20),0_10px_30px_-12px_rgba(37,99,235,0.45)] hover:brightness-110 active:brightness-95",
         destructive:
           "bg-[var(--danger)] text-white hover:bg-[var(--danger)]/90 focus-visible:ring-[var(--danger)]/40",
         outline:
-          "border border-[var(--line-strong)] bg-transparent text-[var(--text-hi)] hover:bg-[rgba(255,255,255,0.04)] hover:border-[var(--accent-1)]/40",
+          "border border-[var(--line-strong)] bg-white text-[var(--text-hi)] hover:bg-[var(--bg-1)] hover:border-[var(--accent-2)]/40",
         secondary:
-          "bg-[rgba(255,255,255,0.06)] text-[var(--text-hi)] border border-[var(--line)] hover:bg-[rgba(255,255,255,0.09)]",
+          "bg-[rgba(37,99,235,0.06)] text-[var(--accent-3)] border border-[var(--line)] hover:bg-[rgba(37,99,235,0.10)]",
         ghost:
-          "bg-transparent text-[var(--text-mid)] hover:bg-[rgba(255,255,255,0.04)] hover:text-[var(--text-hi)]",
+          "bg-transparent text-[var(--text-mid)] hover:bg-[rgba(37,99,235,0.06)] hover:text-[var(--text-hi)]",
         link:
-          "text-[var(--accent-1)] underline-offset-4 hover:underline px-0 h-auto",
+          "text-[var(--accent-2)] underline-offset-4 hover:underline px-0 h-auto",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

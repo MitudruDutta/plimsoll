@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useRouter } from 'next/navigation';
 import {
   Card, Timeline, Button, Tag, Spin, Empty, message as antMessage,
   Descriptions, Input, Space, Divider, Modal
@@ -18,7 +18,8 @@ const { TextArea } = Input;
 
 const HandoffDetail = () => {
   const { handoffId } = useParams();
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (path: string) => router.push(path);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [handoff, setHandoff] = useState(null);

@@ -1,49 +1,52 @@
 // @ts-nocheck
+"use client";
 import React from 'react';
-import {
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useClerk,
-  useUser,
-} from '@clerk/clerk-react';
-import { Menu as MenuIcon } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Menu as MenuIcon, LogOut } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Dropdown, MenuProps } from 'antd';
 import { useHeader } from '../context/HeaderContext';
+import { useCurrentUser, useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { BRAND, BrandLockup } from './Brand';
 import { Button } from './ui/button';
 
 /**
  * Plimsoll header — sticky, glass, hairline.
  *
- * Design notes (per `designprompt.md` §1):
- *  - 64px tall, `backdrop-blur-xl` over the page surface.
+ * Design notes:
+ *  - 60px tall, `backdrop-blur-xl` over the page surface.
  *  - Brand mark (gradient ring) + Plimsoll wordmark, tight tracking.
  *  - Pill nav: active item = subtle accent fill, others = ghost.
- *  - No more Microsoft-blue (#0078d4); the only color signal is the
- *    accent gradient, which we reserve for the gradient CTA only.
+ *  - Single accent (calm blue gradient) reserved for the gradient CTA.
  *  - On the demo page, the header collapses to give the cockpit
  *    breathing room — the wordmark hides, only the mark stays.
  */
 export const CommonHeader: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { openSignIn } = useClerk();
-  const { user } = useUser();
+  const router = useRouter();
+  const pathname = usePathname() ?? '/';
+  const navigate = React.useCallback(
+    (path: string) => router.push(path),
+    [router],
+  );
+  const { isSignedIn, email, fullName, avatarUrl, user } = useCurrentUser();
+  const { signOut } = useSupabaseAuth();
+
   const { subtitle, extraContent } = useHeader();
 
-  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+  const userEmail = email?.toLowerCase();
   const whitelistStr = process.env.NEXT_PUBLIC_ADMIN_WHITELIST || '';
   const adminWhitelist = whitelistStr
     .split(',')
     .map((e: string) => e.trim().toLowerCase());
 
+  const role =
+    (user?.app_metadata as Record<string, unknown> | undefined)?.role ||
+    (user?.user_metadata as Record<string, unknown> | undefined)?.role;
+
   const isAdmin =
-    user?.publicMetadata?.role === 'admin' ||
+    role === 'admin' ||
     (userEmail && adminWhitelist.includes(userEmail));
 
-  const isDemoPage = location.pathname === '/demo';
+  const isDemoPage = pathname === '/demo';
 
   type NavLink = { path: string; label: string };
   const navLinks: NavLink[] = [
@@ -69,11 +72,45 @@ export const CommonHeader: React.FC = () => {
     { key: 'settings', label: 'Settings', disabled: true },
   ];
 
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'email',
+      label: <span className="font-mono text-xs text-[var(--text-low)]">{email}</span>,
+      disabled: true,
+    },
+    { type: 'divider' },
+    {
+      key: 'cockpit',
+      label: 'Cockpit',
+      onClick: () => navigate('/usershome'),
+    },
+    { type: 'divider' },
+    {
+      key: 'sign-out',
+      label: (
+        <span className="flex items-center gap-2 text-[var(--danger)]">
+          <LogOut className="size-3.5" /> Sign out
+        </span>
+      ),
+      onClick: async () => {
+        await signOut();
+        navigate('/pay');
+      },
+    },
+  ];
+
+  const initials = (fullName || email || '?')
+    .split(/\s+|@/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('') || '?';
+
   return (
     <header
       className={
         'sticky top-0 z-50 w-full border-b border-[var(--line)] ' +
-        'bg-[rgba(10,10,11,0.72)] backdrop-blur-xl supports-[backdrop-filter]:bg-[rgba(10,10,11,0.55)] ' +
+        'bg-[rgba(255,255,255,0.78)] backdrop-blur-xl supports-[backdrop-filter]:bg-[rgba(255,255,255,0.62)] ' +
         'transition-all'
       }
       style={{ height: isDemoPage ? 64 : 60 }}
@@ -87,10 +124,9 @@ export const CommonHeader: React.FC = () => {
             className="shrink-0"
           />
 
-          {/* Pill nav */}
           <nav className="hidden md:flex items-center gap-1 ml-2">
             {navLinks.map((link) => {
-              const active = location.pathname === link.path;
+              const active = pathname === link.path;
               return (
                 <button
                   key={link.path}
@@ -98,7 +134,7 @@ export const CommonHeader: React.FC = () => {
                   className={
                     'px-3.5 py-1.5 rounded-full text-[13px] font-medium tracking-[-0.005em] transition-colors ' +
                     (active
-                      ? 'bg-[rgba(124,58,237,0.14)] text-[var(--accent-1)] border border-[rgba(167,139,250,0.30)]'
+                      ? 'bg-[rgba(37,99,235,0.10)] text-[var(--accent-3)] border border-[rgba(37,99,235,0.30)]'
                       : 'text-[var(--text-mid)] hover:text-[var(--text-hi)] border border-transparent hover:border-[var(--line)]')
                   }
                 >
@@ -126,7 +162,7 @@ export const CommonHeader: React.FC = () => {
         <div className="flex items-center gap-3 md:gap-4">
           {isDemoPage && extraContent}
 
-          <SignedIn>
+          {isSignedIn ? (
             <div className="flex items-center gap-3">
               {isAdmin && (
                 <Dropdown
@@ -136,26 +172,46 @@ export const CommonHeader: React.FC = () => {
                 >
                   <button
                     aria-label="Admin menu"
-                    className="flex items-center justify-center size-8 rounded-full text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+                    className="flex items-center justify-center size-8 rounded-full text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:bg-[rgba(37,99,235,0.06)] transition-colors"
                   >
                     <MenuIcon className="size-4" strokeWidth={2} />
                   </button>
                 </Dropdown>
               )}
-              <UserButton afterSignOutUrl="/pay" />
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                placement="bottomRight"
+                arrow
+              >
+                <button
+                  aria-label="Account menu"
+                  className="flex items-center justify-center size-9 rounded-full overflow-hidden border border-[var(--line)] bg-white shadow-sm hover:border-[var(--accent-2)]/40 transition-colors"
+                >
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt="avatar"
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-[12px] font-semibold text-[var(--accent-3)]">
+                      {initials}
+                    </span>
+                  )}
+                </button>
+              </Dropdown>
             </div>
-          </SignedIn>
-
-          <SignedOut>
+          ) : (
             <Button
               variant="gradient"
               size="sm"
-              onClick={() => openSignIn()}
+              onClick={() => navigate('/sign-in')}
               aria-label={`Sign in to ${BRAND.short}`}
             >
               Sign in
             </Button>
-          </SignedOut>
+          )}
         </div>
       </div>
     </header>

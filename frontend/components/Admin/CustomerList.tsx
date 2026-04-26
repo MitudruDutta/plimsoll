@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Tag, Button, Input, Space, message as antMessage } from 'antd';
 import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { chatAPI } from '../../services/api';
 import { formatUTCDateTime } from '../../utils/timeUtils';
 
@@ -10,7 +10,8 @@ const CustomerList = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (path: string) => router.push(path);
 
   const fetchCustomers = async () => {
     try {

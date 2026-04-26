@@ -42,9 +42,9 @@ export const PlimsollMark: React.FC<PlimsollMarkProps> = ({
     >
       <defs>
         <linearGradient id="plimsoll-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#A78BFA" />
-          <stop offset="50%" stopColor="#7C3AED" />
-          <stop offset="100%" stopColor="#4F46E5" />
+          <stop offset="0%" stopColor="#5B8DEF" />
+          <stop offset="50%" stopColor="#2563EB" />
+          <stop offset="100%" stopColor="#1D4ED8" />
         </linearGradient>
       </defs>
       <circle

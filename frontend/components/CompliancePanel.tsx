@@ -3,7 +3,7 @@
  * CompliancePanel - Sidebar-optimized compliance analysis panel
  *
  * Provides full compliance workflow inside the DemoPage sidebar:
- *  - Clerk user provisioning
+ *  - Supabase user provisioning
  *  - Port selector with search (reuses MAJOR_PORTS)
  *  - Saved route selection
  *  - Document count summary
@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useCurrentUser } from "../context/SupabaseAuthContext";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Shield,
@@ -93,7 +93,7 @@ export interface CompliancePanelProps {
 }
 
 export function CompliancePanel({ originPort, destinationPort, activeMapRoute }: CompliancePanelProps) {
-  const { user } = useUser();
+  const { user, email, fullName } = useCurrentUser();
 
   // identity
   const [customerId, setCustomerId] = useState<number | null>(null);
@@ -137,9 +137,9 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
     const provision = async () => {
       try {
         const res = await documentAPI.provisionUser({
-          clerk_id: user.id,
-          email: user.primaryEmailAddress?.emailAddress || "",
-          name: user.fullName || undefined,
+          auth_user_id: user.id,
+          email: email || "",
+          name: fullName || undefined,
         });
         setCustomerId(res.customer_id);
         if (res.vessel_id) setVesselId(res.vessel_id);
@@ -148,7 +148,7 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
       }
     };
     provision();
-  }, [user]);
+  }, [user, email, fullName]);
 
   // ---- pre-populate ports from DemoPage origin/destination ----
   useEffect(() => {

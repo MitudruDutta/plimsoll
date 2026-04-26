@@ -174,7 +174,8 @@ export interface MissingDocsResponse {
 
 // Provisioning types
 export interface ProvisionParams {
-  clerk_id: string;
+  /** Authenticated user id from the identity provider (Supabase user id). */
+  auth_user_id: string;
   email: string;
   name?: string;
 }

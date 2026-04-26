@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, Timeline, Button, Tag, Spin, Empty, message as antMessage, Descriptions } from 'antd';
 import { ArrowLeftOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
@@ -10,7 +10,8 @@ import { formatUTCDateTime } from '../../utils/timeUtils';
 
 const ConversationDetail = () => {
   const { customerId } = useParams();
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (path: string) => router.push(path);
   const [loading, setLoading] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [customer, setCustomer] = useState(null);
