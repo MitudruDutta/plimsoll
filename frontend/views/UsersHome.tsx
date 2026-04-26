@@ -32,6 +32,7 @@ import { documentAPI, setDocumentAuthToken } from '../services/documentApi';
 import { GapAnalysisReport } from '../components/documents';
 import { MAJOR_PORTS } from '../data/ports';
 import { motion, AnimatePresence } from 'motion/react';
+import { ModeBanner } from '../components/ModeBanner';
 
 export function UsersHome() {
   const { user, isLoaded } = useUser();
@@ -170,14 +171,17 @@ export function UsersHome() {
     loadComplianceData();
   }, [activeTab, customerId, vesselId]);
 
-  // User metrics data
-  const [metrics, setMetrics] = useState({
-    totalTokens: 5000000,
-    usedTokens: 1245800,
-    remainingTokens: 3754200,
-    activeTime: "4h 22m",
-    lastSession: "2026-01-26 10:30",
-    requests: 1420
+  // Usage metrics — PRD §F2.6: until /api/usage/me is wired against the
+  // llm_calls ledger (§B7.6), we keep the widget but mark the values
+  // null so the UI renders "—" instead of fabricated counters. Do NOT
+  // restore hardcoded totals; that was a v0 honesty bug.
+  const [metrics] = useState({
+    totalTokens: null,
+    usedTokens: null,
+    remainingTokens: null,
+    activeTime: null,
+    lastSession: null,
+    requests: null,
   });
 
   // Ship Profile Data (Based on TXT reference)
@@ -204,9 +208,12 @@ export function UsersHome() {
     volume: ''
   });
 
-  if (!isLoaded) return <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center text-blue-400 font-mono">INITIALIZING SYSTEM...</div>;
+  if (!isLoaded) return <div className="min-h-screen bg-[var(--bg-0)] flex items-center justify-center text-[var(--accent-1)] font-mono text-sm tracking-[0.14em] uppercase">Initialising cockpit…</div>;
 
-  const usedPercentage = (metrics.usedTokens / metrics.totalTokens) * 100;
+  const usedPercentage =
+    metrics.usedTokens != null && metrics.totalTokens
+      ? (metrics.usedTokens / metrics.totalTokens) * 100
+      : 0;
 
   // --- Handlers ---
   const handleShipDataChange = (field, value) => {
@@ -255,10 +262,20 @@ export function UsersHome() {
         throw new Error('User account not ready. Please wait a moment and try again.');
       }
 
+      // PRD §F2.7 — never silently fall back to vesselId=1; that was a
+      // cross-tenant write hazard. We require the user to have a
+      // provisioned vessel before any upload. The BE re-asserts
+      // ownership inside the transaction.
+      if (!vesselId) {
+        throw new Error(
+          'No vessel attached to your account yet. Wait for provisioning to complete or refresh the page before uploading.',
+        );
+      }
+
       // Step 1: Upload document to backend with OCR processing
       const uploadResult = await documentAPI.uploadDocument({
         customer_id: customerId,
-        vessel_id: vesselId || 1,
+        vessel_id: vesselId,
         document_type: 'other',
         title: file.name,
         file: file,
@@ -381,44 +398,49 @@ export function UsersHome() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white font-sans selection:bg-blue-500/30 overflow-x-hidden">
-      {/* Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[20%] left-[-5%] w-[400px] h-[400px] bg-emerald-500/5 blur-[100px] rounded-full" />
+    <div className="min-h-screen bg-[var(--bg-0)] text-[var(--text-hi)] font-sans selection:bg-[color:var(--accent-1)]/25 overflow-x-hidden">
+      {/* Background Ambience — single accent, soft conic glow */}
+      <div className="fixed inset-0 pointer-events-none -z-10">
+        <div className="absolute top-[-15%] right-[-10%] w-[560px] h-[560px] glow-conic opacity-60" />
+        <div className="absolute bottom-[10%] left-[-8%] w-[420px] h-[420px] rounded-full bg-[color:var(--accent-3)]/10 blur-[120px]" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-12 relative z-10">
+        {/* ModeBanner — usage metrics still mocked per PRD §F2.6/§F2.9 */}
+        <div className="mb-8">
+          <ModeBanner message="Demo data — usage telemetry, capacity, and analytics will switch to live feeds in v1.x." />
+        </div>
+
         {/* Navigation Header */}
         <div className="flex justify-between items-center mb-12">
           <div className="flex items-center gap-6">
-            <button 
+            <button
               onClick={() => navigate('/demo')}
-              className="flex items-center gap-2 text-white/60 hover:text-white transition-all px-4 py-2 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md group"
+              className="flex items-center gap-2 text-[var(--text-mid)] hover:text-[var(--text-hi)] transition-colors px-4 py-2 bg-white/[0.03] border border-[var(--line)] rounded-full backdrop-blur-md group"
             >
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-              <span>Back to Navigator</span>
+              <span className="text-sm">Back to Navigator</span>
             </button>
-            <div className="h-6 w-px bg-white/10 hidden md:block" />
+            <div className="h-6 w-px bg-[var(--line)] hidden md:block" />
             <nav className="hidden md:flex items-center gap-2">
                <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} label="Intelligence Center" />
                <TabButton active={activeTab === 'vessel'} onClick={() => setActiveTab('vessel')} label="Vessel Profile" icon={<Ship className="w-4 h-4" />} />
                <TabButton active={activeTab === 'compliance'} onClick={() => setActiveTab('compliance')} label="Compliance" icon={<Shield className="w-4 h-4" />} />
             </nav>
           </div>
-          
+
           <div className="flex items-center gap-4">
              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-white/90 tracking-tight">{user?.fullName || "Commander"}</p>
+                <p className="text-sm font-medium text-[var(--text-hi)] tracking-[-0.01em]">{user?.fullName || "Commander"}</p>
                 <div className="flex items-center gap-1.5 justify-end">
-                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                   <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest">Global Ops Active</p>
+                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+                   <p className="text-[10px] uppercase font-mono text-[var(--text-low)] tracking-[0.18em]">Global Ops Active</p>
                 </div>
              </div>
-             <img 
-               src={user?.imageUrl} 
-               alt="avatar" 
-               className="w-11 h-11 rounded-2xl border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.15)] ring-2 ring-white/5" 
+             <img
+               src={user?.imageUrl}
+               alt="avatar"
+               className="w-11 h-11 rounded-2xl border border-[var(--accent-1)]/25 shadow-[0_0_24px_-8px_rgba(124,58,237,0.5)] ring-2 ring-white/[0.05]"
              />
           </div>
         </div>
@@ -434,124 +456,143 @@ export function UsersHome() {
             >
               {/* Hero Overview */}
               <header className="mb-12">
-                <h1 className="text-5xl font-extrabold tracking-tight mb-3">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-300">
-                    Mission Control
-                  </span>
+                <h1 className="text-[clamp(2.5rem,5vw,4rem)] font-semibold tracking-[-0.04em] mb-3 leading-[1.05]">
+                  Mission <span className="accent-serif text-grad-accent">control</span>
                 </h1>
-                <p className="text-white/40 text-lg max-w-2xl">
-                  Real-time analytics for your Multi-Agent Maritime Logistics network. All systems operational.
+                <p className="text-[var(--text-mid)] text-base sm:text-lg max-w-2xl leading-relaxed">
+                  A quiet, replayable cockpit for your maritime logistics network. Compliance, routing, and risk — in one surface.
                 </p>
               </header>
 
-              {/* Metrics Grid */}
+              {/* Metrics Grid — usage values are intentionally null
+                  until /api/usage/me is wired against the llm_calls
+                  ledger (PRD §F2.6 + §B7.6). Render an em-dash so the
+                  card is honest without going blank. */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                <MetricCard 
-                  title="System Active Time" 
-                  value={metrics.activeTime} 
-                  icon={<Clock className="text-blue-400" />} 
-                  subText="Continuous monitoring active"
+                <MetricCard
+                  title="Session Active Time"
+                  value={metrics.activeTime ?? '—'}
+                  icon={<Clock className="text-[var(--accent-1)]" />}
+                  subText={metrics.activeTime ? 'Continuous monitoring active' : 'Live usage feed: pending'}
                 />
-                <MetricCard 
-                  title="Network Requests" 
-                  value={metrics.requests.toLocaleString()} 
-                  icon={<TrendingUp className="text-emerald-400" />} 
-                  subText="API Performance: 99.9%"
+                <MetricCard
+                  title="Agent Requests"
+                  value={metrics.requests != null ? metrics.requests.toLocaleString() : '—'}
+                  icon={<TrendingUp className="text-[var(--success)]" />}
+                  subText={metrics.requests != null ? 'Last 24 hours' : 'Live usage feed: pending'}
                 />
-                <MetricCard 
-                  title="Remaining Capacity" 
-                  value={(metrics.remainingTokens / 1000).toFixed(0) + "K"} 
-                  icon={<Zap className="text-amber-400" />} 
-                  subText={`${(100 - usedPercentage).toFixed(1)}% Credit Left`}
+                <MetricCard
+                  title="Remaining Capacity"
+                  value={metrics.remainingTokens != null ? (metrics.remainingTokens / 1000).toFixed(0) + 'K' : '—'}
+                  icon={<Zap className="text-[var(--warn)]" />}
+                  subText={metrics.remainingTokens != null ? `${(100 - usedPercentage).toFixed(1)}% credit left` : 'Live usage feed: pending'}
                 />
-                <MetricCard 
-                  title="Total Allocation" 
-                  value="5.0M" 
-                  icon={<Layers className="text-indigo-400" />} 
-                  subText="Enterprise Tier Plan"
+                <MetricCard
+                  title="Plan Allocation"
+                  value={metrics.totalTokens != null ? (metrics.totalTokens / 1_000_000).toFixed(1) + 'M' : '—'}
+                  icon={<Layers className="text-[var(--accent-1)]" />}
+                  subText={metrics.totalTokens != null ? 'Token budget' : 'Live usage feed: pending'}
                 />
               </div>
 
               {/* Main Section */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                  <div className="lg:col-span-2 space-y-8">
-                   <div className="bg-[#0f172a]/60 border border-white/5 rounded-[2rem] p-8 backdrop-blur-sm relative overflow-hidden">
+                   <div className="surface-glass rounded-2xl p-8 relative overflow-hidden">
                       <div className="flex justify-between items-start mb-10">
                          <div>
-                            <h2 className="text-xl font-bold mb-1 flex items-center gap-2">
-                               <Activity className="w-5 h-5 text-blue-500" />
-                               Neural Token Consumption
+                            <h2 className="text-lg font-semibold mb-1 flex items-center gap-2 tracking-[-0.01em]">
+                               <Activity className="w-5 h-5 text-[var(--accent-1)]" />
+                               Token consumption
                             </h2>
-                            <p className="text-white/40 text-sm">Monthly resource distribution across multi-agent cluster</p>
+                            <p className="text-[var(--text-mid)] text-sm">Monthly distribution across the agent cluster.</p>
                          </div>
-                         <button className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
-                            <Info className="w-4 h-4 text-white/30" />
+                         <button className="p-2 bg-white/[0.03] hover:bg-white/[0.06] border border-[var(--line)] rounded-lg transition-colors">
+                            <Info className="w-4 h-4 text-[var(--text-low)]" />
                          </button>
                       </div>
 
-                      <div className="relative h-4 bg-white/5 rounded-full mb-4 border border-white/5 overflow-hidden">
-                         <motion.div 
+                      <div className="relative h-2.5 bg-white/[0.04] rounded-full mb-4 border border-[var(--line)] overflow-hidden">
+                         <motion.div
                            initial={{ width: 0 }}
                            animate={{ width: `${usedPercentage}%` }}
-                           className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-cyan-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]"
+                           className="absolute top-0 left-0 h-full bg-grad-accent shadow-[0_0_24px_-8px_rgba(124,58,237,0.6)]"
                          />
                       </div>
-                      <div className="flex justify-between items-center text-xs font-mono uppercase tracking-widest text-white/20">
-                         <span>Start Pool: 0.0</span>
-                         <span className="text-white/40">{metrics.usedTokens.toLocaleString()} Used</span>
-                         <span>Max: 5,000,000</span>
+                      <div className="flex justify-between items-center text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--text-low)]" data-mono>
+                         <span>Start: 0</span>
+                         <span className="text-[var(--text-mid)]">
+                           {metrics.usedTokens != null
+                             ? `${metrics.usedTokens.toLocaleString()} used`
+                             : 'Awaiting live usage feed'}
+                         </span>
+                         <span>
+                           {metrics.totalTokens != null
+                             ? `Max: ${metrics.totalTokens.toLocaleString()}`
+                             : 'Max: —'}
+                         </span>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-white/5">
-                         <DetailBox label="Avg Latency" value="142ms" color="text-blue-400" />
-                         <DetailBox label="Agent Uptime" value="100%" color="text-emerald-400" />
-                         <DetailBox label="Encryption" value="AES-256" color="text-indigo-400" />
+                      {/* Honest cluster details — hard-coded marketing
+                          numbers (142ms / 100% / AES-256) removed per
+                          PRD §F2.6. SLO surfaces will replace these
+                          once the obs pipeline lands. */}
+                      <div className="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-[var(--line)]">
+                         <DetailBox label="Avg latency" value="—" />
+                         <DetailBox label="Agent uptime" value="—" />
+                         <DetailBox label="Encryption" value="In transit" />
                       </div>
                    </div>
-                   
+
                    {/* Vessel Quick-Access Link */}
-                   <button 
+                   <button
                      onClick={() => setActiveTab('vessel')}
-                     className="w-full group bg-gradient-to-r from-blue-600/10 to-transparent hover:from-blue-600/20 border border-blue-500/20 rounded-2xl p-6 flex justify-between items-center transition-all"
+                     className="w-full group surface-glass rounded-2xl p-6 flex justify-between items-center transition-colors hover:border-[var(--accent-1)]/30"
                    >
                      <div className="flex items-center gap-4 text-left">
-                        <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                           <Ship className="w-6 h-6 text-blue-400" />
+                        <div className="w-12 h-12 bg-[color:var(--accent-1)]/10 border border-[color:var(--accent-1)]/25 rounded-xl flex items-center justify-center">
+                           <Ship className="w-6 h-6 text-[var(--accent-1)]" />
                         </div>
                         <div>
-                           <h3 className="font-bold text-lg">Configure Vessel Profile</h3>
-                           <p className="text-white/40 text-sm">Set up ship particulars and cargo manifest for routing</p>
+                           <h3 className="font-medium text-base text-[var(--text-hi)] tracking-[-0.01em]">Configure vessel profile</h3>
+                           <p className="text-[var(--text-mid)] text-sm">Set up ship particulars and cargo manifest for routing.</p>
                         </div>
                      </div>
-                     <ChevronRight className="w-6 h-6 text-white/20 group-hover:translate-x-1 group-hover:text-blue-400 transition-all" />
+                     <ChevronRight className="w-5 h-5 text-[var(--text-low)] group-hover:translate-x-1 group-hover:text-[var(--accent-1)] transition-all" />
                    </button>
                  </div>
 
                  <div className="space-y-6">
-                    <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 text-center backdrop-blur-md">
-                       <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                          <Shield className="w-8 h-8 text-blue-400" />
+                    <section className="surface-glass rounded-2xl p-8 text-center">
+                       <div className="w-14 h-14 bg-[color:var(--accent-1)]/10 border border-[color:var(--accent-1)]/25 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                          <Shield className="w-7 h-7 text-[var(--accent-1)]" />
                        </div>
-                       <h2 className="text-xl font-bold mb-2">Defense Status</h2>
-                       <p className="text-white/40 text-sm mb-8 leading-relaxed">Multi-factor authentication and role-based access control enabled.</p>
-                       <div className="space-y-3">
-                          <StatusButton label="Security Logs" />
-                          <StatusButton label="Manage API Keys" />
+                       <h2 className="text-lg font-semibold mb-2 tracking-[-0.01em]">Account security</h2>
+                       <p className="text-[var(--text-mid)] text-sm mb-7 leading-relaxed">
+                         Multi-factor authentication and role-based access control are enabled on this workspace.
+                       </p>
+                       <div className="space-y-2.5">
+                          <StatusButton label="Security logs" />
+                          <StatusButton label="Manage API keys" />
                           <SignOutButton>
-                             <button className="w-full py-3 text-red-400/80 hover:text-red-400 transition-colors font-semibold text-sm">
-                               Disconnect Session
+                             <button className="w-full py-3 text-[var(--danger)]/80 hover:text-[var(--danger)] transition-colors font-medium text-sm">
+                               Sign out
                              </button>
                           </SignOutButton>
                        </div>
                     </section>
 
-                    <div className="bg-gradient-to-br from-indigo-600/20 to-blue-600/10 border border-indigo-500/20 rounded-[2rem] p-6">
+                    {/* Subscription card — Stripe wiring is pending
+                        (PRD §B7), so we show the plan tier honestly
+                        and replace the fake renewal date with a
+                        placeholder rather than hard-coding it. */}
+                    <div className="surface-glass rounded-2xl p-6">
                         <div className="flex items-center gap-3 mb-4">
-                           <Package className="w-5 h-5 text-indigo-400" />
-                           <span className="font-bold text-sm tracking-wide">SUBSCRIPTION</span>
+                           <Package className="w-4 h-4 text-[var(--accent-1)]" />
+                           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-mid)]">Subscription</span>
                         </div>
-                        <p className="text-2xl font-black mb-1">PRO PLAN</p>
-                        <p className="text-white/40 text-xs">Renews Jan 22, 2026</p>
+                        <p className="text-2xl font-semibold mb-1 tracking-[-0.02em]">Pro plan</p>
+                        <p className="text-[var(--text-low)] text-xs">Renewal cycle wires to Stripe in v1.x.</p>
                     </div>
                  </div>
               </div>
@@ -570,8 +611,8 @@ export function UsersHome() {
                <div className="flex justify-between items-end mb-10">
                   <div>
                     <h1 className="text-4xl font-bold flex items-center gap-4">
-                      <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center">
-                        <Ship className="w-7 h-7 text-blue-500" />
+                      <div className="w-12 h-12 bg-[color:var(--accent-1)]/10 rounded-2xl flex items-center justify-center">
+                        <Ship className="w-7 h-7 text-[var(--accent-1)]" />
                       </div>
                       Ship Intelligence Profile
                     </h1>
@@ -579,7 +620,7 @@ export function UsersHome() {
                   </div>
                   <button 
                     onClick={() => setShowUploadModal(true)}
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                    className="bg-grad-accent hover:opacity-95 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-[0_18px_40px_-18px_rgba(124,58,237,0.45)] transition-all active:scale-95"
                   >
                     <Upload className="w-4 h-4" />
                     Auto-Fill from File
@@ -627,9 +668,9 @@ export function UsersHome() {
                   </FormSection>
 
                   {/* Extra Analysis Info */}
-                  <section className="bg-gradient-to-br from-blue-600/10 to-emerald-600/5 border border-white/5 rounded-3xl p-8">
+                  <section className="bg-gradient-to-br from-[color:var(--accent-1)]/10 to-[color:var(--accent-3)]/5 border border-white/5 rounded-3xl p-8">
                      <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                        <History className="w-5 h-5 text-emerald-400" />
+                        <History className="w-5 h-5 text-[var(--success)]" />
                         Compliance Analysis Notes
                      </h3>
                      <div className="space-y-4">
@@ -639,7 +680,7 @@ export function UsersHome() {
                         <div className="mt-8 pt-8 border-t border-white/10">
                            <button 
                              onClick={() => navigate('/port')}
-                             className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black tracking-widest uppercase text-sm shadow-xl shadow-emerald-900/40 transition-all active:scale-95"
+                             className="w-full py-4 bg-grad-accent hover:opacity-95 text-white rounded-2xl font-semibold tracking-widest uppercase text-sm shadow-xl shadow-[0_18px_40px_-18px_rgba(124,58,237,0.55)] transition-all active:scale-95"
                            >
                               Apply to Simulation
                            </button>
@@ -662,8 +703,8 @@ export function UsersHome() {
                <div className="flex justify-between items-end mb-10">
                   <div>
                     <h1 className="text-4xl font-bold flex items-center gap-4">
-                      <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
-                        <Shield className="w-7 h-7 text-emerald-500" />
+                      <div className="w-12 h-12 bg-[color:var(--success)]/10 rounded-2xl flex items-center justify-center">
+                        <Shield className="w-7 h-7 text-[var(--success)]" />
                       </div>
                       Compliance Analysis
                     </h1>
@@ -684,7 +725,7 @@ export function UsersHome() {
                      {/* Route Selection Panel */}
                      <section className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8">
                         <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                           <Navigation className="w-5 h-5 text-blue-500" />
+                           <Navigation className="w-5 h-5 text-[var(--accent-1)]" />
                            Route Selection
                         </h3>
 
@@ -699,7 +740,7 @@ export function UsersHome() {
                                        const route = vesselRoutes.find(r => r.id === parseInt(e.target.value));
                                        setSelectedRoute(route || null);
                                     }}
-                                    className="w-full bg-[#0a0e1a] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all appearance-none cursor-pointer"
+                                    className="w-full bg-[var(--bg-1)] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-[color:var(--accent-1)]/50 focus:ring-1 focus:ring-[color:var(--accent-1)]/30 outline-none transition-all appearance-none cursor-pointer"
                                  >
                                     <option value="">Select a route...</option>
                                     {vesselRoutes.map(route => (
@@ -714,8 +755,8 @@ export function UsersHome() {
 
                            {/* Selected Route Info */}
                            {selectedRoute && (
-                              <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
-                                 <div className="flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-widest mb-3">
+                              <div className="bg-[color:var(--accent-1)]/8 border border-[color:var(--accent-1)]/25 rounded-2xl p-4">
+                                 <div className="flex items-center gap-2 text-[var(--accent-1)] text-xs font-bold uppercase tracking-widest mb-3">
                                     <Anchor className="w-4 h-4" />
                                     Route Ports
                                  </div>
@@ -738,7 +779,7 @@ export function UsersHome() {
                            <div className="pt-4 border-t border-white/5 space-y-4">
                                     <div className="flex items-center justify-between">
                                  <span className="text-sm font-bold flex items-center gap-2">
-                                    <Plus className="w-4 h-4 text-blue-400" />
+                                    <Plus className="w-4 h-4 text-[var(--accent-1)]" />
                                     Add Ports for Analysis
                                  </span>
                                  {selectedRoutePorts.length > 0 && (
@@ -759,7 +800,7 @@ export function UsersHome() {
                                        <label className="text-[10px] uppercase font-bold text-white/30 ml-1 tracking-widest">
                                           Select Ports 
                                           {allPorts.length > 0 && (
-                                             <span className="text-blue-400 ml-2">({allPorts.length} available)</span>
+                                             <span className="text-[var(--accent-1)] ml-2">({allPorts.length} available)</span>
                                           )}
                                        </label>
                                        
@@ -775,7 +816,7 @@ export function UsersHome() {
                                              onFocus={() => setShowPortDropdown(true)}
                                              onBlur={() => setTimeout(() => setShowPortDropdown(false), 300)}
                                              placeholder="Click to browse or type to search..."
-                                             className="w-full bg-[#0a0e1a] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all placeholder:text-white/20"
+                                             className="w-full bg-[var(--bg-1)] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-[color:var(--accent-1)]/50 focus:ring-1 focus:ring-[color:var(--accent-1)]/30 outline-none transition-all placeholder:text-white/20"
                                           />
                                           
                                           {/* Dropdown */}
@@ -811,7 +852,7 @@ export function UsersHome() {
                                                             setPortSearchQuery('');
                                                             setShowPortDropdown(false);
                                                          }}
-                                                         className="w-full px-4 py-3 text-left hover:bg-blue-500/10 border-b border-white/5 last:border-0 transition-colors"
+                                                         className="w-full px-4 py-3 text-left hover:bg-[color:var(--accent-1)]/10 border-b border-white/5 last:border-0 transition-colors"
                                                       >
                                                          <div className="flex items-center justify-between">
                                                             <div>
@@ -830,11 +871,11 @@ export function UsersHome() {
                                        {/* Selected Ports */}
                                        {selectedRoutePorts.length > 0 && (
                                           <div className="space-y-2">
-                                             <div className="flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-widest">
+                                             <div className="flex items-center gap-2 text-[var(--accent-1)] text-xs font-bold uppercase tracking-widest">
                                                 <Anchor className="w-3 h-3" />
                                                 Selected Route ({selectedRoutePorts.length} ports)
                                              </div>
-                                             <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 space-y-2">
+                                             <div className="bg-[color:var(--accent-1)]/8 border border-[color:var(--accent-1)]/25 rounded-xl p-3 space-y-2">
                                                 {selectedRoutePorts.map((port, idx) => (
                                                    <div key={port.un_locode} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
                                                       <div className="flex items-center gap-3">
@@ -846,7 +887,7 @@ export function UsersHome() {
                                                       </div>
                                                       <button
                                                          onClick={() => setSelectedRoutePorts(prev => prev.filter(p => p.un_locode !== port.un_locode))}
-                                                         className="text-red-400 hover:text-red-300 transition-colors"
+                                                         className="text-[var(--danger)] hover:text-red-300 transition-colors"
                                                       >
                                                          <X className="w-4 h-4" />
                                                       </button>
@@ -881,12 +922,12 @@ export function UsersHome() {
                                        value={newRouteName}
                                        onChange={(e) => setNewRouteName(e.target.value)}
                                        placeholder="Route name (e.g., Asia-Europe Express)"
-                                       className="w-full bg-[#0a0e1a] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all placeholder:text-white/20"
+                                       className="w-full bg-[var(--bg-1)] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-[color:var(--accent-1)]/50 focus:ring-1 focus:ring-[color:var(--accent-1)]/30 outline-none transition-all placeholder:text-white/20"
                                     />
                                     <button 
                                        onClick={handleCreateRoute}
                                        disabled={isCreatingRoute || !newRouteName.trim()}
-                                       className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-white/10 disabled:text-white/30 text-white rounded-xl font-bold text-sm transition-all"
+                                       className="w-full py-3 bg-grad-accent hover:opacity-95 disabled:bg-white/10 disabled:text-white/30 text-white rounded-xl font-bold text-sm transition-all"
                                     >
                                        {isCreatingRoute ? 'Saving...' : 'Save Route'}
                                     </button>
@@ -900,7 +941,7 @@ export function UsersHome() {
                      <section className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8">
                         <div className="flex items-center justify-between mb-6">
                            <h3 className="text-lg font-bold flex items-center gap-2">
-                              <FileText className="w-5 h-5 text-indigo-500" />
+                              <FileText className="w-5 h-5 text-[var(--accent-1)]" />
                               Documents on File
                            </h3>
                            <span className="text-white/40 text-sm">{vesselDocuments.length} documents</span>
@@ -912,7 +953,7 @@ export function UsersHome() {
                               <p className="text-white/40 text-sm mb-4">No documents uploaded yet</p>
                               <button 
                                  onClick={() => navigate('/documents')}
-                                 className="text-blue-400 hover:text-blue-300 text-sm font-bold"
+                                 className="text-[var(--accent-1)] hover:text-[color:var(--accent-1)]/80 text-sm font-bold"
                               >
                                  Go to Document Upload
                               </button>
@@ -954,7 +995,7 @@ export function UsersHome() {
                         <section className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8">
                            <div className="flex items-center justify-between mb-6">
                               <h3 className="text-lg font-bold flex items-center gap-2">
-                                 <ClipboardCheck className="w-5 h-5 text-emerald-500" />
+                                 <ClipboardCheck className="w-5 h-5 text-[var(--success)]" />
                                  Analysis Results
                               </h3>
                               <span className="text-white/40 text-sm">
@@ -981,9 +1022,9 @@ export function UsersHome() {
                   {/* Right Column - Action Panel */}
                   <div className="space-y-6">
                      {/* Run Analysis Card */}
-                     <section className="bg-gradient-to-br from-emerald-600/20 to-blue-600/10 border border-emerald-500/20 rounded-[2rem] p-8">
-                        <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                           <Search className="w-8 h-8 text-emerald-400" />
+                     <section className="bg-gradient-to-br from-[color:var(--accent-1)]/15 to-[color:var(--accent-3)]/10 border border-[color:var(--accent-1)]/25 rounded-[2rem] p-8">
+                        <div className="w-16 h-16 bg-[color:var(--success)]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                           <Search className="w-8 h-8 text-[var(--success)]" />
                         </div>
                         <h2 className="text-xl font-bold mb-2 text-center">Run Compliance Analysis</h2>
                         <p className="text-white/40 text-sm mb-8 text-center leading-relaxed">
@@ -991,7 +1032,7 @@ export function UsersHome() {
                         </p>
 
                         {analysisError && (
-                           <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm flex items-center gap-2">
+                           <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-[var(--danger)] text-sm flex items-center gap-2">
                               <AlertCircle className="w-4 h-4 flex-shrink-0" />
                               {analysisError}
                            </div>
@@ -1000,7 +1041,7 @@ export function UsersHome() {
                         <button 
                            onClick={handleRunAnalysis}
                            disabled={(!selectedRoute && selectedRoutePorts.length === 0) || isAnalyzing}
-                           className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-white/10 disabled:text-white/30 text-white rounded-2xl font-black tracking-widest uppercase text-sm shadow-xl shadow-emerald-900/40 transition-all active:scale-95 flex items-center justify-center gap-2"
+                           className="w-full py-4 bg-grad-accent hover:opacity-95 disabled:bg-white/10 disabled:text-white/30 text-white rounded-2xl font-semibold tracking-widest uppercase text-sm shadow-xl shadow-[0_18px_40px_-18px_rgba(124,58,237,0.55)] transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
                            {isAnalyzing ? (
                               <>
@@ -1016,12 +1057,12 @@ export function UsersHome() {
                         </button>
 
                         {!selectedRoute && selectedRoutePorts.length === 0 && (
-                           <p className="text-amber-400/60 text-xs text-center mt-4">
+                           <p className="text-[var(--warn)]/60 text-xs text-center mt-4">
                               Please select a route or add ports for analysis
                            </p>
                         )}
                         {vesselDocuments.length === 0 && (selectedRoute || selectedRoutePorts.length > 0) && (
-                           <p className="text-blue-400/60 text-xs text-center mt-4">
+                           <p className="text-[var(--accent-1)]/60 text-xs text-center mt-4">
                               No documents uploaded yet - analysis will show all required documents
                            </p>
                         )}
@@ -1030,20 +1071,20 @@ export function UsersHome() {
                      {/* Analysis Info */}
                      <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
                         <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
-                           <Info className="w-4 h-4 text-blue-400" />
+                           <Info className="w-4 h-4 text-[var(--accent-1)]" />
                            How It Works
                         </h3>
                         <div className="space-y-3 text-sm text-white/50">
                            <div className="flex gap-3">
-                              <span className="text-blue-400 font-bold">1.</span>
+                              <span className="text-[var(--accent-1)] font-bold">1.</span>
                               <span>Route Requirements Analyst identifies all required documents</span>
                            </div>
                            <div className="flex gap-3">
-                              <span className="text-blue-400 font-bold">2.</span>
+                              <span className="text-[var(--accent-1)] font-bold">2.</span>
                               <span>Gap Detector compares your documents against requirements</span>
                            </div>
                            <div className="flex gap-3">
-                              <span className="text-blue-400 font-bold">3.</span>
+                              <span className="text-[var(--accent-1)] font-bold">3.</span>
                               <span>AI generates prioritized recommendations for compliance</span>
                            </div>
                         </div>
@@ -1057,19 +1098,19 @@ export function UsersHome() {
                               <div className="flex justify-between items-center">
                                  <span className="text-white/50 text-sm">Compliance Score</span>
                                  <span className={`font-bold ${
-                                    missingDocsResult.compliance_score >= 80 ? 'text-emerald-400' :
-                                    missingDocsResult.compliance_score >= 50 ? 'text-amber-400' : 'text-red-400'
+                                    missingDocsResult.compliance_score >= 80 ? 'text-[var(--success)]' :
+                                    missingDocsResult.compliance_score >= 50 ? 'text-[var(--warn)]' : 'text-[var(--danger)]'
                                  }`}>
                                     {missingDocsResult.compliance_score}%
                                  </span>
                               </div>
                               <div className="flex justify-between items-center">
                                  <span className="text-white/50 text-sm">Missing Documents</span>
-                                 <span className="font-bold text-red-400">{missingDocsResult.missing_documents.length}</span>
+                                 <span className="font-bold text-[var(--danger)]">{missingDocsResult.missing_documents.length}</span>
                               </div>
                               <div className="flex justify-between items-center">
                                  <span className="text-white/50 text-sm">Recommendations</span>
-                                 <span className="font-bold text-blue-400">{missingDocsResult.recommendations.length}</span>
+                                 <span className="font-bold text-[var(--accent-1)]">{missingDocsResult.recommendations.length}</span>
                               </div>
                            </div>
                         </section>
@@ -1088,7 +1129,7 @@ export function UsersHome() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-[#0a0e1a]/95 backdrop-blur-xl flex items-center justify-center p-6"
+            className="fixed inset-0 z-[100] bg-[var(--bg-1)]/95 backdrop-blur-xl flex items-center justify-center p-6"
           >
              <motion.div 
                initial={{ scale: 0.9, y: 20 }}
@@ -1097,7 +1138,7 @@ export function UsersHome() {
                className="bg-[#0f172a] border border-white/10 rounded-[2.5rem] w-full max-w-xl p-10 relative shadow-2xl overflow-hidden"
              >
                 {/* Decorative Elements */}
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-500" />
+                <div className="absolute top-0 left-0 w-full h-2 bg-grad-accent" />
                 
                 <button 
                   onClick={() => setShowUploadModal(false)}
@@ -1107,8 +1148,8 @@ export function UsersHome() {
                 </button>
 
                 <div className="text-center mb-10">
-                   <div className="w-20 h-20 bg-blue-500/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                      <FileText className="w-10 h-10 text-blue-500" />
+                   <div className="w-20 h-20 bg-[color:var(--accent-1)]/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                      <FileText className="w-10 h-10 text-[var(--accent-1)]" />
                    </div>
                    <h2 className="text-3xl font-bold mb-2">Multi-Document Upload</h2>
                    <p className="text-white/40">Upload your vessel certificates and shipping docs for analysis</p>
@@ -1127,9 +1168,9 @@ export function UsersHome() {
                       onClick={handleDropZoneClick}
                       onDrop={handleDrop}
                       onDragOver={(e) => e.preventDefault()}
-                      className="border-2 border-dashed border-white/10 rounded-3xl p-12 text-center hover:border-blue-500/40 hover:bg-blue-500/5 transition-all cursor-pointer group"
+                      className="border-2 border-dashed border-white/10 rounded-3xl p-12 text-center hover:border-[color:var(--accent-1)]/40 hover:bg-[color:var(--accent-1)]/8 transition-all cursor-pointer group"
                     >
-                       <Plus className="w-10 h-10 text-white/20 group-hover:text-blue-500 mx-auto mb-4 transition-all group-hover:scale-110" />
+                       <Plus className="w-10 h-10 text-white/20 group-hover:text-[var(--accent-1)] mx-auto mb-4 transition-all group-hover:scale-110" />
                        <p className="font-bold text-lg mb-1">Drag and Drop Files Here</p>
                        <p className="text-sm text-white/30">Supports PDF, PNG, JPG (Max 50MB per file)</p>
                        <div className="mt-8 flex justify-center gap-2">
@@ -1137,7 +1178,7 @@ export function UsersHome() {
                        </div>
                     </div>
                     {uploadError && (
-                      <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm flex items-center gap-2">
+                      <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-[var(--danger)] text-sm flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                         {uploadError}
                       </div>
@@ -1146,13 +1187,13 @@ export function UsersHome() {
                 ) : (
                   <div className="py-12 px-6">
                     <div className="flex justify-between items-center mb-4">
-                       <span className="text-blue-400 font-bold uppercase tracking-widest text-xs animate-pulse">Analyzing Documents...</span>
+                       <span className="text-[var(--accent-1)] font-bold uppercase tracking-widest text-xs animate-pulse">Analyzing Documents...</span>
                        <span className="text-white/60 font-mono">{uploadProgress}%</span>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
                        <motion.div 
                          animate={{ width: `${uploadProgress}%` }}
-                         className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]"
+                         className="h-full bg-grad-accent shadow-[0_0_18px_rgba(124,58,237,0.55)]"
                        />
                     </div>
                     <div className="mt-8 space-y-4">
@@ -1174,12 +1215,12 @@ export function UsersHome() {
 
 function TabButton({ active, onClick, label, icon }) {
   return (
-    <button 
+    <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
-        active 
-          ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-          : 'text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/5'
+      className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+        active
+          ? 'bg-[var(--accent-2)]/15 text-[var(--text-hi)] border border-[var(--accent-1)]/30 shadow-[0_0_24px_-12px_rgba(124,58,237,0.6)]'
+          : 'text-[var(--text-mid)] hover:text-[var(--text-hi)] bg-white/[0.02] hover:bg-white/[0.05] border border-transparent hover:border-[var(--line)]'
       }`}
     >
       {icon}
@@ -1190,29 +1231,29 @@ function TabButton({ active, onClick, label, icon }) {
 
 function MetricCard({ title, value, icon, subText }) {
   return (
-    <div className="p-6 bg-[#0f172a]/40 border border-white/5 rounded-3xl backdrop-blur-sm group hover:border-blue-500/30 transition-all">
-      <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+    <div className="surface-glass rounded-2xl p-6 group transition-colors hover:border-[var(--accent-1)]/25">
+      <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-[var(--line)] flex items-center justify-center mb-5 transition-transform group-hover:scale-105">
         {icon}
       </div>
-      <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/30 mb-1">{title}</p>
-      <h3 className="text-3xl font-black text-white/90 mb-2">{value}</h3>
-      <p className="text-[10px] font-medium text-white/20 group-hover:text-blue-500/60 transition-colors uppercase">{subText}</p>
+      <p className="text-[10px] uppercase font-mono tracking-[0.18em] text-[var(--text-low)] mb-1.5">{title}</p>
+      <h3 className="text-3xl font-semibold text-[var(--text-hi)] tabular-nums tracking-[-0.02em]" data-mono>{value}</h3>
+      <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-low)] group-hover:text-[var(--accent-1)]/70 transition-colors">{subText}</p>
     </div>
   );
 }
 
-function DetailBox({ label, value, color }) {
+function DetailBox({ label, value }) {
   return (
     <div>
-      <p className="text-[10px] uppercase font-bold text-white/20 mb-1 tracking-widest">{label}</p>
-      <p className={`text-lg font-bold ${color}`}>{value}</p>
+      <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--text-low)] mb-1.5">{label}</p>
+      <p className="text-lg font-semibold text-[var(--text-hi)] tabular-nums" data-mono>{value}</p>
     </div>
   );
 }
 
 function StatusButton({ label }) {
   return (
-    <button className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-sm font-bold text-white/60 transition-all hover:text-white">
+    <button className="w-full py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-[var(--line)] hover:border-[var(--line-strong)] rounded-xl text-sm font-medium text-[var(--text-mid)] transition-colors hover:text-[var(--text-hi)]">
       {label}
     </button>
   );
@@ -1220,9 +1261,9 @@ function StatusButton({ label }) {
 
 function FormSection({ title, icon, children }) {
   return (
-    <section className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8">
-       <h3 className="text-lg font-bold mb-8 flex items-center gap-2">
-          <span className="text-blue-500">{icon}</span>
+    <section className="surface-glass rounded-2xl p-8">
+       <h3 className="text-base font-semibold mb-7 flex items-center gap-2 text-[var(--text-hi)] tracking-[-0.01em]">
+          <span className="text-[var(--accent-1)]">{icon}</span>
           {title}
        </h3>
        {children}
@@ -1233,13 +1274,13 @@ function FormSection({ title, icon, children }) {
 function InputField({ label, value, onChange, placeholder, type = "text" }) {
   return (
     <div className="space-y-2">
-       <label className="text-[10px] uppercase font-bold text-white/30 ml-1 tracking-widest">{label}</label>
-       <input 
+       <label className="text-[10px] uppercase font-mono tracking-[0.18em] text-[var(--text-low)] ml-1">{label}</label>
+       <input
          type={type}
          value={value}
          onChange={(e) => onChange(e.target.value)}
          placeholder={placeholder}
-         className="w-full bg-[#0a0e1a] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all placeholder:text-white/10"
+         className="w-full bg-[var(--bg-1)] border border-[var(--line)] rounded-lg px-4 py-2.5 text-sm font-normal text-[var(--text-hi)] focus:border-[var(--accent-1)]/50 focus:ring-1 focus:ring-[var(--accent-1)]/30 outline-none transition-colors placeholder:text-[var(--text-low)]"
        />
     </div>
   );
@@ -1248,8 +1289,14 @@ function InputField({ label, value, onChange, placeholder, type = "text" }) {
 function AnalysisPoint({ label, status, alert }) {
   return (
     <div className="flex justify-between items-center py-2">
-       <span className="text-sm font-medium text-white/60">{label}</span>
-       <span className={`text-[10px] uppercase font-bold px-3 py-1 rounded-full border ${alert ? 'border-amber-500/30 bg-amber-500/10 text-amber-500' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+       <span className="text-sm font-normal text-[var(--text-mid)]">{label}</span>
+       <span
+         className={`text-[10px] uppercase font-mono tracking-[0.16em] px-2.5 py-1 rounded-full border ${
+           alert
+             ? 'border-[color:var(--warn)]/30 bg-[color:var(--warn)]/10 text-[var(--warn)]'
+             : 'border-[color:var(--success)]/30 bg-[color:var(--success)]/10 text-[var(--success)]'
+         }`}
+       >
           {status}
        </span>
     </div>
@@ -1257,37 +1304,49 @@ function AnalysisPoint({ label, status, alert }) {
 }
 
 function FileIcon() {
-  return <div className="w-8 h-8 bg-white/5 border border-white/10 rounded-lg flex items-center justify-center text-white/20"><FileText className="w-4 h-4" /></div>;
+  return (
+    <div className="w-8 h-8 bg-white/[0.04] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--text-low)]">
+      <FileText className="w-4 h-4" />
+    </div>
+  );
 }
 
 function ParsingStep({ label, active, completed }) {
   return (
     <div className="flex items-center gap-4 py-1">
        {completed ? (
-         <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+         <CheckCircle2 className="w-5 h-5 text-[var(--success)]" />
        ) : active ? (
-         <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+         <div className="w-5 h-5 border-2 border-[var(--accent-1)] border-t-transparent rounded-full animate-spin" />
        ) : (
-         <div className="w-5 h-5 border-2 border-white/10 rounded-full" />
+         <div className="w-5 h-5 border-2 border-[var(--line)] rounded-full" />
        )}
-       <span className={`text-sm font-medium ${completed ? 'text-white/90' : active ? 'text-white' : 'text-white/20'}`}>{label}</span>
+       <span
+         className={`text-sm font-normal ${
+           completed ? 'text-[var(--text-hi)]' : active ? 'text-[var(--text-hi)]' : 'text-[var(--text-low)]'
+         }`}
+       >
+         {label}
+       </span>
     </div>
   );
 }
 
 function DocumentCountCard({ label, count, color }) {
-  const colorClasses = {
-    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    red: 'bg-red-500/10 text-red-400 border-red-500/20',
-    indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  // Status semantics only — all chips inherit the Plimsoll palette so
+  // the page stays on a single accent gradient with status accents.
+  const palette: Record<string, string> = {
+    emerald: 'bg-[color:var(--success)]/10 text-[var(--success)] border-[color:var(--success)]/25',
+    amber:   'bg-[color:var(--warn)]/10 text-[var(--warn)] border-[color:var(--warn)]/25',
+    red:     'bg-[color:var(--danger)]/10 text-[var(--danger)] border-[color:var(--danger)]/25',
+    indigo:  'bg-[color:var(--accent-3)]/12 text-[var(--accent-1)] border-[color:var(--accent-1)]/25',
+    blue:    'bg-[color:var(--info)]/10 text-[var(--info)] border-[color:var(--info)]/25',
   };
-  
+
   return (
-    <div className={`p-4 rounded-2xl border ${colorClasses[color] || colorClasses.blue} text-center`}>
-      <div className="text-2xl font-black">{count}</div>
-      <div className="text-[10px] uppercase font-bold tracking-wider opacity-70 mt-1">{label}</div>
+    <div className={`p-4 rounded-xl border text-center ${palette[color] || palette.indigo}`}>
+      <div className="text-2xl font-semibold tabular-nums" data-mono>{count}</div>
+      <div className="text-[10px] uppercase font-mono tracking-[0.16em] opacity-70 mt-1.5">{label}</div>
     </div>
   );
 }

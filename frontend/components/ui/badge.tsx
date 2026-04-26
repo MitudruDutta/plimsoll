@@ -6,18 +6,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
+  "inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.06em] w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none transition-colors",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+          "border-[var(--line)] bg-[rgba(255,255,255,0.04)] text-[var(--text-mid)]",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "border-[var(--line)] bg-[rgba(255,255,255,0.06)] text-[var(--text-hi)]",
+        accent:
+          "border-[rgba(167,139,250,0.35)] bg-[rgba(124,58,237,0.12)] text-[var(--accent-1)]",
+        success:
+          "border-[rgba(34,211,168,0.30)] bg-[rgba(34,211,168,0.10)] text-[var(--success)]",
+        warn:
+          "border-[rgba(245,181,68,0.30)] bg-[rgba(245,181,68,0.10)] text-[var(--warn)]",
         destructive:
-          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "border-[rgba(255,84,112,0.30)] bg-[rgba(255,84,112,0.10)] text-[var(--danger)]",
         outline:
-          "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+          "border-[var(--line-strong)] bg-transparent text-[var(--text-mid)] hover:text-[var(--text-hi)]",
       },
     },
     defaultVariants: {

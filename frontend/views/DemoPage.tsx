@@ -770,7 +770,7 @@ export const DemoPage: React.FC = () => {
   }
 
   return (
-    <div className="demo-page h-screen max-h-screen bg-[#0a0e1a] text-white overflow-hidden flex flex-col">
+    <div className="demo-page h-screen max-h-screen bg-[var(--bg-0)] text-white overflow-hidden flex flex-col">
       {/* Page-scoped typography reset to avoid global base button/label styles affecting alignment */}
       <style>{`
         .demo-page button { font-size: 0.75rem; line-height: 1rem; }
@@ -862,7 +862,7 @@ export const DemoPage: React.FC = () => {
 
         {/* Resizable Right Sidebar */}
         <div
-          className="bg-[#0a0e1a] border-l border-[#1a2332] flex flex-col overflow-hidden relative transition-[width] duration-300 ease-in-out"
+          className="bg-[var(--bg-0)] border-l border-[#1a2332] flex flex-col overflow-hidden relative transition-[width] duration-300 ease-in-out"
           style={{ width: isRightCollapsed ? 24 : sidebarWidth }}
         >
           {/* Resize Handle */}

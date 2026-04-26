@@ -1,81 +1,87 @@
 @custom-variant dark (&:is(.dark *));
 
+/* ──────────────────────────────────────────────────────────────
+ * Plimsoll 1.0 — design tokens
+ * Dark-first. Single violet→indigo gradient as the only color
+ * signal. Hairline borders, glass surfaces, generous whitespace.
+ * ────────────────────────────────────────────────────────────── */
 :root {
   --font-size: 16px;
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
-  --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #e9ebef;
-  --accent-foreground: #030213;
-  --destructive: #d4183d;
-  --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
-  --input: transparent;
-  --input-background: #f3f3f5;
-  --switch-background: #cbced4;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  /* Surface (page → card → elevated) */
+  --bg-0:        #0A0A0B;
+  --bg-1:        #111114;
+  --bg-2:        #17171C;
+
+  /* Hairlines */
+  --line:         rgba(255, 255, 255, 0.08);
+  --line-strong:  rgba(255, 255, 255, 0.14);
+
+  /* Type */
+  --text-hi:    #F5F5F7;
+  --text-mid:   #A1A1AA;
+  --text-low:   #6B6B75;
+
+  /* Single accent gradient */
+  --accent-1:    #A78BFA;
+  --accent-2:    #7C3AED;
+  --accent-3:    #4F46E5;
+  --accent-grad: linear-gradient(135deg, #A78BFA 0%, #7C3AED 50%, #4F46E5 100%);
+
+  /* Status */
+  --success: #22D3A8;
+  --warn:    #F5B544;
+  --danger:  #FF5470;
+  --info:    #60A5FA;
+
+  /* shadcn token bridge — map to Plimsoll surface so existing
+   * <Card>/<Button> primitives inherit the new look automatically. */
+  --background:               var(--bg-0);
+  --foreground:               var(--text-hi);
+  --card:                     rgba(255, 255, 255, 0.03);
+  --card-foreground:          var(--text-hi);
+  --popover:                  var(--bg-1);
+  --popover-foreground:       var(--text-hi);
+  --primary:                  var(--accent-2);
+  --primary-foreground:       #ffffff;
+  --secondary:                rgba(255, 255, 255, 0.06);
+  --secondary-foreground:     var(--text-hi);
+  --muted:                    rgba(255, 255, 255, 0.04);
+  --muted-foreground:         var(--text-mid);
+  --accent:                   rgba(124, 58, 237, 0.12);
+  --accent-foreground:        var(--accent-1);
+  --destructive:              var(--danger);
+  --destructive-foreground:   #ffffff;
+  --border:                   var(--line);
+  --input:                    rgba(255, 255, 255, 0.06);
+  --input-background:         rgba(255, 255, 255, 0.02);
+  --switch-background:        rgba(255, 255, 255, 0.12);
+  --ring:                     var(--accent-1);
+
+  /* Typography weights */
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+
+  /* Radii (matches designprompt.md) */
+  --radius:      0.875rem;   /* 14px cards */
+  --radius-btn:  0.625rem;   /* 10px buttons */
+
+  /* Editorial chart palette */
+  --chart-1: #A78BFA;
+  --chart-2: #4F46E5;
+  --chart-3: #60A5FA;
+  --chart-4: #22D3A8;
+  --chart-5: #F5B544;
+
+  /* Sidebar */
+  --sidebar:                       var(--bg-1);
+  --sidebar-foreground:            var(--text-hi);
+  --sidebar-primary:               var(--accent-2);
+  --sidebar-primary-foreground:    #ffffff;
+  --sidebar-accent:                rgba(255, 255, 255, 0.04);
+  --sidebar-accent-foreground:     var(--text-hi);
+  --sidebar-border:                var(--line);
+  --sidebar-ring:                  var(--accent-1);
 }
 
 @theme inline {
@@ -105,10 +111,6 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -117,6 +119,14 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-sans-base, 'Inter', ui-sans-serif, system-ui, sans-serif);
+  --font-serif: var(--font-serif-base, 'Instrument Serif', ui-serif, Georgia, serif);
+  --font-mono: var(--font-mono-base, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
 }
 
 @layer base {
@@ -124,58 +134,131 @@
     @apply border-border outline-ring/50;
   }
 
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
-
   html {
     font-size: var(--font-size);
+    color-scheme: dark;
   }
 
-  h1 {
-    font-size: var(--text-2xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
   }
 
-  h2 {
-    font-size: var(--text-xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+  ::selection {
+    background: rgba(167, 139, 250, 0.25);
+    color: var(--text-hi);
   }
 
-  h3 {
-    font-size: var(--text-lg);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+  h1, h2, h3, h4 {
+    color: var(--text-hi);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
   }
 
-  h4 {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+  h1 { font-size: clamp(2.5rem, 5vw, 4.25rem); font-weight: 600; letter-spacing: -0.04em; }
+  h2 { font-size: clamp(1.75rem, 3vw, 2.5rem);  font-weight: 600; letter-spacing: -0.03em; }
+  h3 { font-size: 1.375rem; font-weight: 600; }
+  h4 { font-size: 1.0625rem; font-weight: 500; }
+
+  label, button { font-size: 0.875rem; font-weight: 500; line-height: 1.4; }
+  input         { font-size: 0.9375rem; font-weight: 400; line-height: 1.5; }
+
+  /* Tabular numerals for KPI/metric digits */
+  .font-mono, [data-mono] {
+    font-feature-settings: "tnum", "zero", "ss01";
+    letter-spacing: 0;
   }
 
-  label {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+  /* Editorial italic accent — supermemory-style hero word */
+  .accent-serif {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Utility surfaces
+ * ────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .surface-glass {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+    backdrop-filter: saturate(140%) blur(20px);
+    -webkit-backdrop-filter: saturate(140%) blur(20px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 30px 60px -30px rgba(0, 0, 0, 0.6);
   }
 
-  button {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+  .surface-elevated {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
   }
 
-  input {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-normal);
-    line-height: 1.5;
+  .text-grad-accent {
+    background: var(--accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
   }
+
+  .bg-grad-accent {
+    background: var(--accent-grad);
+  }
+
+  .ring-accent-soft {
+    box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.35), 0 0 32px -8px rgba(124, 58, 237, 0.45);
+  }
+
+  /* Subtle film grain — used as a body overlay on hero/landing
+   * surfaces. Very low opacity, doesn't tank perf because it's
+   * a single repeated svg in CSS data-uri. */
+  .grain-overlay::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: 220px 220px;
+  }
+
+  .glow-accent {
+    background: radial-gradient(60% 50% at 50% 0%,
+      rgba(124, 58, 237, 0.25) 0%,
+      rgba(79, 70, 229, 0.10) 35%,
+      rgba(0, 0, 0, 0) 70%);
+  }
+
+  /* Hero backdrop conic glow */
+  .glow-conic {
+    background:
+      conic-gradient(from 220deg at 50% 50%,
+        rgba(167, 139, 250, 0.18),
+        rgba(79, 70, 229, 0.10),
+        rgba(124, 58, 237, 0.22),
+        rgba(167, 139, 250, 0.18));
+    filter: blur(60px);
+  }
+
+  /* Hairline divider */
+  .hairline { border-color: var(--line); }
+  .hairline-strong { border-color: var(--line-strong); }
+
+  /* Scroll behaviour for the dark theme */
+  .scrollbar-plimsoll::-webkit-scrollbar { width: 10px; height: 10px; }
+  .scrollbar-plimsoll::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-plimsoll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+  }
+  .scrollbar-plimsoll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.16); }
 }

@@ -2,9 +2,8 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '@clerk/clerk-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  Shield,
   Eye,
   Brain,
   Ship,
@@ -22,6 +21,8 @@ import {
   AlertTriangle,
   Anchor,
 } from 'lucide-react';
+import { BRAND, PlimsollMark } from '../components/Brand';
+import { Button } from '../components/ui/button';
 import '../styles/payment.css';
 
 // Feature Card Component
@@ -159,10 +160,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, selectedTi
 
         <div className="payment-modal-header">
           <div className="payment-modal-icon">
-            <Shield className="w-8 h-8 text-[#0078d4]" />
+            <PlimsollMark size={36} />
           </div>
-          <h2>Welcome to NaviGuard {selectedTier}</h2>
-          <p>Experience AI-powered supply chain protection</p>
+          <h2>Welcome to {BRAND.short} {selectedTier}</h2>
+          <p>Maritime risk &amp; compliance, replayable end-to-end.</p>
         </div>
 
         <div className="payment-modal-body">
@@ -338,80 +339,76 @@ export const PaymentPage: React.FC = () => {
       <div className="payment-bg-gradient" />
       <div className="payment-grid-bg" />
 
-      {/* Hero Section */}
-      <section className="hero-section">
+      {/* Hero Section — supermemory-style: oversized headline,
+          serif italic accent on one word, single gradient CTA. */}
+      <section
+        className="relative isolate overflow-hidden px-6 pt-28 pb-24 md:pt-36 md:pb-32"
+        style={{ minHeight: 'min(880px, 100vh)' }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-1/3 left-1/2 -translate-x-1/2 size-[1100px] glow-conic opacity-60"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[520px] glow-accent"
+        />
+
         <motion.div
-          className="hero-content"
-          initial={{ opacity: 0, y: 30 }}
+          className="relative z-10 mx-auto flex max-w-[980px] flex-col items-center text-center"
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="hero-badge">
-            <Brain className="w-4 h-4" />
-            <span>Powered by Google Gemini 2.0</span>
+          <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-[11px] font-mono uppercase tracking-[0.16em] text-[var(--text-mid)]">
+            <span className="size-1.5 rounded-full bg-[var(--accent-1)]" />
+            {BRAND.long} &middot; v1.0 base release
           </div>
 
-          <h1 className="hero-title">
-            <span className="hero-title-gradient">NaviGuard Shield</span>
-            <br />
-            Securing Global Lifelines
+          <h1 className="m-0 max-w-[14ch] text-[clamp(3rem,7vw,6rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-[var(--text-hi)]">
+            The maritime{' '}
+            <span className="accent-serif text-grad-accent">cockpit</span> for
+            risk, compliance, and hedging.
           </h1>
 
-          <p className="hero-subtitle">
-            Enterprise-grade AI that protects Fortune 500 supply chains from geopolitical crises,
-            using <span className="hero-highlight">satellite imagery analysis</span> and <span className="hero-highlight">real-time reasoning</span> — 
-            making decisions in 3 minutes, not 3 days.
+          <p className="mt-7 max-w-[64ch] text-[17px] leading-[1.6] text-[var(--text-mid)]">
+            Connect your fleet, paste your route, drop your certificates &mdash;
+            and get a <span className="text-[var(--text-hi)]">regulator-grade compliance verdict</span>,
+            a vessel-by-vessel <span className="text-[var(--text-hi)]">risk map</span>,
+            and a <span className="text-[var(--text-hi)]">hedge plan</span> in real time.
+            Every output is cited. Every agent run is replayable.
           </p>
 
-          <div className="hero-cta-group">
-            <button className="hero-cta-primary" onClick={() => handleTierSelect('Enterprise')}>
-              <Zap className="w-5 h-5" />
-              Start Free Trial
-            </button>
-            <button className="hero-cta-secondary" onClick={() => navigate('/port')}>
-              <Play className="w-5 h-5" />
-              Watch Demo
-            </button>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="gradient"
+              size="xl"
+              onClick={() => handleTierSelect('Enterprise')}
+            >
+              <Zap className="size-4" />
+              Start free trial
+              <ArrowRight className="size-4" />
+            </Button>
+            <Button variant="outline" size="xl" onClick={() => navigate('/port')}>
+              <Play className="size-4" />
+              Run the live demo
+            </Button>
           </div>
 
-          <div className="hero-trust-badges">
-            <div className="trust-badge">
-              <Globe className="w-4 h-4" />
-              <span>50+ Global Routes</span>
-            </div>
-            <div className="trust-badge">
-              <Clock className="w-4 h-4" />
-              <span>99.9% Uptime</span>
-            </div>
-            <div className="trust-badge">
-              <Shield className="w-4 h-4" />
-              <span>Enterprise Security</span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Hero Visual */}
-        <motion.div
-          className="hero-visual"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <div className="hero-globe-wrapper">
-            <div className="hero-globe-glow" />
-            <div className="hero-globe-icon" style={{
-              width: '280px',
-              height: '280px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, rgba(0,120,212,0.15) 0%, rgba(74,144,226,0.08) 100%)',
-              borderRadius: '50%',
-              border: '2px solid rgba(0,120,212,0.2)',
-              boxShadow: '0 0 80px rgba(0,120,212,0.25), inset 0 0 40px rgba(0,120,212,0.1)',
-            }}>
-              <Shield style={{ width: '120px', height: '120px', color: '#4a90e2', filter: 'drop-shadow(0 0 30px rgba(74,144,226,0.5))' }} />
-            </div>
+          <div className="mt-12 grid w-full grid-cols-1 gap-3 text-left sm:grid-cols-3 sm:gap-2">
+            {[
+              { icon: <Globe className="size-4" />, label: 'IMO, PSC, ECA, customs &mdash; cited' },
+              { icon: <Clock className="size-4" />, label: 'Decision in &lt; 3 minutes, not 3 days' },
+              { icon: <Scale className="size-4" />, label: 'Audit-grade, replayable agent traces' },
+            ].map((b, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2.5 rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[12.5px] text-[var(--text-mid)]"
+              >
+                <span className="text-[var(--accent-1)]">{b.icon}</span>
+                <span dangerouslySetInnerHTML={{ __html: b.label }} />
+              </div>
+            ))}
           </div>
         </motion.div>
       </section>
@@ -453,7 +450,7 @@ export const PaymentPage: React.FC = () => {
         >
           <h2 className="section-title">Real-World Crisis Response</h2>
           <p className="section-subtitle">
-            See how NaviGuard transforms reactive firefighting into proactive protection
+            See how Plimsoll turns reactive firefighting into proactive protection
           </p>
         </motion.div>
 
@@ -556,7 +553,7 @@ export const PaymentPage: React.FC = () => {
         >
           <h2 className="cta-title">Securing the Lifelines of Global Economy</h2>
           <p className="cta-subtitle">
-            When NaviGuard helps Maersk reroute during a Red Sea crisis, it means Kenya's grain won't run out, 
+            When Plimsoll helps Maersk reroute during a Red Sea crisis, it means Kenya's grain won't run out, 
             Europe's gas supply stays secure, and critical medical equipment reaches hospitals on time.
           </p>
           <div className="cta-buttons">
@@ -576,11 +573,13 @@ export const PaymentPage: React.FC = () => {
       <footer className="payment-footer">
         <div className="footer-content">
           <div className="footer-brand">
-            <Shield className="w-6 h-6 text-[#0078d4]" />
-            <span>NaviGuard</span>
+            <PlimsollMark size={22} />
+            <span>{BRAND.short}</span>
           </div>
-          <p className="footer-tagline">Trading with Confidence</p>
-          <p className="footer-copyright">© 2026 NaviGuard. Google Gemini 3 Hackathon Project.</p>
+          <p className="footer-tagline">{BRAND.tagline}</p>
+          <p className="footer-copyright">
+            &copy; 2026 {BRAND.long}. Maritime supply-chain risk &amp; compliance.
+          </p>
         </div>
       </footer>
 

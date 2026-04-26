@@ -7,12 +7,19 @@ import {
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { ModeBanner } from '../../components/ModeBanner';
+import { BrandLockup } from '../../components/Brand';
 
 const { Title, Text } = Typography;
 
-const COLORS = ['#1890ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1'];
+// Plimsoll chart palette — single accent gradient + status colors
+// (PRD F2.6 / designprompt.md). The dashboard still runs on AntD;
+// a full shadcn rewrite is tracked under F1.2 (admin shell).
+const COLORS = ['#A78BFA', '#7C3AED', '#4F46E5', '#22D3A8', '#F5B544'];
 
-// Mock Data fallbacks
+// Mock Data fallbacks — see ModeBanner above the dashboard. Until
+// /api/admin/stats and /api/admin/performance are wired (PRD §B7),
+// these are clearly labeled as demo telemetry.
 const MOCK_CATEGORIES = [
   { name: 'VIP Customer', value: 45 },
   { name: 'Normal Customer', value: 120 },
@@ -107,26 +114,30 @@ export const AdminDashboard: React.FC = () => {
       dataIndex: 'category',
       key: 'category',
       render: (category: string) => {
-        let color = 'blue';
+        let color = 'purple';
         let label = category?.toUpperCase() || 'NORMAL';
         if (category === 'high_value') { color = 'gold'; label = 'VIP'; }
-        if (category === 'low_value') { color = 'gray'; label = 'LOW'; }
+        if (category === 'low_value') { color = 'default'; label = 'LOW'; }
         return <Tag color={color}>{label}</Tag>;
       },
     },
-    { 
-      title: 'Priority', 
-      dataIndex: 'priority_score', 
+    {
+      title: 'Priority',
+      dataIndex: 'priority_score',
       key: 'priority_score',
-      render: (score: number) => <Text strong style={{ color: score >= 4 ? '#52c41a' : '#bfbfbf'}}>{score || 3}/5</Text>
+      render: (score: number) => (
+        <Text strong style={{ color: score >= 4 ? '#22D3A8' : '#A1A1AA' }}>
+          {score || 3}/5
+        </Text>
+      ),
     },
     {
       title: 'Actions',
       key: 'action',
       render: () => (
         <Space size="middle">
-          <a style={{ color: '#1890ff' }}>View</a>
-          <a style={{ color: '#fa8c16' }}>Manage</a>
+          <a style={{ color: '#7C3AED' }}>View</a>
+          <a style={{ color: '#A78BFA' }}>Manage</a>
         </Space>
       ),
     },
@@ -134,8 +145,22 @@ export const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
-        <Spin size="large" tip="Loading dashboard..." />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          background: '#0A0A0B',
+          color: '#A1A1AA',
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          fontSize: 12,
+        }}
+      >
+        <Spin size="large" tip="Loading admin dashboard…" />
       </div>
     );
   }
@@ -146,43 +171,74 @@ export const AdminDashboard: React.FC = () => {
   const performanceData = MOCK_PERFORMANCE; // Completely mock for now as requested
 
   return (
-    <div style={{ padding: '32px', background: '#f0f2f5', minHeight: '100vh' }}>
+    <div style={{ padding: '32px', background: '#f5f5f7', minHeight: '100vh' }}>
+      <div style={{ marginBottom: 16 }}>
+        <ModeBanner message="Admin telemetry is demo-only until /api/admin/stats and /api/admin/performance ship in v1.x." />
+      </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
         <div>
-          <Title level={2} style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            NaviGuard Dashboard 
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+            <BrandLockup size={26} />
+          </div>
+          <Title
+            level={2}
+            style={{
+              marginBottom: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              fontWeight: 600,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Admin <span style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic', fontWeight: 400 }}>dashboard</span>
             <AntTooltip title="Real-time AI analytics overview">
-              <InfoCircleOutlined style={{ fontSize: '16px', color: '#8c8c8c', cursor: 'pointer' }} />
+              <InfoCircleOutlined style={{ fontSize: '14px', color: '#8c8c8c', cursor: 'pointer' }} />
             </AntTooltip>
           </Title>
-          <Text type="secondary">Real-time monitoring and analytics</Text>
+          <Text type="secondary">Live monitoring &amp; analytics — currently rendering demo telemetry.</Text>
         </div>
-        <div style={{ textAlign: 'right', background: 'white', padding: '8px 16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <Text type="secondary" style={{ fontSize: '12px' }}>Logged in as</Text>
-          <div style={{ fontWeight: 'bold', color: '#1890ff' }}>{user?.fullName || user?.username} (Admin)</div>
+        <div style={{ textAlign: 'right', background: 'white', padding: '10px 16px', borderRadius: '12px', boxShadow: '0 2px 6px rgba(15,15,20,0.05)' }}>
+          <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Signed in as</Text>
+          <div style={{ fontWeight: 600, color: '#7C3AED' }}>{user?.fullName || user?.username} <span style={{ color: '#A1A1AA', fontWeight: 500 }}>· admin</span></div>
         </div>
       </div>
 
       <Row gutter={[24, 24]}>
         {/* Statistics Cards */}
+        {/* Stats — fall back to em-dash when the backend hasn't shipped
+            yet (PRD §F2.6). The previous hard-coded 184/92.4/1256/3
+            looked credible but was fabricated. */}
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} hoverable>
-            <Statistic title="Total Customers" value={stats?.overall.total_customers || 184} prefix={<Tag color="blue">Total</Tag>} />
+            <Statistic
+              title="Total customers"
+              value={stats?.overall?.total_customers ?? '—'}
+              prefix={<Tag color="purple">Live</Tag>}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} hoverable>
-            <Statistic title="AI Confidence" value={stats?.overall.avg_confidence ? stats.overall.avg_confidence * 100 : 92.4} precision={1} suffix="%" />
+            <Statistic
+              title="AI confidence"
+              value={stats?.overall?.avg_confidence ? stats.overall.avg_confidence * 100 : '—'}
+              precision={1}
+              suffix={stats?.overall?.avg_confidence ? '%' : ''}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} hoverable>
-            <Statistic title="Total Conversations" value={stats?.overall.total_conversations || 1256} />
+            <Statistic
+              title="Total conversations"
+              value={stats?.overall?.total_conversations ?? '—'}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} hoverable>
-            <Statistic title="Pending Handoffs" value={3} valueStyle={{ color: '#cf1322' }} />
+            <Statistic title="Pending handoffs" value="—" />
           </Card>
         </Col>
 
@@ -196,8 +252,8 @@ export const AdminDashboard: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" name="Total" fill="#1890ff" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="active" name="Active" fill="#faad14" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" name="Total" fill="#7C3AED" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="active" name="Active" fill="#A78BFA" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -236,18 +292,18 @@ export const AdminDashboard: React.FC = () => {
               <AreaChart data={performanceData}>
                 <defs>
                   <linearGradient id="colorLatency" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.25}/>
+                    <stop offset="95%" stopColor="#7C3AED" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey="time" />
-                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: 'Latency (ms)', angle: -90, position: 'insideLeft' }} />
-                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" domain={[0, 1]} label={{ value: 'Confidence', angle: 90, position: 'insideRight' }} />
+                <YAxis yAxisId="left" orientation="left" stroke="#7C3AED" label={{ value: 'Latency (ms)', angle: -90, position: 'insideLeft' }} />
+                <YAxis yAxisId="right" orientation="right" stroke="#22D3A8" domain={[0, 1]} label={{ value: 'Confidence', angle: 90, position: 'insideRight' }} />
                 <Tooltip />
                 <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="latency" name="AI Latency" stroke="#8884d8" fillOpacity={1} fill="url(#colorLatency)" />
-                <Line yAxisId="right" type="monotone" dataKey="confidence" name="Confidence" stroke="#82ca9d" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Area yAxisId="left" type="monotone" dataKey="latency" name="AI Latency" stroke="#7C3AED" fillOpacity={1} fill="url(#colorLatency)" />
+                <Line yAxisId="right" type="monotone" dataKey="confidence" name="Confidence" stroke="#22D3A8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </AreaChart>
             </ResponsiveContainer>
           </Card>

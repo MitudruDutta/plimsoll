@@ -151,7 +151,7 @@ const ChatWidget = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <RobotOutlined style={{ marginRight: 8 }} />
-                NaviGuard Assistant
+                Plimsoll Assistant
               </div>
               <Button
                 type="text"
@@ -165,7 +165,7 @@ const ChatWidget = () => {
           {showNameInput ? (
             <div className={styles.welcomeScreen}>
               <Avatar size={64} icon={<RobotOutlined />} style={{ marginBottom: 16 }} />
-              <h3>Welcome to NaviGuard</h3>
+              <h3>Welcome to Plimsoll</h3>
               <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
                 Please enter your name
               </p>
@@ -192,7 +192,7 @@ const ChatWidget = () => {
                 {messages.length === 0 && (
                   <div style={{ textAlign: 'center', color: '#8c8c8c', padding: 32 }}>
                     <RobotOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-                    <p>Welcome to NaviGuard Assistant!</p>
+                    <p>Welcome to the Plimsoll Assistant.</p>
                     <p>How can I help you today?</p>
                   </div>
                 )}

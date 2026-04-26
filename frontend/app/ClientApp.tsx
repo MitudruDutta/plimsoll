@@ -113,11 +113,20 @@ function AuthBridge() {
 
 function MissingClerkKey() {
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-6">
-      <section className="max-w-xl rounded-lg border border-white/10 bg-white/5 p-6">
-        <h1 className="text-xl font-semibold">Missing Clerk publishable key</h1>
-        <p className="mt-3 text-sm text-white/70">
-          Set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in frontend1/.env.local, then restart the dev server.
+    <main className="min-h-screen bg-[var(--bg-0)] text-[var(--text-hi)] flex items-center justify-center px-6">
+      <section className="surface-glass max-w-xl rounded-2xl p-8">
+        <h1 className="text-xl font-semibold tracking-[-0.02em]">
+          Auth is not configured
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-[var(--text-mid)]">
+          Plimsoll cannot start without a Clerk publishable key (the auth
+          stack is being migrated to Supabase per PRD &sect;F2 — until then,
+          set{" "}
+          <code className="font-mono text-[var(--accent-1)]">
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+          </code>{" "}
+          in <code className="font-mono">frontend/.env.local</code> and
+          restart the dev server.
         </p>
       </section>
     </main>

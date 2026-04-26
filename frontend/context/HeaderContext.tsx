@@ -16,13 +16,13 @@ interface HeaderContextType {
 const HeaderContext = createContext<HeaderContextType | undefined>(undefined);
 
 export const HeaderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [title, setTitle] = useState('NaviGuard AI');
+    const [title, setTitle] = useState('Plimsoll');
     const [subtitle, setSubtitle] = useState('');
     const [extraContent, setExtraContent] = useState<ReactNode | null>(null);
     const [showShieldIcon, setShowShieldIcon] = useState(false);
 
     const resetHeader = () => {
-        setTitle('NaviGuard AI');
+        setTitle('Plimsoll');
         setSubtitle('');
         setExtraContent(null);
         setShowShieldIcon(false);
