@@ -17,11 +17,13 @@ It is regex-based, so it will both miss things and occasionally over-redact.
 Keep structured logging discipline: prefer logging IDs and short codes over
 free-form strings that could contain user data.
 """
+
 from __future__ import annotations
 
 import logging
 import re
-from typing import Iterable, Pattern
+from collections.abc import Iterable
+from re import Pattern
 
 # Each entry is (regex, replacement). Replacement may use backreferences.
 _PII_RULES: list[tuple[Pattern[str], str]] = [
@@ -59,7 +61,7 @@ class PIIRedactor(logging.Filter):
     (stdout, Sentry, etc.) actually see.
     """
 
-    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D401 - logging API
+    def filter(self, record: logging.LogRecord) -> bool:
         try:
             if isinstance(record.msg, str):
                 record.msg = _redact(record.msg)

@@ -60,15 +60,15 @@
 #     challenger_agent: AgentType = Field(default=AgentType.ADVERSARIAL)
 #     defender_agent: AgentType = Field(..., description="Agent")
 #     timestamp: datetime = Field(default_factory=datetime.now)
-    
+
 #     challenge: str = Field(..., description="ㄧ")
 #     challenge_reason: str = Field(..., description="ㄧ")
-    
+
 #     response: str = Field(..., description="")
-    
+
 #     resolution: str = Field(..., description="€В?)
 #     resolution_accepted: bool = Field(default=True, description="ュe")
-    
+
 #     sources: List[RAGSource] = Field(default_factory=list, description="")
 
 
@@ -76,13 +76,13 @@
 #     """"""
 #     decision_id: str = Field(..., description="ID")
 #     timestamp: datetime = Field(default_factory=datetime.now)
-    
+
 #     trigger_event: str = Field(..., description="﹀")
 #     trigger_agent: AgentType = Field(..., description="﹀Agent")
-    
+
 #     reasoning_chain: List[ReasoningStep] = Field(..., description="ㄧ?)
 #     debates: List[DebateExchange] = Field(default_factory=list, description="╄")
-    
+
 #     final_recommendation: str = Field(..., description="€?)
 #     total_duration_ms: int = Field(default=0, description="€")
 #     human_approval_required: bool = Field(default=True, description="€ュ?)

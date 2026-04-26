@@ -2,16 +2,18 @@
 OCR Service - Document text extraction using Gemini Vision
 Handles PDF, PNG, JPG for maritime certificates and permits
 """
+
+import base64
+import json
 import logging
 import os
-import base64
-import httpx
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass, field
-from pathlib import Path
-from datetime import datetime
-import json
 import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import httpx
 
 from shared.config import get_settings
 
@@ -22,13 +24,14 @@ settings = get_settings()
 @dataclass
 class OCRResult:
     """Result of OCR text extraction"""
+
     text: str
     confidence: float
     provider: str = "gemini"
     pages: int = 1
-    extracted_fields: Dict[str, Any] = field(default_factory=dict)
-    raw_response: Optional[Dict] = None
-    error: Optional[str] = None
+    extracted_fields: dict[str, Any] = field(default_factory=dict)
+    raw_response: dict | None = None
+    error: str | None = None
 
     @property
     def success(self) -> bool:
@@ -105,16 +108,16 @@ class OCRService:
     # MSA / classification societies; if any are present we treat the doc as
     # Chinese so the date parser tries the zh formats first.
     _CHINESE_KEYWORDS = (
-        "\u8bc1\u4e66",      # certificate
-        "\u8239\u540d",      # vessel name
-        "\u53d1\u8bc1",      # issued
+        "\u8bc1\u4e66",  # certificate
+        "\u8239\u540d",  # vessel name
+        "\u53d1\u8bc1",  # issued
         "\u6709\u6548\u671f",  # validity period
-        "\u8239\u65d7",      # flag
+        "\u8239\u65d7",  # flag
     )
 
     def __init__(self):
         self.api_key = settings.google_api_key
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
         if not self.api_key:
             logger.warning("Google API key not configured. OCR will run in MOCK mode.")
@@ -130,11 +133,7 @@ class OCRService:
         if self._client and not self._client.is_closed:
             await self._client.aclose()
 
-    async def extract_text(
-        self,
-        file_path: str,
-        mime_type: Optional[str] = None
-    ) -> OCRResult:
+    async def extract_text(self, file_path: str, mime_type: str | None = None) -> OCRResult:
         """
         Extract text from a document using Gemini Vision
 
@@ -147,11 +146,7 @@ class OCRService:
         """
         # Validate file exists
         if not os.path.exists(file_path):
-            return OCRResult(
-                text="",
-                confidence=0.0,
-                error=f"File not found: {file_path}"
-            )
+            return OCRResult(text="", confidence=0.0, error=f"File not found: {file_path}")
 
         # Auto-detect mime type if not provided
         if not mime_type:
@@ -159,11 +154,7 @@ class OCRService:
 
         # Validate mime type
         if mime_type not in self.SUPPORTED_MIME_TYPES:
-            return OCRResult(
-                text="",
-                confidence=0.0,
-                error=f"Unsupported file type: {mime_type}"
-            )
+            return OCRResult(text="", confidence=0.0, error=f"Unsupported file type: {mime_type}")
 
         # Read file content
         try:
@@ -172,17 +163,10 @@ class OCRService:
             return await self.extract_text_from_bytes(file_content, mime_type, Path(file_path).name)
         except Exception as e:
             logger.error(f"OCR extraction error: {e}")
-            return OCRResult(
-                text="",
-                confidence=0.0,
-                error=str(e)
-            )
+            return OCRResult(text="", confidence=0.0, error=str(e))
 
     async def extract_text_from_bytes(
-        self,
-        content: bytes,
-        mime_type: str,
-        filename: Optional[str] = None
+        self, content: bytes, mime_type: str, filename: str | None = None
     ) -> OCRResult:
         """
         Extract text from file bytes directly.
@@ -192,14 +176,14 @@ class OCRService:
         try:
             text_content = content.decode("utf-8")
             data = json.loads(text_content)
-            
+
             # Check for known structure (ship_intelligence_profile)
             if isinstance(data, dict) and "ship_intelligence_profile" in data:
                 profile = data["ship_intelligence_profile"]
                 vessel_particulars = profile.get("vessel_particulars", {})
-                
+
                 logger.info(f"JSON Parser: Successfully extracted data from {filename}")
-                
+
                 return OCRResult(
                     text=json.dumps(data, indent=2),
                     confidence=1.0,
@@ -212,23 +196,19 @@ class OCRService:
                         "vessel_type": vessel_particulars.get("vessel_type"),
                         "gross_tonnage": "N/A",
                         "issue_date": datetime.now().strftime("%Y-%m-%d"),
-                    }
+                    },
                 )
         except (json.JSONDecodeError, UnicodeDecodeError):
             pass  # Not a JSON file, or binary content
-            
+
         if mime_type not in self.SUPPORTED_MIME_TYPES:
-             return OCRResult(
-                text="",
-                confidence=0.0,
-                error=f"Unsupported file type: {mime_type}"
-            )
+            return OCRResult(text="", confidence=0.0, error=f"Unsupported file type: {mime_type}")
 
         # 2. Use Gemini Vision OCR
         if self.api_key and "DEMO_KEY" not in self.api_key:
             try:
                 logger.info(f"Using Gemini Vision OCR for {filename}...")
-                
+
                 prompt = """
                 Extract the following fields from this maritime document into JSON format:
                 - vessel_name
@@ -244,49 +224,48 @@ class OCRService:
 
                 Return ONLY raw JSON. No markdown formatting (no ```json blocks).
                 """
-                
-                b64_content = base64.b64encode(content).decode('utf-8')
+
+                b64_content = base64.b64encode(content).decode("utf-8")
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.api_key}"
-                
+
                 payload = {
-                    "contents": [{
-                        "parts": [
-                            {"text": prompt},
-                            {
-                                "inline_data": {
-                                    "mime_type": mime_type,
-                                    "data": b64_content
-                                }
-                            }
-                        ]
-                    }]
+                    "contents": [
+                        {
+                            "parts": [
+                                {"text": prompt},
+                                {"inline_data": {"mime_type": mime_type, "data": b64_content}},
+                            ]
+                        }
+                    ]
                 }
-                
+
                 async with httpx.AsyncClient() as client:
                     resp = await client.post(url, json=payload, timeout=60.0)
-                    
+
                 if resp.status_code == 200:
                     result = resp.json()
                     candidates = result.get("candidates", [])
                     if candidates:
                         raw_text = candidates[0]["content"]["parts"][0]["text"]
                         raw_text = raw_text.replace("```json", "").replace("```", "").strip()
-                        
+
                         try:
                             extracted_data = json.loads(raw_text)
                             logger.info(f"Gemini Vision OCR Success for {filename}")
-                            
+
                             return OCRResult(
                                 text=json.dumps(extracted_data, indent=2),
                                 confidence=0.95,
                                 provider="gemini",
                                 pages=1,
-                                extracted_fields=extracted_data
+                                extracted_fields=extracted_data,
                             )
                         except json.JSONDecodeError as je:
-                            logger.warning(f"Gemini returned invalid JSON: {je}. Raw: {raw_text[:100]}...")
+                            logger.warning(
+                                f"Gemini returned invalid JSON: {je}. Raw: {raw_text[:100]}..."
+                            )
                     else:
-                         logger.warning("Gemini response contained no candidates.")
+                        logger.warning("Gemini response contained no candidates.")
                 else:
                     logger.error(f"Gemini API returned status {resp.status_code}: {resp.text}")
 
@@ -297,9 +276,9 @@ class OCRService:
         logger.warning("Using Static Mock Data (Gemini not configured or failed)")
         return self._mock_extract_from_bytes(content, mime_type, filename)
 
-    def _extract_structured_fields(self, text: str) -> Dict[str, Any]:
+    def _extract_structured_fields(self, text: str) -> dict[str, Any]:
         """Extract structured fields from text using regex patterns."""
-        fields: Dict[str, Any] = {}
+        fields: dict[str, Any] = {}
         fields["language"] = self._detect_language(text)
 
         for field_name, patterns in self.FIELD_PATTERNS.items():
@@ -319,17 +298,23 @@ class OCRService:
 
         return fields
 
-    def _parse_date(self, date_str: str) -> Optional[datetime]:
+    def _parse_date(self, date_str: str) -> datetime | None:
         """Parse date string to datetime, handling EN + ZH formats."""
         if not date_str:
             return None
 
         normalized = self._normalize_chinese_date(date_str)
         date_formats = [
-            "%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d",
-            "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y",
-            "%m/%d/%Y", "%m-%d-%Y",
-            "%d %B %Y", "%d %b %Y",
+            "%Y-%m-%d",
+            "%Y/%m/%d",
+            "%Y.%m.%d",
+            "%d/%m/%Y",
+            "%d-%m-%Y",
+            "%d.%m.%Y",
+            "%m/%d/%Y",
+            "%m-%d-%Y",
+            "%d %B %Y",
+            "%d %b %Y",
         ]
 
         for fmt in date_formats:
@@ -373,10 +358,7 @@ class OCRService:
         return mime_map.get(ext, "application/octet-stream")
 
     def _mock_extract_from_bytes(
-        self,
-        content: bytes,
-        mime_type: str,
-        filename: Optional[str]
+        self, content: bytes, mime_type: str, filename: str | None
     ) -> OCRResult:
         """Generate static mock OCR result"""
         doc_no = hash(content[:100]) % 10000
@@ -406,12 +388,12 @@ Expiry Date: 14/06/2025
                 "imo_number": "1234567",
                 "issue_date": "15/06/2024",
                 "expiry_date": "14/06/2025",
-            }
+            },
         )
 
 
 # Singleton instance
-_ocr_service: Optional[OCRService] = None
+_ocr_service: OCRService | None = None
 
 
 def get_ocr_service() -> OCRService:

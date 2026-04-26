@@ -7,8 +7,9 @@ Usage:
 This script loads PDF, DOCX, and TXT files from the data/maritime_regulations directory
 into the ChromaDB vector store using Gemini embeddings.
 """
-import sys
+
 import os
+import sys
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,13 +17,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 
-from langchain_core.documents import Document
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from langchain_core.documents import Document
 
-from shared.config import get_settings
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
 
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +30,17 @@ logger = logging.getLogger(__name__)
 
 # Collection mapping based on file path or filename keywords
 COLLECTION_KEYWORDS = {
-    "imo_conventions": ["solas", "marpol", "stcw", "ism", "isps", "load_line", "tonnage", "imo", "convention"],
+    "imo_conventions": [
+        "solas",
+        "marpol",
+        "stcw",
+        "ism",
+        "isps",
+        "load_line",
+        "tonnage",
+        "imo",
+        "convention",
+    ],
     "psc_requirements": ["psc", "port_state_control", "detention", "inspection"],
     "port_regulations": ["port", "harbor", "terminal", "berth", "pilot"],
     "regional_requirements": ["eu_mrv", "eca", "seca", "emission", "regional", "uscg", "us_cfr"],
@@ -52,7 +62,7 @@ def detect_collection(file_path: str, content: str = "") -> str:
     return "imo_conventions"
 
 
-def extract_metadata(file_path: str, content: str) -> Dict[str, Any]:
+def extract_metadata(file_path: str, content: str) -> dict[str, Any]:
     """Extract metadata from document content."""
     metadata = {
         "source_file": os.path.basename(file_path),
@@ -96,7 +106,7 @@ def extract_metadata(file_path: str, content: str) -> Dict[str, Any]:
     return metadata
 
 
-def load_pdf(file_path: str) -> List[Document]:
+def load_pdf(file_path: str) -> list[Document]:
     """Load a PDF file."""
     try:
         loader = PyPDFLoader(file_path)
@@ -106,19 +116,19 @@ def load_pdf(file_path: str) -> List[Document]:
         return []
 
 
-def load_text(file_path: str) -> List[Document]:
+def load_text(file_path: str) -> list[Document]:
     """Load a text file."""
     try:
-        loader = TextLoader(file_path, encoding='utf-8')
+        loader = TextLoader(file_path, encoding="utf-8")
         return loader.load()
     except Exception as e:
         logger.error(f"Error loading text file {file_path}: {e}")
         return []
 
 
-def load_documents_from_directory(directory: str) -> Dict[str, List[Document]]:
+def load_documents_from_directory(directory: str) -> dict[str, list[Document]]:
     """Load all documents from a directory, organized by collection."""
-    documents_by_collection: Dict[str, List[Document]] = {
+    documents_by_collection: dict[str, list[Document]] = {
         "imo_conventions": [],
         "psc_requirements": [],
         "port_regulations": [],
@@ -139,10 +149,10 @@ def load_documents_from_directory(directory: str) -> Dict[str, List[Document]]:
         return documents_by_collection
 
     # Find all supported files
-    supported_extensions = ['.pdf', '.txt', '.md']
+    supported_extensions = [".pdf", ".txt", ".md"]
     files = []
     for ext in supported_extensions:
-        files.extend(path.rglob(f'*{ext}'))
+        files.extend(path.rglob(f"*{ext}"))
 
     logger.info(f"Found {len(files)} files to process")
 
@@ -151,10 +161,7 @@ def load_documents_from_directory(directory: str) -> Dict[str, List[Document]]:
         logger.info(f"Processing: {file_path.name}")
 
         # Load based on file type
-        if file_path.suffix.lower() == '.pdf':
-            docs = load_pdf(file_str)
-        else:
-            docs = load_text(file_str)
+        docs = load_pdf(file_str) if file_path.suffix.lower() == ".pdf" else load_text(file_str)
 
         if not docs:
             continue
@@ -181,7 +188,7 @@ def load_documents_from_directory(directory: str) -> Dict[str, List[Document]]:
     return documents_by_collection
 
 
-def load_from_json(json_file: str) -> Dict[str, List[Document]]:
+def load_from_json(json_file: str) -> dict[str, list[Document]]:
     """Load documents from a JSON file.
 
     Expected JSON format:
@@ -197,7 +204,7 @@ def load_from_json(json_file: str) -> Dict[str, List[Document]]:
         }
     ]
     """
-    documents_by_collection: Dict[str, List[Document]] = {
+    documents_by_collection: dict[str, list[Document]] = {
         "imo_conventions": [],
         "psc_requirements": [],
         "port_regulations": [],
@@ -206,7 +213,7 @@ def load_from_json(json_file: str) -> Dict[str, List[Document]]:
     }
 
     try:
-        with open(json_file, 'r', encoding='utf-8') as f:
+        with open(json_file, encoding="utf-8") as f:
             data = json.load(f)
 
         for item in data:
@@ -218,7 +225,9 @@ def load_from_json(json_file: str) -> Dict[str, List[Document]]:
                 doc = Document(page_content=content, metadata=metadata)
                 documents_by_collection[collection].append(doc)
 
-        logger.info(f"Loaded {sum(len(docs) for docs in documents_by_collection.values())} documents from JSON")
+        logger.info(
+            f"Loaded {sum(len(docs) for docs in documents_by_collection.values())} documents from JSON"
+        )
 
     except Exception as e:
         logger.error(f"Error loading JSON file: {e}")

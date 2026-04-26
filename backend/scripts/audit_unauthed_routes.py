@@ -13,7 +13,6 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
-
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 ROUTE_FILES = [BACKEND_DIR / "main.py", *sorted((BACKEND_DIR / "modules").rglob("*_routes.py"))]
 

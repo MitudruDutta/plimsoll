@@ -10,9 +10,11 @@ Allowed values
 - ``live`` — real upstream data (Argus, ECB, Sentinel-2, Spire, …)
 - ``hybrid`` — some fields live, some still mocked
 """
+
 from __future__ import annotations
 
-from typing import Any, Literal, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any, Literal
 
 Mode = Literal["demo", "live", "hybrid"]
 

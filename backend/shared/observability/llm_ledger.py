@@ -30,13 +30,15 @@ Usage::
 The ledger is best-effort: a failure to write the row never propagates to
 the caller. The motto is "don't let observability take down a request".
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from contextlib import contextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Optional
+from typing import Any
 
 from shared.database.database import SessionLocal
 
@@ -90,10 +92,10 @@ def record_llm_call(
     completion_tokens: int = 0,
     latency_ms: int = 0,
     status: str = "ok",
-    error_code: Optional[str] = None,
-    customer_id: Optional[int] = None,
-    trace_id: Optional[str] = None,
-    cost_usd: Optional[float] = None,
+    error_code: str | None = None,
+    customer_id: int | None = None,
+    trace_id: str | None = None,
+    cost_usd: float | None = None,
 ) -> None:
     """Insert a single row into ``llm_calls``. Errors are swallowed."""
     from shared.database.models import LLMCall
@@ -123,10 +125,8 @@ def record_llm_call(
         session.commit()
     except Exception as exc:
         logger.warning("LLM ledger write failed: %s", exc)
-        try:
+        with suppress(Exception):
             session.rollback()
-        except Exception:
-            pass
     finally:
         session.close()
 
@@ -137,7 +137,7 @@ class _LedgerSpan:
 
     prompt_tokens: int = 0
     completion_tokens: int = 0
-    cost_usd: Optional[float] = None
+    cost_usd: float | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def tokens(self, *, prompt: int = 0, completion: int = 0) -> None:
@@ -155,15 +155,15 @@ def ledger_span(
     provider: str,
     model: str,
     operation: str,
-    customer_id: Optional[int] = None,
-    trace_id: Optional[str] = None,
+    customer_id: int | None = None,
+    trace_id: str | None = None,
 ) -> Iterator[_LedgerSpan]:
     """Time + record a block of LLM work. The span is always recorded,
     including on exception (with status='error' and error_code set)."""
     span = _LedgerSpan()
     start = time.perf_counter()
     status = "ok"
-    error_code: Optional[str] = None
+    error_code: str | None = None
     try:
         yield span
     except Exception as exc:

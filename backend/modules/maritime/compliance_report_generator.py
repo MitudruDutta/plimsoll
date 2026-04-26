@@ -4,32 +4,29 @@ Compliance Report Generator Service
 Generates structured, business-friendly compliance reports from
 knowledge base queries and document analysis.
 """
+
 import logging
 import uuid
-from datetime import datetime, date, timedelta
-from typing import List, Dict, Any, Optional
+from datetime import date, datetime, timedelta
+from typing import Any
 
+from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
 from shared.database.models.compliance_report import (
+    ActionItem,
     ComplianceReport,
     ComplianceReportSummary,
     ComplianceStatus,
-    Priority,
-    RiskLevel,
-    DocumentStatus,
-    VesselInfo,
     DocumentCheckResult,
     DocumentGapAnalysis,
-    RegulationRequirement,
+    DocumentStatus,
     PortRequirement,
-    RouteComplianceCheck,
-    ActionItem,
+    Priority,
+    RegulationRequirement,
     RiskAssessment,
-    CertificateInfo,
-    RegulationQueryResponse,
-    PortQueryResponse,
-    QuickComplianceCheck,
+    RiskLevel,
+    RouteComplianceCheck,
+    VesselInfo,
 )
-from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base, SearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +51,21 @@ class ComplianceReportGenerator:
             ("Document of Compliance (DOC)", "ISM Code", "5 years"),
             ("Safety Management Certificate (SMC)", "ISM Code", "5 years"),
             ("International Ship Security Certificate (ISSC)", "ISPS Code", "5 years"),
-            ("International Oil Pollution Prevention Certificate (IOPP)", "MARPOL Annex I", "5 years"),
-            ("International Air Pollution Prevention Certificate (IAPP)", "MARPOL Annex VI", "5 years"),
-            ("International Sewage Pollution Prevention Certificate (ISPP)", "MARPOL Annex IV", "5 years"),
+            (
+                "International Oil Pollution Prevention Certificate (IOPP)",
+                "MARPOL Annex I",
+                "5 years",
+            ),
+            (
+                "International Air Pollution Prevention Certificate (IAPP)",
+                "MARPOL Annex VI",
+                "5 years",
+            ),
+            (
+                "International Sewage Pollution Prevention Certificate (ISPP)",
+                "MARPOL Annex IV",
+                "5 years",
+            ),
             ("International Energy Efficiency Certificate (IEE)", "MARPOL Annex VI", "Indefinite"),
             ("International Ballast Water Management Certificate", "BWM Convention", "5 years"),
             ("Maritime Labour Certificate", "MLC 2006", "5 years"),
@@ -65,37 +74,69 @@ class ComplianceReportGenerator:
         ],
         "tanker": [
             # All cargo ship certificates plus:
-            ("International Oil Pollution Prevention Certificate (IOPP)", "MARPOL Annex I", "5 years"),
+            (
+                "International Oil Pollution Prevention Certificate (IOPP)",
+                "MARPOL Annex I",
+                "5 years",
+            ),
             ("Certificate of Fitness for Carriage of Dangerous Chemicals", "IBC Code", "5 years"),
-            ("International Certificate of Fitness for Carriage of Liquefied Gases", "IGC Code", "5 years"),
+            (
+                "International Certificate of Fitness for Carriage of Liquefied Gases",
+                "IGC Code",
+                "5 years",
+            ),
         ],
         "passenger": [
             ("Passenger Ship Safety Certificate", "SOLAS", "12 months"),
             # Plus most cargo ship certificates
-        ]
+        ],
     }
 
     # ECA ports and requirements
     ECA_ZONES = {
-        "Baltic Sea": {"sulphur_limit": 0.10, "ports": ["FIHEL", "SEGOT", "DKCPH", "PLGDN", "EETAL", "RULED"]},
-        "North Sea": {"sulphur_limit": 0.10, "ports": ["NLRTM", "DEHAM", "BEANR", "GBFXT", "GBSOU"]},
-        "North American": {"sulphur_limit": 0.10, "ports": ["USLAX", "USNYC", "USHOU", "CAHAL", "CAVAN"]},
+        "Baltic Sea": {
+            "sulphur_limit": 0.10,
+            "ports": ["FIHEL", "SEGOT", "DKCPH", "PLGDN", "EETAL", "RULED"],
+        },
+        "North Sea": {
+            "sulphur_limit": 0.10,
+            "ports": ["NLRTM", "DEHAM", "BEANR", "GBFXT", "GBSOU"],
+        },
+        "North American": {
+            "sulphur_limit": 0.10,
+            "ports": ["USLAX", "USNYC", "USHOU", "CAHAL", "CAVAN"],
+        },
         "US Caribbean": {"sulphur_limit": 0.10, "ports": ["USSJN", "VICHA"]},
-        "Mediterranean": {"sulphur_limit": 0.10, "effective_date": "2025-05-01", "ports": ["ITGOA", "ESBCN", "FRMAR", "GRPIR"]},
+        "Mediterranean": {
+            "sulphur_limit": 0.10,
+            "effective_date": "2025-05-01",
+            "ports": ["ITGOA", "ESBCN", "FRMAR", "GRPIR"],
+        },
     }
 
     # EU ports for MRV/ETS
-    EU_PORTS = ["NLRTM", "DEHAM", "BEANR", "FRMAR", "ESBCN", "ITGOA", "GRPIR", "PLGDN", "SEGOT", "FIHEL"]
+    EU_PORTS = [
+        "NLRTM",
+        "DEHAM",
+        "BEANR",
+        "FRMAR",
+        "ESBCN",
+        "ITGOA",
+        "GRPIR",
+        "PLGDN",
+        "SEGOT",
+        "FIHEL",
+    ]
 
     def __init__(self):
         self.kb = get_maritime_knowledge_base()
 
     def generate_compliance_report(
         self,
-        vessel_info: Dict[str, Any],
-        route_ports: List[str],
-        user_documents: List[Dict[str, Any]] = None,
-        voyage_start_date: Optional[date] = None
+        vessel_info: dict[str, Any],
+        route_ports: list[str],
+        user_documents: list[dict[str, Any]] | None = None,
+        voyage_start_date: date | None = None,
     ) -> ComplianceReport:
         """
         Generate a comprehensive compliance report for a vessel and route.
@@ -154,9 +195,7 @@ class ComplianceReportGenerator:
         low_actions = [a for a in all_actions if a.priority == Priority.LOW]
 
         # Generate summary
-        summary = self._generate_summary(
-            document_analysis, risk_assessments, all_actions
-        )
+        summary = self._generate_summary(document_analysis, risk_assessments, all_actions)
 
         # Calculate detention risk
         detention_risk = self._calculate_detention_risk(document_analysis, risk_assessments)
@@ -187,9 +226,7 @@ class ComplianceReportGenerator:
         )
 
     def _analyze_documents(
-        self,
-        vessel_type: str,
-        user_documents: List[Dict[str, Any]]
+        self, vessel_type: str, user_documents: list[dict[str, Any]]
     ) -> DocumentGapAnalysis:
         """Analyze user documents against requirements."""
         # Get required certificates for vessel type
@@ -210,7 +247,7 @@ class ComplianceReportGenerator:
 
         today = date.today()
 
-        for cert_name, regulation, validity in required_certs:
+        for cert_name, regulation, _validity in required_certs:
             cert_key = cert_name.lower()
 
             # Check if user has this document
@@ -233,60 +270,74 @@ class ComplianceReportGenerator:
 
                         if days_until < 0:
                             # Expired
-                            expired_docs.append(DocumentCheckResult(
-                                document_type=cert_name,
-                                status=DocumentStatus.EXPIRED,
-                                expiry_date=expiry_date,
-                                days_until_expiry=days_until,
-                                regulation_source=regulation,
-                                action_required=f"Renew immediately - expired {abs(days_until)} days ago",
-                                priority=Priority.CRITICAL,
-                            ))
+                            expired_docs.append(
+                                DocumentCheckResult(
+                                    document_type=cert_name,
+                                    status=DocumentStatus.EXPIRED,
+                                    expiry_date=expiry_date,
+                                    days_until_expiry=days_until,
+                                    regulation_source=regulation,
+                                    action_required=f"Renew immediately - expired {abs(days_until)} days ago",
+                                    priority=Priority.CRITICAL,
+                                )
+                            )
                         elif days_until <= 30:
                             # Expiring soon
-                            expiring_soon.append(DocumentCheckResult(
-                                document_type=cert_name,
-                                status=DocumentStatus.EXPIRING_SOON,
-                                expiry_date=expiry_date,
-                                days_until_expiry=days_until,
-                                regulation_source=regulation,
-                                action_required=f"Schedule renewal - expires in {days_until} days",
-                                priority=Priority.HIGH if days_until <= 14 else Priority.MEDIUM,
-                            ))
+                            expiring_soon.append(
+                                DocumentCheckResult(
+                                    document_type=cert_name,
+                                    status=DocumentStatus.EXPIRING_SOON,
+                                    expiry_date=expiry_date,
+                                    days_until_expiry=days_until,
+                                    regulation_source=regulation,
+                                    action_required=f"Schedule renewal - expires in {days_until} days",
+                                    priority=Priority.HIGH if days_until <= 14 else Priority.MEDIUM,
+                                )
+                            )
                         else:
                             # Valid
-                            valid_docs.append(DocumentCheckResult(
+                            valid_docs.append(
+                                DocumentCheckResult(
+                                    document_type=cert_name,
+                                    status=DocumentStatus.VALID,
+                                    expiry_date=expiry_date,
+                                    days_until_expiry=days_until,
+                                    regulation_source=regulation,
+                                    priority=Priority.LOW,
+                                )
+                            )
+                    except (ValueError, TypeError):
+                        valid_docs.append(
+                            DocumentCheckResult(
                                 document_type=cert_name,
                                 status=DocumentStatus.VALID,
-                                expiry_date=expiry_date,
-                                days_until_expiry=days_until,
                                 regulation_source=regulation,
                                 priority=Priority.LOW,
-                            ))
-                    except (ValueError, TypeError):
-                        valid_docs.append(DocumentCheckResult(
+                            )
+                        )
+                else:
+                    # No expiry date provided, assume valid
+                    valid_docs.append(
+                        DocumentCheckResult(
                             document_type=cert_name,
                             status=DocumentStatus.VALID,
                             regulation_source=regulation,
                             priority=Priority.LOW,
-                        ))
-                else:
-                    # No expiry date provided, assume valid
-                    valid_docs.append(DocumentCheckResult(
-                        document_type=cert_name,
-                        status=DocumentStatus.VALID,
-                        regulation_source=regulation,
-                        priority=Priority.LOW,
-                    ))
+                        )
+                    )
             else:
                 # Missing
-                missing_docs.append(DocumentCheckResult(
-                    document_type=cert_name,
-                    status=DocumentStatus.MISSING,
-                    regulation_source=regulation,
-                    action_required=f"Obtain {cert_name} as required by {regulation}",
-                    priority=Priority.CRITICAL if "Safety" in cert_name or "ISM" in cert_name else Priority.HIGH,
-                ))
+                missing_docs.append(
+                    DocumentCheckResult(
+                        document_type=cert_name,
+                        status=DocumentStatus.MISSING,
+                        regulation_source=regulation,
+                        action_required=f"Obtain {cert_name} as required by {regulation}",
+                        priority=Priority.CRITICAL
+                        if "Safety" in cert_name or "ISM" in cert_name
+                        else Priority.HIGH,
+                    )
+                )
 
         total_required = len(required_certs)
         total_available = len(valid_docs) + len(expiring_soon)
@@ -303,9 +354,7 @@ class ComplianceReportGenerator:
         )
 
     def _check_route_compliance(
-        self,
-        route_ports: List[str],
-        vessel_info: Dict[str, Any]
+        self, route_ports: list[str], vessel_info: dict[str, Any]
     ) -> RouteComplianceCheck:
         """Check compliance requirements for the entire route."""
         port_requirements = {}
@@ -315,13 +364,11 @@ class ComplianceReportGenerator:
         for port_code in route_ports:
             # Determine if port is in ECA
             in_eca = False
-            eca_name = None
             sulphur_limit = 0.50  # Global limit
 
-            for eca, info in self.ECA_ZONES.items():
+            for _eca, info in self.ECA_ZONES.items():
                 if port_code in info.get("ports", []):
                     in_eca = True
-                    eca_name = eca
                     sulphur_limit = info.get("sulphur_limit", 0.10)
                     eca_ports.append(port_code)
                     break
@@ -357,7 +404,7 @@ class ComplianceReportGenerator:
             eu_ports=list(set(eu_ports)),
         )
 
-    def _get_imo_requirements(self, vessel_info: Dict[str, Any]) -> List[RegulationRequirement]:
+    def _get_imo_requirements(self, vessel_info: dict[str, Any]) -> list[RegulationRequirement]:
         """Get applicable IMO requirements."""
         requirements = []
 
@@ -366,29 +413,29 @@ class ComplianceReportGenerator:
             results = self.kb.search_general(
                 f"IMO requirements {vessel_info.get('vessel_type', 'cargo')} vessel certificates",
                 collections=["imo_conventions"],
-                top_k=10
+                top_k=10,
             )
 
             for i, result in enumerate(results):
-                requirements.append(RegulationRequirement(
-                    requirement_id=f"IMO-{i+1:03d}",
-                    regulation=result.metadata.get("convention", "IMO"),
-                    title=result.metadata.get("chapter_title", "IMO Requirement"),
-                    description=result.content[:500],
-                    requirement_type="MANDATORY",
-                    applicability=result.metadata.get("applicability", "All ships"),
-                    documents_required=self._extract_documents_from_text(result.content),
-                ))
+                requirements.append(
+                    RegulationRequirement(
+                        requirement_id=f"IMO-{i + 1:03d}",
+                        regulation=result.metadata.get("convention", "IMO"),
+                        title=result.metadata.get("chapter_title", "IMO Requirement"),
+                        description=result.content[:500],
+                        requirement_type="MANDATORY",
+                        applicability=result.metadata.get("applicability", "All ships"),
+                        documents_required=self._extract_documents_from_text(result.content),
+                    )
+                )
         except Exception as e:
             logger.warning(f"Error fetching IMO requirements: {e}")
 
         return requirements
 
     def _get_regional_requirements(
-        self,
-        route_ports: List[str],
-        vessel_info: Dict[str, Any]
-    ) -> List[RegulationRequirement]:
+        self, route_ports: list[str], vessel_info: dict[str, Any]
+    ) -> list[RegulationRequirement]:
         """Get regional requirements (EU MRV, ECA, etc.)."""
         requirements = []
 
@@ -396,27 +443,35 @@ class ComplianceReportGenerator:
         has_eu_ports = any(p in self.EU_PORTS for p in route_ports)
 
         if has_eu_ports:
-            requirements.append(RegulationRequirement(
-                requirement_id="EU-MRV-001",
-                regulation="EU Regulation 2015/757 (as amended)",
-                title="EU MRV Monitoring, Reporting and Verification",
-                description="Ships ≥5000 GT calling at EU/EEA ports must monitor and report CO2, CH4, and N2O emissions. Requires verified Monitoring Plan and annual Emissions Report.",
-                requirement_type="MANDATORY",
-                applicability="Ships ≥5000 GT calling at EU/EEA ports",
-                documents_required=["EU MRV Monitoring Plan", "EU MRV Document of Compliance", "Annual Emissions Report"],
-                deadline="Report by 31 March each year",
-            ))
+            requirements.append(
+                RegulationRequirement(
+                    requirement_id="EU-MRV-001",
+                    regulation="EU Regulation 2015/757 (as amended)",
+                    title="EU MRV Monitoring, Reporting and Verification",
+                    description="Ships ≥5000 GT calling at EU/EEA ports must monitor and report CO2, CH4, and N2O emissions. Requires verified Monitoring Plan and annual Emissions Report.",
+                    requirement_type="MANDATORY",
+                    applicability="Ships ≥5000 GT calling at EU/EEA ports",
+                    documents_required=[
+                        "EU MRV Monitoring Plan",
+                        "EU MRV Document of Compliance",
+                        "Annual Emissions Report",
+                    ],
+                    deadline="Report by 31 March each year",
+                )
+            )
 
-            requirements.append(RegulationRequirement(
-                requirement_id="EU-ETS-001",
-                regulation="EU Directive 2023/959",
-                title="EU Emissions Trading System (Maritime)",
-                description="From 2024, ships must surrender EU ETS allowances for verified emissions. Phase-in: 40% (2024), 70% (2025), 100% (2026+).",
-                requirement_type="MANDATORY",
-                applicability="Ships ≥5000 GT on EU voyages",
-                documents_required=["EU ETS Account Registration", "Verified Emissions Report"],
-                deadline="Surrender allowances by 30 September each year",
-            ))
+            requirements.append(
+                RegulationRequirement(
+                    requirement_id="EU-ETS-001",
+                    regulation="EU Directive 2023/959",
+                    title="EU Emissions Trading System (Maritime)",
+                    description="From 2024, ships must surrender EU ETS allowances for verified emissions. Phase-in: 40% (2024), 70% (2025), 100% (2026+).",
+                    requirement_type="MANDATORY",
+                    applicability="Ships ≥5000 GT on EU voyages",
+                    documents_required=["EU ETS Account Registration", "Verified Emissions Report"],
+                    deadline="Surrender allowances by 30 September each year",
+                )
+            )
 
         # Check for ECA zones
         has_eca_ports = any(
@@ -426,23 +481,27 @@ class ComplianceReportGenerator:
         )
 
         if has_eca_ports:
-            requirements.append(RegulationRequirement(
-                requirement_id="ECA-001",
-                regulation="MARPOL Annex VI Reg 14",
-                title="Emission Control Area Fuel Requirements",
-                description="Ships in ECAs must use fuel with max 0.10% sulphur content, or use equivalent compliance methods (scrubbers, LNG).",
-                requirement_type="MANDATORY",
-                applicability="All ships in designated ECAs",
-                documents_required=["Bunker Delivery Notes", "Fuel Changeover Procedure", "EGCS Documentation (if fitted)"],
-            ))
+            requirements.append(
+                RegulationRequirement(
+                    requirement_id="ECA-001",
+                    regulation="MARPOL Annex VI Reg 14",
+                    title="Emission Control Area Fuel Requirements",
+                    description="Ships in ECAs must use fuel with max 0.10% sulphur content, or use equivalent compliance methods (scrubbers, LNG).",
+                    requirement_type="MANDATORY",
+                    applicability="All ships in designated ECAs",
+                    documents_required=[
+                        "Bunker Delivery Notes",
+                        "Fuel Changeover Procedure",
+                        "EGCS Documentation (if fitted)",
+                    ],
+                )
+            )
 
         return requirements
 
     def _get_port_specific_requirements(
-        self,
-        route_ports: List[str],
-        vessel_info: Dict[str, Any]
-    ) -> Dict[str, List[RegulationRequirement]]:
+        self, route_ports: list[str], vessel_info: dict[str, Any]
+    ) -> dict[str, list[RegulationRequirement]]:
         """Get port-specific requirements."""
         port_reqs = {}
 
@@ -454,18 +513,20 @@ class ComplianceReportGenerator:
                 results = self.kb.search_general(
                     f"Port {port_code} requirements regulations",
                     collections=["port_regulations", "customs_documentation"],
-                    top_k=5
+                    top_k=5,
                 )
 
                 for i, result in enumerate(results):
-                    reqs.append(RegulationRequirement(
-                        requirement_id=f"{port_code}-{i+1:03d}",
-                        regulation=result.metadata.get("source", "Port Authority"),
-                        title=f"Port Requirement: {result.metadata.get('requirement_name', 'Local Requirement')}",
-                        description=result.content[:300],
-                        requirement_type=result.metadata.get("requirement_type", "MANDATORY"),
-                        applicability=vessel_info.get("vessel_type", "All vessels"),
-                    ))
+                    reqs.append(
+                        RegulationRequirement(
+                            requirement_id=f"{port_code}-{i + 1:03d}",
+                            regulation=result.metadata.get("source", "Port Authority"),
+                            title=f"Port Requirement: {result.metadata.get('requirement_name', 'Local Requirement')}",
+                            description=result.content[:300],
+                            requirement_type=result.metadata.get("requirement_type", "MANDATORY"),
+                            applicability=vessel_info.get("vessel_type", "All vessels"),
+                        )
+                    )
             except Exception as e:
                 logger.warning(f"Error fetching port requirements for {port_code}: {e}")
 
@@ -477,65 +538,75 @@ class ComplianceReportGenerator:
         self,
         doc_analysis: DocumentGapAnalysis,
         route_compliance: RouteComplianceCheck,
-        vessel_info: Dict[str, Any],
-        route_ports: List[str]
-    ) -> List[RiskAssessment]:
+        vessel_info: dict[str, Any],
+        route_ports: list[str],
+    ) -> list[RiskAssessment]:
         """Assess compliance risks."""
         risks = []
 
         # Document-related risks
         if doc_analysis.expired_documents:
-            risks.append(RiskAssessment(
-                risk_area="PSC Detention - Expired Certificates",
-                risk_level=RiskLevel.CRITICAL,
-                probability="High",
-                impact=f"Ship may be detained at port. {len(doc_analysis.expired_documents)} expired certificate(s) found.",
-                mitigation="Renew all expired certificates before departure.",
-                affected_ports=route_ports,
-            ))
+            risks.append(
+                RiskAssessment(
+                    risk_area="PSC Detention - Expired Certificates",
+                    risk_level=RiskLevel.CRITICAL,
+                    probability="High",
+                    impact=f"Ship may be detained at port. {len(doc_analysis.expired_documents)} expired certificate(s) found.",
+                    mitigation="Renew all expired certificates before departure.",
+                    affected_ports=route_ports,
+                )
+            )
 
         if doc_analysis.missing_documents:
             missing_count = len(doc_analysis.missing_documents)
-            risks.append(RiskAssessment(
-                risk_area="PSC Detention - Missing Documents",
-                risk_level=RiskLevel.HIGH if missing_count > 3 else RiskLevel.MEDIUM,
-                probability="High" if missing_count > 3 else "Medium",
-                impact=f"{missing_count} required document(s) not on file. May result in detention or delays.",
-                mitigation="Obtain all missing documents before voyage.",
-                affected_ports=route_ports,
-            ))
+            risks.append(
+                RiskAssessment(
+                    risk_area="PSC Detention - Missing Documents",
+                    risk_level=RiskLevel.HIGH if missing_count > 3 else RiskLevel.MEDIUM,
+                    probability="High" if missing_count > 3 else "Medium",
+                    impact=f"{missing_count} required document(s) not on file. May result in detention or delays.",
+                    mitigation="Obtain all missing documents before voyage.",
+                    affected_ports=route_ports,
+                )
+            )
 
         if doc_analysis.expiring_soon:
-            risks.append(RiskAssessment(
-                risk_area="Certificate Validity During Voyage",
-                risk_level=RiskLevel.MEDIUM,
-                probability="Medium",
-                impact=f"{len(doc_analysis.expiring_soon)} certificate(s) may expire during voyage.",
-                mitigation="Schedule renewals or ensure surveys completed before relevant port calls.",
-                affected_ports=route_ports,
-            ))
+            risks.append(
+                RiskAssessment(
+                    risk_area="Certificate Validity During Voyage",
+                    risk_level=RiskLevel.MEDIUM,
+                    probability="Medium",
+                    impact=f"{len(doc_analysis.expiring_soon)} certificate(s) may expire during voyage.",
+                    mitigation="Schedule renewals or ensure surveys completed before relevant port calls.",
+                    affected_ports=route_ports,
+                )
+            )
 
         # ECA compliance risks
         if route_compliance.eca_ports:
-            risks.append(RiskAssessment(
-                risk_area="ECA Non-Compliance",
-                risk_level=RiskLevel.HIGH,
-                probability="High if not compliant",
-                impact="Fines of €10,000-100,000+ for sulphur violations. Possible detention.",
-                mitigation="Ensure compliant fuel or operational EGCS for ECA transits.",
-                affected_ports=route_compliance.eca_ports,
-            ))
+            risks.append(
+                RiskAssessment(
+                    risk_area="ECA Non-Compliance",
+                    risk_level=RiskLevel.HIGH,
+                    probability="High if not compliant",
+                    impact="Fines of €10,000-100,000+ for sulphur violations. Possible detention.",
+                    mitigation="Ensure compliant fuel or operational EGCS for ECA transits.",
+                    affected_ports=route_compliance.eca_ports,
+                )
+            )
 
         # EU ETS risks
         if route_compliance.eu_ports:
-            risks.append(RiskAssessment(
-                risk_area="EU ETS Non-Compliance",
-                risk_level=RiskLevel.MEDIUM,
-                probability="Medium",
-                impact="Penalty of €100/tonne CO2 for missing allowances. Potential denial of entry after 2 years.",
-                mitigation="Ensure EU ETS account is active and sufficient allowances are available.",
-                affected_ports=route_compliance.eu_ports,
-            ))
+            risks.append(
+                RiskAssessment(
+                    risk_area="EU ETS Non-Compliance",
+                    risk_level=RiskLevel.MEDIUM,
+                    probability="Medium",
+                    impact="Penalty of €100/tonne CO2 for missing allowances. Potential denial of entry after 2 years.",
+                    mitigation="Ensure EU ETS account is active and sufficient allowances are available.",
+                    affected_ports=route_compliance.eu_ports,
+                )
+            )
 
         return risks
 
@@ -543,85 +614,97 @@ class ComplianceReportGenerator:
         self,
         doc_analysis: DocumentGapAnalysis,
         route_compliance: RouteComplianceCheck,
-        risk_assessments: List[RiskAssessment],
-        route_ports: List[str]
-    ) -> List[ActionItem]:
+        risk_assessments: list[RiskAssessment],
+        route_ports: list[str],
+    ) -> list[ActionItem]:
         """Generate prioritized action items."""
         actions = []
         action_id = 1
 
         # Actions for expired documents
         for doc in doc_analysis.expired_documents:
-            actions.append(ActionItem(
-                action_id=f"ACT-{action_id:04d}",
-                priority=Priority.CRITICAL,
-                category="Document",
-                action=f"RENEW: {doc.document_type}",
-                reason=f"Certificate expired {abs(doc.days_until_expiry)} days ago",
-                regulation_reference=doc.regulation_source,
-                deadline="Immediately - before departure",
-                responsible_party="Ship Manager / DPA",
-                ports_affected=route_ports,
-            ))
+            actions.append(
+                ActionItem(
+                    action_id=f"ACT-{action_id:04d}",
+                    priority=Priority.CRITICAL,
+                    category="Document",
+                    action=f"RENEW: {doc.document_type}",
+                    reason=f"Certificate expired {abs(doc.days_until_expiry)} days ago",
+                    regulation_reference=doc.regulation_source,
+                    deadline="Immediately - before departure",
+                    responsible_party="Ship Manager / DPA",
+                    ports_affected=route_ports,
+                )
+            )
             action_id += 1
 
         # Actions for missing documents
         for doc in doc_analysis.missing_documents:
-            actions.append(ActionItem(
-                action_id=f"ACT-{action_id:04d}",
-                priority=Priority.HIGH if doc.priority == Priority.CRITICAL else Priority.MEDIUM,
-                category="Document",
-                action=f"OBTAIN: {doc.document_type}",
-                reason=f"Required by {doc.regulation_source}",
-                regulation_reference=doc.regulation_source,
-                deadline="Before departure",
-                responsible_party="Ship Manager",
-                ports_affected=doc.ports_requiring if doc.ports_requiring else route_ports,
-            ))
+            actions.append(
+                ActionItem(
+                    action_id=f"ACT-{action_id:04d}",
+                    priority=Priority.HIGH
+                    if doc.priority == Priority.CRITICAL
+                    else Priority.MEDIUM,
+                    category="Document",
+                    action=f"OBTAIN: {doc.document_type}",
+                    reason=f"Required by {doc.regulation_source}",
+                    regulation_reference=doc.regulation_source,
+                    deadline="Before departure",
+                    responsible_party="Ship Manager",
+                    ports_affected=doc.ports_requiring if doc.ports_requiring else route_ports,
+                )
+            )
             action_id += 1
 
         # Actions for expiring documents
         for doc in doc_analysis.expiring_soon:
-            actions.append(ActionItem(
-                action_id=f"ACT-{action_id:04d}",
-                priority=Priority.HIGH if doc.days_until_expiry <= 14 else Priority.MEDIUM,
-                category="Document",
-                action=f"SCHEDULE RENEWAL: {doc.document_type}",
-                reason=f"Expires in {doc.days_until_expiry} days (on {doc.expiry_date})",
-                regulation_reference=doc.regulation_source,
-                deadline=f"Before {doc.expiry_date}",
-                responsible_party="Ship Manager",
-            ))
+            actions.append(
+                ActionItem(
+                    action_id=f"ACT-{action_id:04d}",
+                    priority=Priority.HIGH if doc.days_until_expiry <= 14 else Priority.MEDIUM,
+                    category="Document",
+                    action=f"SCHEDULE RENEWAL: {doc.document_type}",
+                    reason=f"Expires in {doc.days_until_expiry} days (on {doc.expiry_date})",
+                    regulation_reference=doc.regulation_source,
+                    deadline=f"Before {doc.expiry_date}",
+                    responsible_party="Ship Manager",
+                )
+            )
             action_id += 1
 
         # Actions for ECA compliance
         if route_compliance.eca_ports:
-            actions.append(ActionItem(
-                action_id=f"ACT-{action_id:04d}",
-                priority=Priority.HIGH,
-                category="Fuel",
-                action="VERIFY ECA FUEL COMPLIANCE",
-                reason="Route includes ECA zones requiring 0.10% sulphur fuel",
-                regulation_reference="MARPOL Annex VI Reg 14",
-                deadline="Before entering ECA",
-                responsible_party="Chief Engineer",
-                ports_affected=route_compliance.eca_ports,
-            ))
+            actions.append(
+                ActionItem(
+                    action_id=f"ACT-{action_id:04d}",
+                    priority=Priority.HIGH,
+                    category="Fuel",
+                    action="VERIFY ECA FUEL COMPLIANCE",
+                    reason="Route includes ECA zones requiring 0.10% sulphur fuel",
+                    regulation_reference="MARPOL Annex VI Reg 14",
+                    deadline="Before entering ECA",
+                    responsible_party="Chief Engineer",
+                    ports_affected=route_compliance.eca_ports,
+                )
+            )
             action_id += 1
 
         # Actions for EU compliance
         if route_compliance.eu_ports:
-            actions.append(ActionItem(
-                action_id=f"ACT-{action_id:04d}",
-                priority=Priority.MEDIUM,
-                category="Emissions",
-                action="VERIFY EU MRV MONITORING PLAN",
-                reason="Route includes EU ports subject to MRV/ETS requirements",
-                regulation_reference="EU Regulation 2015/757",
-                deadline="Before EU port call",
-                responsible_party="Ship Manager / Environmental Officer",
-                ports_affected=route_compliance.eu_ports,
-            ))
+            actions.append(
+                ActionItem(
+                    action_id=f"ACT-{action_id:04d}",
+                    priority=Priority.MEDIUM,
+                    category="Emissions",
+                    action="VERIFY EU MRV MONITORING PLAN",
+                    reason="Route includes EU ports subject to MRV/ETS requirements",
+                    regulation_reference="EU Regulation 2015/757",
+                    deadline="Before EU port call",
+                    responsible_party="Ship Manager / Environmental Officer",
+                    ports_affected=route_compliance.eu_ports,
+                )
+            )
             action_id += 1
 
         return actions
@@ -629,12 +712,14 @@ class ComplianceReportGenerator:
     def _generate_summary(
         self,
         doc_analysis: DocumentGapAnalysis,
-        risk_assessments: List[RiskAssessment],
-        action_items: List[ActionItem]
+        risk_assessments: list[RiskAssessment],
+        action_items: list[ActionItem],
     ) -> ComplianceReportSummary:
         """Generate executive summary."""
         # Determine overall status
-        if doc_analysis.expired_documents or any(r.risk_level == RiskLevel.CRITICAL for r in risk_assessments):
+        if doc_analysis.expired_documents or any(
+            r.risk_level == RiskLevel.CRITICAL for r in risk_assessments
+        ):
             overall_status = ComplianceStatus.NON_COMPLIANT
         elif doc_analysis.missing_documents or doc_analysis.expiring_soon:
             overall_status = ComplianceStatus.PARTIAL
@@ -659,20 +744,23 @@ class ComplianceReportGenerator:
         # Generate key findings
         key_findings = []
         if doc_analysis.expired_documents:
-            key_findings.append(f"{len(doc_analysis.expired_documents)} certificate(s) have expired and require immediate renewal")
+            key_findings.append(
+                f"{len(doc_analysis.expired_documents)} certificate(s) have expired and require immediate renewal"
+            )
         if doc_analysis.expiring_soon:
-            key_findings.append(f"{len(doc_analysis.expiring_soon)} certificate(s) expiring within 30 days")
+            key_findings.append(
+                f"{len(doc_analysis.expiring_soon)} certificate(s) expiring within 30 days"
+            )
         if doc_analysis.missing_documents:
-            key_findings.append(f"{len(doc_analysis.missing_documents)} required document(s) not on file")
+            key_findings.append(
+                f"{len(doc_analysis.missing_documents)} required document(s) not on file"
+            )
         for risk in risk_assessments[:2]:  # Top 2 risks
             if risk.risk_level in [RiskLevel.CRITICAL, RiskLevel.HIGH]:
                 key_findings.append(f"Risk: {risk.risk_area}")
 
         # Get immediate actions
-        immediate_actions = [
-            a.action for a in action_items
-            if a.priority == Priority.CRITICAL
-        ][:5]
+        immediate_actions = [a.action for a in action_items if a.priority == Priority.CRITICAL][:5]
 
         return ComplianceReportSummary(
             overall_status=overall_status,
@@ -687,9 +775,7 @@ class ComplianceReportGenerator:
         )
 
     def _calculate_detention_risk(
-        self,
-        doc_analysis: DocumentGapAnalysis,
-        risk_assessments: List[RiskAssessment]
+        self, doc_analysis: DocumentGapAnalysis, risk_assessments: list[RiskAssessment]
     ) -> RiskLevel:
         """Calculate PSC detention risk."""
         if doc_analysis.expired_documents:
@@ -701,10 +787,8 @@ class ComplianceReportGenerator:
         return RiskLevel.LOW
 
     def _generate_timeline(
-        self,
-        action_items: List[ActionItem],
-        voyage_start: Optional[date]
-    ) -> List[Dict[str, Any]]:
+        self, action_items: list[ActionItem], voyage_start: date | None
+    ) -> list[dict[str, Any]]:
         """Generate compliance timeline."""
         timeline = []
 
@@ -713,22 +797,26 @@ class ComplianceReportGenerator:
         high_actions = [a for a in action_items if a.priority == Priority.HIGH]
 
         if critical_actions:
-            timeline.append({
-                "phase": "Immediate (Before Departure)",
-                "actions": [a.action for a in critical_actions],
-                "deadline": "Now",
-            })
+            timeline.append(
+                {
+                    "phase": "Immediate (Before Departure)",
+                    "actions": [a.action for a in critical_actions],
+                    "deadline": "Now",
+                }
+            )
 
         if high_actions:
-            timeline.append({
-                "phase": "Pre-Voyage",
-                "actions": [a.action for a in high_actions],
-                "deadline": voyage_start.isoformat() if voyage_start else "Before voyage",
-            })
+            timeline.append(
+                {
+                    "phase": "Pre-Voyage",
+                    "actions": [a.action for a in high_actions],
+                    "deadline": voyage_start.isoformat() if voyage_start else "Before voyage",
+                }
+            )
 
         return timeline
 
-    def _estimate_time_to_compliance(self, action_items: List[ActionItem]) -> Optional[str]:
+    def _estimate_time_to_compliance(self, action_items: list[ActionItem]) -> str | None:
         """Estimate time to achieve full compliance."""
         critical_count = sum(1 for a in action_items if a.priority == Priority.CRITICAL)
         high_count = sum(1 for a in action_items if a.priority == Priority.HIGH)
@@ -745,9 +833,37 @@ class ComplianceReportGenerator:
         """Determine PSC regime for a port."""
         if port_code.startswith("US"):
             return "USCG"
-        elif port_code[:2] in ["NL", "DE", "BE", "FR", "GB", "ES", "IT", "PT", "NO", "SE", "DK", "FI", "PL"]:
+        elif port_code[:2] in [
+            "NL",
+            "DE",
+            "BE",
+            "FR",
+            "GB",
+            "ES",
+            "IT",
+            "PT",
+            "NO",
+            "SE",
+            "DK",
+            "FI",
+            "PL",
+        ]:
             return "Paris MOU"
-        elif port_code[:2] in ["SG", "CN", "JP", "KR", "AU", "NZ", "HK", "TW", "MY", "TH", "VN", "PH", "ID"]:
+        elif port_code[:2] in [
+            "SG",
+            "CN",
+            "JP",
+            "KR",
+            "AU",
+            "NZ",
+            "HK",
+            "TW",
+            "MY",
+            "TH",
+            "VN",
+            "PH",
+            "ID",
+        ]:
             return "Tokyo MOU"
         elif port_code[:2] in ["IN", "LK", "BD", "PK", "AE", "SA", "OM", "KE", "TZ", "ZA"]:
             return "Indian Ocean MOU"
@@ -778,7 +894,7 @@ class ComplianceReportGenerator:
         else:
             return 24  # Standard for most ports
 
-    def _get_pre_arrival_docs(self, port_code: str) -> List[str]:
+    def _get_pre_arrival_docs(self, port_code: str) -> list[str]:
         """Get pre-arrival document requirements."""
         base_docs = ["Crew List", "Cargo Manifest", "Ship's Stores Declaration"]
         if port_code.startswith("US"):
@@ -793,7 +909,7 @@ class ComplianceReportGenerator:
         banned_ports = ["SGSIN", "CNSHA", "DEHAM", "BEANR", "USLAX"]
         return port_code not in banned_ports
 
-    def _get_special_requirements(self, port_code: str) -> List[str]:
+    def _get_special_requirements(self, port_code: str) -> list[str]:
         """Get port-specific special requirements."""
         requirements = []
         if port_code in self.EU_PORTS:
@@ -804,15 +920,13 @@ class ComplianceReportGenerator:
         return requirements
 
     def _get_common_route_requirements(
-        self,
-        route_ports: List[str],
-        vessel_info: Dict[str, Any]
-    ) -> List[RegulationRequirement]:
+        self, route_ports: list[str], vessel_info: dict[str, Any]
+    ) -> list[RegulationRequirement]:
         """Get requirements common to all ports on route."""
         # These are requirements that apply regardless of specific port
         return []
 
-    def _extract_documents_from_text(self, text: str) -> List[str]:
+    def _extract_documents_from_text(self, text: str) -> list[str]:
         """Extract document names from text content."""
         # Simple extraction - look for common certificate patterns
         documents = []
@@ -825,7 +939,7 @@ class ComplianceReportGenerator:
 
 
 # Singleton instance
-_report_generator: Optional[ComplianceReportGenerator] = None
+_report_generator: ComplianceReportGenerator | None = None
 
 
 def get_compliance_report_generator() -> ComplianceReportGenerator:

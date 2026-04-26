@@ -1,16 +1,19 @@
-from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
-from modules.demo.autoplay_controller import CrisisAutoPlayController
-from shared.auth.clerk_auth import User, get_current_user
-from shared.config import get_settings
+import asyncio
 import base64
 import hashlib
 import hmac
 import json
-import uuid
 import logging
-import asyncio
 import os
 import time
+import uuid
+
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
+
+from modules.demo.autoplay_controller import CrisisAutoPlayController
+from shared.auth import User, get_current_user
+from shared.config import get_settings
+from shared.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,7 @@ router = APIRouter(prefix="/api/demo", tags=["Demo"])
 # Simple in-memory storage for active demo controllers
 # demo_id -> {"controller": controller_instance, "user_id": str, "expires_at": int}
 active_sessions = {}
+
 
 def _sign_demo_token(demo_id: str, user_id: str, expires_at: int) -> str:
     settings = get_settings()
@@ -62,6 +66,7 @@ def _verify_demo_token(token: str, demo_id: str) -> dict | None:
 
 
 @router.post("/start")
+@limiter.limit("6/minute")
 async def start_demo(
     request: Request,
     scenario: str = "crisis_455pm",
@@ -73,7 +78,7 @@ async def start_demo(
     """
     demo_id = str(uuid.uuid4())
     logger.info(f"Starting demo session: {demo_id} for scenario: {scenario}")
-    
+
     now = int(time.time())
     expires_at = now + get_settings().demo_session_ttl_seconds
     controller = CrisisAutoPlayController()
@@ -96,8 +101,9 @@ async def start_demo(
         "status": "started",
         "websocket_url": f"{ws_base_url.rstrip('/')}/api/demo/ws?demo_id={demo_id}&demo_token={demo_token}",
         "expires_at": expires_at,
-        "duration_seconds": 178
+        "duration_seconds": 178,
     }
+
 
 @router.websocket("/ws")
 async def websocket_demo(websocket: WebSocket, demo_id: str, demo_token: str):
@@ -121,13 +127,13 @@ async def websocket_demo(websocket: WebSocket, demo_id: str, demo_token: str):
     controller = session["controller"]
 
     demo_task = None
-    
+
     try:
         # Loop to handle commands from client (e.g., "play", "confirm")
         while True:
             data = await websocket.receive_json()
             logger.info(f"Received command: {data}")
-            
+
             if data.get("action") == "play":
                 if not controller.is_playing:
                     controller.is_playing = True
@@ -144,17 +150,15 @@ async def websocket_demo(websocket: WebSocket, demo_id: str, demo_token: str):
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected: {demo_id}")
-        if demo_id in active_sessions:
-            del active_sessions[demo_id]
+        active_sessions.pop(demo_id, None)
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         try:
             await websocket.close(code=1011)
-        except:
-            pass
+        except Exception:
+            logger.debug("WebSocket close after error failed", exc_info=True)
     finally:
         # Background tasks
         if demo_task and not demo_task.done():
             demo_task.cancel()
-        if demo_id in active_sessions:
-            del active_sessions[demo_id]
+        active_sessions.pop(demo_id, None)

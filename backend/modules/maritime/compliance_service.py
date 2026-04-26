@@ -2,20 +2,24 @@
 Compliance Service - Route compliance checking
 Integrates with CrewAI for comprehensive compliance analysis
 """
-import logging
+
 import json
-from typing import List, Optional, Dict, Any
+import logging
+from dataclasses import dataclass, field
 from datetime import datetime
-from dataclasses import dataclass, field, asdict
+from typing import Any
 
 from sqlalchemy.orm import Session
 
-from shared.database.models import (
-    Vessel, Port, ComplianceCheck, ComplianceStatus,
-    DocumentType, VesselType
-)
-from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base, SearchResult
 from modules.maritime.document_service import DocumentService
+from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
+from shared.database.models import (
+    ComplianceCheck,
+    ComplianceStatus,
+    DocumentType,
+    Port,
+    Vessel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,17 +27,18 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PortComplianceResult:
     """Compliance result for a single port"""
+
     port_code: str
     port_name: str
     status: ComplianceStatus
-    required_documents: List[Dict[str, Any]] = field(default_factory=list)
-    available_documents: List[Dict[str, Any]] = field(default_factory=list)
-    missing_documents: List[Dict[str, Any]] = field(default_factory=list)
-    expired_documents: List[Dict[str, Any]] = field(default_factory=list)
-    special_requirements: List[str] = field(default_factory=list)
-    risk_factors: List[str] = field(default_factory=list)
+    required_documents: list[dict[str, Any]] = field(default_factory=list)
+    available_documents: list[dict[str, Any]] = field(default_factory=list)
+    missing_documents: list[dict[str, Any]] = field(default_factory=list)
+    expired_documents: list[dict[str, Any]] = field(default_factory=list)
+    special_requirements: list[str] = field(default_factory=list)
+    risk_factors: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "port_code": self.port_code,
             "port_name": self.port_name,
@@ -50,20 +55,21 @@ class PortComplianceResult:
 @dataclass
 class RouteComplianceResult:
     """Compliance result for entire route"""
+
     vessel_id: int
     route_name: str
-    route_ports: List[str]
+    route_ports: list[str]
     overall_status: ComplianceStatus
     compliance_score: float
-    port_results: List[PortComplianceResult] = field(default_factory=list)
-    all_missing_documents: List[Dict[str, Any]] = field(default_factory=list)
-    all_expired_documents: List[Dict[str, Any]] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
+    port_results: list[PortComplianceResult] = field(default_factory=list)
+    all_missing_documents: list[dict[str, Any]] = field(default_factory=list)
+    all_expired_documents: list[dict[str, Any]] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
     risk_level: str = "low"  # low, medium, high, critical
     summary_report: str = ""
     detailed_report: str = ""
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "vessel_id": self.vessel_id,
             "route_name": self.route_name,
@@ -109,10 +115,7 @@ class ComplianceService:
         self.doc_service = DocumentService()
 
     def check_port_compliance(
-        self,
-        vessel_id: int,
-        port_code: str,
-        port_name: Optional[str] = None
+        self, vessel_id: int, port_code: str, port_name: str | None = None
     ) -> PortComplianceResult:
         """
         Check compliance for a single port
@@ -132,7 +135,7 @@ class ComplianceService:
                 port_code=port_code,
                 port_name=port_name or port_code,
                 status=ComplianceStatus.PENDING_REVIEW,
-                risk_factors=["Vessel not found"]
+                risk_factors=["Vessel not found"],
             )
 
         vessel_type = vessel.vessel_type.value if vessel.vessel_type else "container"
@@ -151,14 +154,14 @@ class ComplianceService:
             try:
                 doc_type = DocumentType(doc["document_type"])
                 all_required_types.add(doc_type)
-            except:
-                pass
+            except (KeyError, ValueError):
+                continue
 
         # Check vessel documents against requirements (pass string values)
         doc_matches = self.doc_service.find_matching_documents(
             vessel_id=vessel_id,
             required_doc_types=[dt.value for dt in all_required_types],
-            check_expiry=True
+            check_expiry=True,
         )
 
         # Build result
@@ -176,27 +179,31 @@ class ComplianceService:
 
             if match_info["found"]:
                 if match_info["is_expired"]:
-                    expired_documents.append({
-                        "document_type": doc_type_str,
-                        "document": match_info["document"],
-                    })
+                    expired_documents.append(
+                        {
+                            "document_type": doc_type_str,
+                            "document": match_info["document"],
+                        }
+                    )
                 else:
-                    available_documents.append({
-                        "document_type": doc_type_str,
-                        "document": match_info["document"],
-                        "days_until_expiry": match_info["days_until_expiry"],
-                    })
+                    available_documents.append(
+                        {
+                            "document_type": doc_type_str,
+                            "document": match_info["document"],
+                            "days_until_expiry": match_info["days_until_expiry"],
+                        }
+                    )
             else:
-                missing_documents.append({
-                    "document_type": doc_type_str,
-                    "description": f"Missing {doc_type_str.replace('_', ' ').title()}",
-                })
+                missing_documents.append(
+                    {
+                        "document_type": doc_type_str,
+                        "description": f"Missing {doc_type_str.replace('_', ' ').title()}",
+                    }
+                )
 
         # Get special requirements from KB
         port_regulations = self.kb.search_by_port(port_code, vessel_type, top_k=5)
-        special_requirements = [
-            r.content[:200] for r in port_regulations[:3]
-        ]
+        special_requirements = [r.content[:200] for r in port_regulations[:3]]
 
         # Calculate risk factors
         risk_factors = []
@@ -206,8 +213,11 @@ class ComplianceService:
             risk_factors.append(f"{len(expired_documents)} documents expired")
 
         # Check for documents expiring within 30 days
-        expiring_soon = [d for d in available_documents
-                        if d.get("days_until_expiry") and d["days_until_expiry"] < 30]
+        expiring_soon = [
+            d
+            for d in available_documents
+            if d.get("days_until_expiry") and d["days_until_expiry"] < 30
+        ]
         if expiring_soon:
             risk_factors.append(f"{len(expiring_soon)} documents expiring within 30 days")
 
@@ -232,10 +242,7 @@ class ComplianceService:
         )
 
     def check_route_compliance(
-        self,
-        vessel_id: int,
-        port_codes: List[str],
-        route_name: Optional[str] = None
+        self, vessel_id: int, port_codes: list[str], route_name: str | None = None
     ) -> RouteComplianceResult:
         """
         Check compliance for entire route
@@ -266,7 +273,9 @@ class ComplianceService:
                     doc["ports"] = [port_code]
                     all_missing.append(doc)
                 else:
-                    existing = next((d for d in all_missing if d["document_type"] == doc["document_type"]), None)
+                    existing = next(
+                        (d for d in all_missing if d["document_type"] == doc["document_type"]), None
+                    )
                     if existing:
                         existing.setdefault("ports", []).append(port_code)
 
@@ -278,10 +287,14 @@ class ComplianceService:
         # Calculate overall status and score
         compliant_count = sum(1 for p in port_results if p.status == ComplianceStatus.COMPLIANT)
         partial_count = sum(1 for p in port_results if p.status == ComplianceStatus.PARTIAL)
-        non_compliant_count = sum(1 for p in port_results if p.status == ComplianceStatus.NON_COMPLIANT)
+        non_compliant_count = sum(
+            1 for p in port_results if p.status == ComplianceStatus.NON_COMPLIANT
+        )
 
         total_ports = len(port_results)
-        compliance_score = (compliant_count * 100 + partial_count * 50) / total_ports if total_ports > 0 else 0
+        compliance_score = (
+            (compliant_count * 100 + partial_count * 50) / total_ports if total_ports > 0 else 0
+        )
 
         if non_compliant_count > 0:
             overall_status = ComplianceStatus.NON_COMPLIANT
@@ -330,8 +343,8 @@ class ComplianceService:
         self,
         customer_id: int,
         result: RouteComplianceResult,
-        crew_run_id: Optional[str] = None,
-        agent_outputs: Optional[Dict] = None
+        crew_run_id: str | None = None,
+        agent_outputs: dict | None = None,
     ) -> ComplianceCheck:
         """Save compliance check result to database"""
         check = ComplianceCheck(
@@ -356,11 +369,7 @@ class ComplianceService:
 
         return check
 
-    def get_compliance_history(
-        self,
-        vessel_id: int,
-        limit: int = 10
-    ) -> List[ComplianceCheck]:
+    def get_compliance_history(self, vessel_id: int, limit: int = 10) -> list[ComplianceCheck]:
         """Get compliance check history for a vessel"""
         return (
             self.db.query(ComplianceCheck)
@@ -372,29 +381,29 @@ class ComplianceService:
 
     def _generate_recommendations(
         self,
-        missing_docs: List[Dict],
-        expired_docs: List[Dict],
-        port_results: List[PortComplianceResult]
-    ) -> List[str]:
+        missing_docs: list[dict],
+        expired_docs: list[dict],
+        port_results: list[PortComplianceResult],
+    ) -> list[str]:
         """Generate actionable recommendations"""
         recommendations = []
 
         # Missing documents
         if missing_docs:
-            doc_types = list(set(d["document_type"] for d in missing_docs))
+            doc_types = list({d["document_type"] for d in missing_docs})
             recommendations.append(
                 f"URGENT: Obtain the following missing certificates: {', '.join(doc_types[:5])}"
             )
 
         # Expired documents
         if expired_docs:
-            doc_types = list(set(d["document_type"] for d in expired_docs))
-            recommendations.append(
-                f"URGENT: Renew expired certificates: {', '.join(doc_types)}"
-            )
+            doc_types = list({d["document_type"] for d in expired_docs})
+            recommendations.append(f"URGENT: Renew expired certificates: {', '.join(doc_types)}")
 
         # Port-specific recommendations
-        non_compliant_ports = [p for p in port_results if p.status == ComplianceStatus.NON_COMPLIANT]
+        non_compliant_ports = [
+            p for p in port_results if p.status == ComplianceStatus.NON_COMPLIANT
+        ]
         if non_compliant_ports:
             port_names = [p.port_name for p in non_compliant_ports[:3]]
             recommendations.append(
@@ -409,17 +418,19 @@ class ComplianceService:
             )
 
         if not recommendations:
-            recommendations.append("Vessel appears to be fully compliant for this route. Maintain current documentation.")
+            recommendations.append(
+                "Vessel appears to be fully compliant for this route. Maintain current documentation."
+            )
 
         return recommendations
 
     def _generate_summary_report(
         self,
         route_name: str,
-        port_results: List[PortComplianceResult],
+        port_results: list[PortComplianceResult],
         overall_status: ComplianceStatus,
         compliance_score: float,
-        risk_level: str
+        risk_level: str,
     ) -> str:
         """Generate executive summary report"""
         compliant_count = sum(1 for p in port_results if p.status == ComplianceStatus.COMPLIANT)
@@ -448,10 +459,10 @@ including SOLAS, MARPOL, ISM Code, ISPS Code, and port-specific requirements.
     def _generate_detailed_report(
         self,
         route_name: str,
-        port_results: List[PortComplianceResult],
-        missing_docs: List[Dict],
-        expired_docs: List[Dict],
-        recommendations: List[str]
+        port_results: list[PortComplianceResult],
+        missing_docs: list[dict],
+        expired_docs: list[dict],
+        recommendations: list[str],
     ) -> str:
         """Generate detailed compliance report"""
         lines = [

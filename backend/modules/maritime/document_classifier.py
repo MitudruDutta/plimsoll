@@ -6,7 +6,11 @@ basic document processing can use it without triggering agent framework startup.
 
 DOCUMENT_TYPES = {
     "safety_management_certificate": ["ISM", "SMC", "Safety Management Certificate"],
-    "safety_construction_certificate": ["SOLAS", "Safety Construction", "Cargo Ship Safety Construction"],
+    "safety_construction_certificate": [
+        "SOLAS",
+        "Safety Construction",
+        "Cargo Ship Safety Construction",
+    ],
     "safety_equipment_certificate": ["Safety Equipment", "Cargo Ship Safety Equipment"],
     "safety_radio_certificate": ["Safety Radio", "Cargo Ship Safety Radio"],
     "load_line_certificate": ["Load Line", "International Load Line", "ILL"],

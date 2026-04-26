@@ -10,15 +10,17 @@ the correct embedding dimensions.
 
 Run: python scripts/reset_collections.py
 """
-import sys
+
 import os
+import sys
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import logging
+
 import chromadb
-from chromadb.config import Settings as ChromaSettings
+
 from shared.config import get_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -32,7 +34,7 @@ COLLECTIONS = [
     "psc_requirements",
     "port_regulations",
     "regional_requirements",
-    "customs_documentation"
+    "customs_documentation",
 ]
 
 
@@ -61,7 +63,7 @@ def main():
             "Authorization": f"Bearer {settings.chroma_api_key}",
             "x-chroma-tenant": settings.chroma_tenant,
             "x-chroma-database": settings.chroma_database,
-        }
+        },
     )
 
     # List existing collections

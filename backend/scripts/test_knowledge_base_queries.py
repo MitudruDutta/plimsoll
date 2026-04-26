@@ -7,21 +7,22 @@ is properly loaded and returns relevant results.
 
 Run: python scripts/test_knowledge_base_queries.py
 """
-import sys
+
 import os
+import sys
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import logging
-from typing import List, Dict, Any
-from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base, SearchResult
+
+from modules.maritime.maritime_knowledge_base import SearchResult, get_maritime_knowledge_base
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def print_results(results: List[SearchResult], max_content_length: int = 300):
+def print_results(results: list[SearchResult], max_content_length: int = 300):
     """Pretty print search results."""
     if not results:
         print("  No results found.")
@@ -33,26 +34,26 @@ def print_results(results: List[SearchResult], max_content_length: int = 300):
         print(f"    Score: {result.score:.4f}")
         if result.metadata:
             # Print key metadata fields
-            if 'convention' in result.metadata:
+            if "convention" in result.metadata:
                 print(f"    Convention: {result.metadata.get('convention')}")
-            if 'chapter' in result.metadata:
+            if "chapter" in result.metadata:
                 print(f"    Chapter: {result.metadata.get('chapter')}")
-            if 'annex' in result.metadata:
+            if "annex" in result.metadata:
                 print(f"    Annex: {result.metadata.get('annex')}")
-            if 'requirement_name' in result.metadata:
+            if "requirement_name" in result.metadata:
                 print(f"    Requirement: {result.metadata.get('requirement_name')}")
-            if 'psc_regime' in result.metadata:
+            if "psc_regime" in result.metadata:
                 print(f"    PSC Regime: {result.metadata.get('psc_regime')}")
-        content_preview = result.content[:max_content_length].replace('\n', ' ')
+        content_preview = result.content[:max_content_length].replace("\n", " ")
         if len(result.content) > max_content_length:
             content_preview += "..."
         print(f"    Content: {content_preview}")
 
 
-def test_query(kb, query: str, collections: List[str] = None, top_k: int = 3):
+def test_query(kb, query: str, collections: list[str] | None = None, top_k: int = 3):
     """Run a test query and print results."""
-    print(f"\n{'='*70}")
-    print(f"Query: \"{query}\"")
+    print(f"\n{'=' * 70}")
+    print(f'Query: "{query}"')
     if collections:
         print(f"Collections: {collections}")
     print("-" * 70)
@@ -87,74 +88,80 @@ def main():
     print("TESTING IMO CONVENTIONS QUERIES")
     print("=" * 70)
 
-    test_query(kb, "What are SOLAS fire safety requirements?",
-               collections=["imo_conventions"])
+    test_query(kb, "What are SOLAS fire safety requirements?", collections=["imo_conventions"])
 
-    test_query(kb, "ISM Code Document of Compliance DOC requirements",
-               collections=["imo_conventions"])
+    test_query(
+        kb, "ISM Code Document of Compliance DOC requirements", collections=["imo_conventions"]
+    )
 
-    test_query(kb, "MARPOL Annex VI sulphur limits emission control areas",
-               collections=["imo_conventions"])
+    test_query(
+        kb, "MARPOL Annex VI sulphur limits emission control areas", collections=["imo_conventions"]
+    )
 
-    test_query(kb, "ISPS Code ship security plan requirements",
-               collections=["imo_conventions"])
+    test_query(kb, "ISPS Code ship security plan requirements", collections=["imo_conventions"])
 
-    test_query(kb, "ballast water management D-2 standard",
-               collections=["imo_conventions"])
+    test_query(kb, "ballast water management D-2 standard", collections=["imo_conventions"])
 
     # Test queries for PSC Requirements
     print("\n" + "=" * 70)
     print("TESTING PORT STATE CONTROL QUERIES")
     print("=" * 70)
 
-    test_query(kb, "Paris MOU inspection targeting ship risk profile",
-               collections=["psc_requirements"])
+    test_query(
+        kb, "Paris MOU inspection targeting ship risk profile", collections=["psc_requirements"]
+    )
 
-    test_query(kb, "USCG QUALSHIP 21 program requirements",
-               collections=["psc_requirements"])
+    test_query(kb, "USCG QUALSHIP 21 program requirements", collections=["psc_requirements"])
 
-    test_query(kb, "What certificates are checked during PSC inspection?",
-               collections=["psc_requirements"])
+    test_query(
+        kb, "What certificates are checked during PSC inspection?", collections=["psc_requirements"]
+    )
 
-    test_query(kb, "Tokyo MOU black grey white list",
-               collections=["psc_requirements"])
+    test_query(kb, "Tokyo MOU black grey white list", collections=["psc_requirements"])
 
     # Test queries for Regional Requirements
     print("\n" + "=" * 70)
     print("TESTING REGIONAL REQUIREMENTS QUERIES")
     print("=" * 70)
 
-    test_query(kb, "EU MRV monitoring reporting verification emissions 2024",
-               collections=["regional_requirements"])
+    test_query(
+        kb,
+        "EU MRV monitoring reporting verification emissions 2024",
+        collections=["regional_requirements"],
+    )
 
-    test_query(kb, "EU ETS maritime emissions trading allowances",
-               collections=["regional_requirements"])
+    test_query(
+        kb, "EU ETS maritime emissions trading allowances", collections=["regional_requirements"]
+    )
 
-    test_query(kb, "FuelEU Maritime GHG intensity limits",
-               collections=["regional_requirements"])
+    test_query(kb, "FuelEU Maritime GHG intensity limits", collections=["regional_requirements"])
 
-    test_query(kb, "ECA SECA sulphur emission control areas Baltic North Sea",
-               collections=["regional_requirements"])
+    test_query(
+        kb,
+        "ECA SECA sulphur emission control areas Baltic North Sea",
+        collections=["regional_requirements"],
+    )
 
-    test_query(kb, "Mediterranean Sea emission control area 2025",
-               collections=["regional_requirements"])
+    test_query(
+        kb, "Mediterranean Sea emission control area 2025", collections=["regional_requirements"]
+    )
 
     # Test queries for Customs Documentation
     print("\n" + "=" * 70)
     print("TESTING CUSTOMS DOCUMENTATION QUERIES")
     print("=" * 70)
 
-    test_query(kb, "US Notice of Arrival 96 hour requirement",
-               collections=["customs_documentation"])
+    test_query(
+        kb, "US Notice of Arrival 96 hour requirement", collections=["customs_documentation"]
+    )
 
-    test_query(kb, "FAL forms required for port arrival",
-               collections=["customs_documentation"])
+    test_query(kb, "FAL forms required for port arrival", collections=["customs_documentation"])
 
-    test_query(kb, "complete list certificates required cargo ships",
-               collections=["customs_documentation"])
+    test_query(
+        kb, "complete list certificates required cargo ships", collections=["customs_documentation"]
+    )
 
-    test_query(kb, "pre-arrival notification requirements",
-               collections=["customs_documentation"])
+    test_query(kb, "pre-arrival notification requirements", collections=["customs_documentation"])
 
     # Cross-collection queries
     print("\n" + "=" * 70)
@@ -185,11 +192,7 @@ def main():
     print("TESTING ROUTE SEARCH")
     print("=" * 70)
 
-    vessel_info = {
-        "vessel_type": "container",
-        "gross_tonnage": 50000,
-        "flag_state": "Panama"
-    }
+    vessel_info = {"vessel_type": "container", "gross_tonnage": 50000, "flag_state": "Panama"}
     route_ports = ["SGSIN", "NLRTM", "DEHAM"]
 
     print(f"\nSearching for route: {' -> '.join(route_ports)}")
@@ -213,7 +216,9 @@ def main():
         for doc in req_docs[:10]:
             print(f"  - {doc.get('document_type')}: {doc.get('regulation_source')}")
     else:
-        print("  No specific document requirements found (this is expected if port_regulations collection is empty)")
+        print(
+            "  No specific document requirements found (this is expected if port_regulations collection is empty)"
+        )
 
     print("\n" + "=" * 70)
     print("TEST COMPLETE")

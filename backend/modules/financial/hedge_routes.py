@@ -4,15 +4,15 @@ Financial Hedging API Routes
 API endpoints for financial risk hedging functionality.
 """
 
+import logging
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-import logging
 
 from modules.financial.hedge_agent import get_hedge_agent
 from modules.financial.market_data_service import get_market_data_service
-from shared.auth.clerk_auth import get_current_user
+from shared.auth import get_current_user
 from shared.observability.mode import demo_response, tag_response
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,10 @@ router = APIRouter(
 
 # ========== Request Models ==========
 
+
 class HedgeOperationParams(BaseModel):
     """Operation parameters for hedging calculations"""
+
     fuel_consumption_monthly: float = 1000  # tons
     revenue_foreign_monthly: float = 1_800_000  # EUR
     fx_pair: str = "EUR"
@@ -37,29 +39,31 @@ class HedgeOperationParams(BaseModel):
 
 class CrisisActivationRequest(BaseModel):
     """Request to activate crisis hedging mode"""
+
     crisis_scenario: str  # 'red_sea', 'fuel_spike', 'currency_crisis'
     operation_params: HedgeOperationParams
 
 
 # ========== API Endpoints ==========
 
+
 @router.post("/assess-risk")
 def assess_hedging_risk(params: HedgeOperationParams):
     """
-    Assess financial risk exposure.
-    
-    Returns risk assessment with VaR calculations for fuel, currency, and freight risks.
-    
-    Example response:
-    ```json
-    {
-      "market_regime": "crisis",
-      "urgency": "CRITICAL",
-      "total_exposure_usd": 10000000,
-"total_var_95_usd": 1500000,
-      "risk_breakdown": {...}
-    }
-    ```
+        Assess financial risk exposure.
+
+        Returns risk assessment with VaR calculations for fuel, currency, and freight risks.
+
+        Example response:
+        ```json
+        {
+          "market_regime": "crisis",
+          "urgency": "CRITICAL",
+          "total_exposure_usd": 10000000,
+    "total_var_95_usd": 1500000,
+          "risk_breakdown": {...}
+        }
+        ```
     """
     try:
         hedge_agent = get_hedge_agent()
@@ -70,20 +74,20 @@ def assess_hedging_risk(params: HedgeOperationParams):
         return risk_assessment
     except Exception as e:
         logger.error(f"Risk assessment failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Risk assessment failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Risk assessment failed: {e}") from e
 
 
 @router.post("/recommend")
 def recommend_hedging_strategy(params: HedgeOperationParams, crisis_override: bool = False):
     """
     Get optimal hedging strategy recommendations.
-    
+
     Returns comprehensive strategy with specific positions for fuel, currency, and freight.
-    
+
     Args:
         params: Operation parameters
         crisis_override: Force crisis hedging mode (default: auto-detect from market)
-    
+
     Example response:
     ```json
     {
@@ -106,21 +110,23 @@ def recommend_hedging_strategy(params: HedgeOperationParams, crisis_override: bo
         return strategy
     except Exception as e:
         logger.error(f"Strategy recommendation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Strategy recommendation failed: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Strategy recommendation failed: {e}"
+        ) from e
 
 
 @router.post("/crisis-activate")
 def activate_crisis_hedging(request: CrisisActivationRequest):
     """
     Activate emergency crisis hedging protocol.
-    
+
     Returns crisis management plan with immediate actions and hedging strategy.
-    
+
     Crisis scenarios:
     - 'red_sea': Red Sea / Suez Canal disruption
     - 'fuel_spike': Fuel price spike scenario
     - 'currency_crisis': Currency volatility crisis
-    
+
     Example response:
     ```json
     {
@@ -141,19 +147,19 @@ def activate_crisis_hedging(request: CrisisActivationRequest):
         return crisis_plan
     except Exception as e:
         logger.error(f"Crisis activation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Crisis activation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Crisis activation failed: {e}") from e
 
 
 @router.get("/market-data")
-def get_market_data(crisis_scenario: Optional[str] = None):
+def get_market_data(crisis_scenario: str | None = None):
     """
     Get current market data for all asset classes.
-    
+
     Returns fuel prices, FX rates, freight rates, and crisis indicators.
-    
+
     Args:
         crisis_scenario: Optional crisis scenario to simulate
-    
+
     Example response:
     ```json
     {
@@ -174,16 +180,18 @@ def get_market_data(crisis_scenario: Optional[str] = None):
         return market_summary
     except Exception as e:
         logger.error(f"Market data retrieval failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Market data retrieval failed: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Market data retrieval failed: {e}"
+        ) from e
 
 
 @router.post("/report")
 def generate_hedge_report(params: HedgeOperationParams):
     """
     Generate executive-level hedging report in natural language.
-    
+
     Returns formatted text report with risk analysis and recommendations.
-    
+
     Example response:
     ```json
     {
@@ -196,41 +204,47 @@ def generate_hedge_report(params: HedgeOperationParams):
         hedge_agent = get_hedge_agent()
         operation_dict = params.dict()
         report_text = hedge_agent.generate_agent_report(operation_dict)
-        return demo_response({
-            "report": report_text,
-            "timestamp": datetime.utcnow().isoformat(),
-        })
+        return demo_response(
+            {
+                "report": report_text,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
     except Exception as e:
         logger.error(f"Report generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Report generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Report generation failed: {e}") from e
 
 
 @router.get("/health")
 def hedge_module_health():
     """
     Check health status of hedging module.
-    
+
     Returns status of all hedging components.
     """
     try:
         # Test hedge agent
-        hedge_agent = get_hedge_agent()
-        
+        get_hedge_agent()
+
         # Test market data service
         market_service = get_market_data_service()
         market_data = market_service.get_market_summary()
-        
-        return demo_response({
-            "status": "healthy",
-            "hedge_agent": "initialized",
-            "market_data_service": "initialized",
-            "current_regime": market_data.get("market_regime", "unknown"),
-            "timestamp": datetime.utcnow().isoformat(),
-        })
+
+        return demo_response(
+            {
+                "status": "healthy",
+                "hedge_agent": "initialized",
+                "market_data_service": "initialized",
+                "current_regime": market_data.get("market_regime", "unknown"),
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        return demo_response({
-            "status": "unhealthy",
-            "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
-        })
+        return demo_response(
+            {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )

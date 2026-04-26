@@ -1,33 +1,37 @@
 """Database engine + session factory.
 
-Engine is constructed lazily so test fixtures and env reloads can override
-``DATABASE_URL`` before the first connection is opened.
+The engine is built lazily on first access so test fixtures and env reloads
+can override ``DATABASE_URL`` before the connection pool is opened. Callers
+must use :func:`get_engine` and :func:`get_sessionmaker` rather than holding
+a module-level reference.
 """
+
+from __future__ import annotations
+
 from functools import lru_cache
 from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from shared.config import get_settings
 
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """SQLAlchemy 2.x style declarative base."""
 
 
 @lru_cache(maxsize=1)
-def _build_engine() -> Engine:
+def get_engine() -> Engine:
     settings = get_settings()
-    connect_args = {}
-    # SQLite needs same-thread relaxed for FastAPI's threadpool dependencies.
+    connect_args: dict[str, object] = {}
     if settings.database_url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
         db_path = settings.database_url.removeprefix("sqlite:///")
         if db_path and db_path != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    engine_kwargs = {
+    engine_kwargs: dict[str, object] = {
         "pool_pre_ping": True,
         "echo": settings.debug,
         "connect_args": connect_args,
@@ -38,10 +42,14 @@ def _build_engine() -> Engine:
     return create_engine(settings.database_url, **engine_kwargs)
 
 
-# Module-level handles preserved for callers that import ``engine`` /
-# ``SessionLocal`` directly (e.g. ``Base.metadata.create_all(bind=engine)``).
-engine: Engine = _build_engine()
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+@lru_cache(maxsize=1)
+def get_sessionmaker() -> sessionmaker[Session]:
+    return sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+
+
+def SessionLocal() -> Session:
+    """Session factory shim. Preserves the ``SessionLocal()`` call site."""
+    return get_sessionmaker()()
 
 
 def get_db():

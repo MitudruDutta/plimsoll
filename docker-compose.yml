@@ -51,14 +51,17 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     env_file:
-      - ./backend/.env.example
+      - path: ./backend/.env
+        required: false
     environment:
       HOST: 0.0.0.0
       PORT: 8000
       DATABASE_URL: postgresql://plimsoll:plimsoll@postgres:5432/plimsoll
       REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_STORAGE_URL: redis://redis:6379/0
       QUEUE_BACKEND: pgmq
       KB_BACKEND: disabled
       UPLOAD_BACKEND: disk
@@ -79,15 +82,18 @@ services:
 
   worker:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     command: ["python", "-m", "worker.main"]
     healthcheck:
       disable: true
     env_file:
-      - ./backend/.env.example
+      - path: ./backend/.env
+        required: false
     environment:
       DATABASE_URL: postgresql://plimsoll:plimsoll@postgres:5432/plimsoll
       REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_STORAGE_URL: redis://redis:6379/0
       QUEUE_BACKEND: pgmq
       KB_BACKEND: disabled
       UPLOAD_BACKEND: disk

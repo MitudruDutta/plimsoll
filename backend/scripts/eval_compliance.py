@@ -38,6 +38,7 @@ CI usage
 
 Exits non-zero if top-1 accuracy is below the threshold.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -46,9 +47,10 @@ import logging
 import os
 import statistics
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -87,7 +89,9 @@ def _load_cases(path: Path) -> list[dict[str, Any]]:
     return cases
 
 
-def _evaluate_port_metadata(db: Session, port_code: str, expected: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+def _evaluate_port_metadata(
+    db: Session, port_code: str, expected: dict[str, Any]
+) -> tuple[bool, dict[str, Any]]:
     port = db.query(Port).filter(Port.un_locode == port_code).first()
     if port is None:
         return False, {"error": f"port not seeded: {port_code}"}

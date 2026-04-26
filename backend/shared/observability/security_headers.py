@@ -13,14 +13,14 @@ Notes
   HTML (legal pages, etc.), tighten/loosen this on a per-route basis instead
   of globally relaxing it here.
 """
+
 from __future__ import annotations
 
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-
 
 _DEFAULT_HEADERS: dict[str, str] = {
     "X-Content-Type-Options": "nosniff",
@@ -30,10 +30,7 @@ _DEFAULT_HEADERS: dict[str, str] = {
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Content-Security-Policy": (
-        "default-src 'none'; "
-        "frame-ancestors 'none'; "
-        "base-uri 'none'; "
-        "form-action 'none'"
+        "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
     ),
 }
 

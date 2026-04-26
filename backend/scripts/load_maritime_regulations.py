@@ -17,8 +17,9 @@ Data sourced from:
 
 Run: python scripts/load_maritime_regulations.py
 """
-import sys
+
 import os
+import sys
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,8 +27,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 import logging
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any
+
 from langchain_core.documents import Document
+
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
 
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +41,7 @@ logger = logging.getLogger(__name__)
 # IMO CONVENTIONS DATA
 # =============================================================================
 
-IMO_CONVENTIONS_DATA: List[Dict[str, Any]] = [
+IMO_CONVENTIONS_DATA: list[dict[str, Any]] = [
     # SOLAS Convention
     {
         "convention": "SOLAS",
@@ -73,8 +76,12 @@ Amendments entering force 1 January 2024:
         "source_convention": "SOLAS 1974 as amended",
         "last_updated": "2024-01-01",
         "applicability": "Ships engaged on international voyages",
-        "required_certificates": ["Passenger Ship Safety Certificate", "Cargo Ship Safety Construction Certificate",
-                                  "Cargo Ship Safety Equipment Certificate", "Cargo Ship Safety Radio Certificate"]
+        "required_certificates": [
+            "Passenger Ship Safety Certificate",
+            "Cargo Ship Safety Construction Certificate",
+            "Cargo Ship Safety Equipment Certificate",
+            "Cargo Ship Safety Radio Certificate",
+        ],
     },
     {
         "convention": "SOLAS",
@@ -104,7 +111,7 @@ Required Documentation:
         "source_convention": "SOLAS 1974 as amended",
         "last_updated": "2024-01-01",
         "applicability": "All passenger ships and cargo ships",
-        "required_documents": ["Stability Booklet", "Damage Control Plan", "Loading Manual"]
+        "required_documents": ["Stability Booklet", "Damage Control Plan", "Loading Manual"],
     },
     {
         "convention": "SOLAS",
@@ -138,7 +145,11 @@ Required Certificates and Documents:
         "source_convention": "SOLAS 1974 as amended",
         "last_updated": "2024-01-01",
         "applicability": "All ships",
-        "required_documents": ["Fire Control Plan", "Fire Training Manual", "Fire Safety Systems Maintenance Plan"]
+        "required_documents": [
+            "Fire Control Plan",
+            "Fire Training Manual",
+            "Fire Safety Systems Maintenance Plan",
+        ],
     },
     {
         "convention": "SOLAS",
@@ -173,7 +184,7 @@ Drill Requirements:
         "source_convention": "SOLAS 1974 as amended",
         "last_updated": "2024-01-01",
         "applicability": "All ships",
-        "required_documents": ["LSA Form E", "Training Manual", "Muster List", "Drill Records"]
+        "required_documents": ["LSA Form E", "Training Manual", "Muster List", "Drill Records"],
     },
     {
         "convention": "SOLAS",
@@ -211,7 +222,7 @@ GMDSS (Global Maritime Distress and Safety System) Requirements:
         "last_updated": "2024-01-01",
         "applicability": "All ships of 300 GT and above on international voyages",
         "required_certificates": ["Cargo Ship Safety Radio Certificate"],
-        "required_documents": ["Radio Record Book", "GMDSS Radio Log"]
+        "required_documents": ["Radio Record Book", "GMDSS Radio Log"],
     },
     {
         "convention": "SOLAS",
@@ -251,7 +262,7 @@ Key Requirements:
         "source_convention": "SOLAS 1974 as amended",
         "last_updated": "2024-01-01",
         "applicability": "All ships on international voyages",
-        "required_documents": ["Voyage Plan", "Navigation Records", "AIS Data"]
+        "required_documents": ["Voyage Plan", "Navigation Records", "AIS Data"],
     },
     {
         "convention": "SOLAS",
@@ -291,8 +302,15 @@ Application:
         "source_convention": "SOLAS 1974 / ISM Code",
         "last_updated": "2024-01-01",
         "applicability": "Passenger ships and cargo ships ≥500 GT",
-        "required_certificates": ["Document of Compliance (DOC)", "Safety Management Certificate (SMC)"],
-        "required_documents": ["Safety Management Manual", "SMS Procedures", "Internal Audit Records"]
+        "required_certificates": [
+            "Document of Compliance (DOC)",
+            "Safety Management Certificate (SMC)",
+        ],
+        "required_documents": [
+            "Safety Management Manual",
+            "SMS Procedures",
+            "Internal Audit Records",
+        ],
     },
     {
         "convention": "SOLAS",
@@ -324,7 +342,7 @@ Key Requirements:
         "source_convention": "SOLAS 1974 as amended",
         "last_updated": "2024-01-01",
         "applicability": "All ships engaged on international voyages",
-        "required_documents": ["Continuous Synopsis Record (CSR)"]
+        "required_documents": ["Continuous Synopsis Record (CSR)"],
     },
     {
         "convention": "SOLAS",
@@ -377,7 +395,7 @@ Application:
         "last_updated": "2024-01-01",
         "applicability": "Passenger ships and cargo ships ≥500 GT",
         "required_certificates": ["International Ship Security Certificate (ISSC)"],
-        "required_documents": ["Ship Security Plan (SSP)", "Ship Security Assessment (SSA)"]
+        "required_documents": ["Ship Security Plan (SSP)", "Ship Security Assessment (SSA)"],
     },
     # MARPOL Convention
     {
@@ -422,7 +440,7 @@ Required Documents:
         "last_updated": "2024-01-01",
         "applicability": "All ships ≥400 GT, oil tankers ≥150 GT",
         "required_certificates": ["International Oil Pollution Prevention (IOPP) Certificate"],
-        "required_documents": ["Oil Record Book Part I", "Oil Record Book Part II", "SOPEP"]
+        "required_documents": ["Oil Record Book Part I", "Oil Record Book Part II", "SOPEP"],
     },
     {
         "convention": "MARPOL",
@@ -464,7 +482,7 @@ Required Documents:
         "last_updated": "2024-01-01",
         "applicability": "Chemical tankers and NLS carriers",
         "required_certificates": ["NLS Certificate"],
-        "required_documents": ["Cargo Record Book", "P&A Manual", "SMPEP"]
+        "required_documents": ["Cargo Record Book", "P&A Manual", "SMPEP"],
     },
     {
         "convention": "MARPOL",
@@ -503,7 +521,7 @@ Required Documents:
         "source_convention": "MARPOL 73/78",
         "last_updated": "2024-01-01",
         "applicability": "Ships carrying harmful substances in packaged form",
-        "required_documents": ["Dangerous Goods Manifest", "Stowage Plan"]
+        "required_documents": ["Dangerous Goods Manifest", "Stowage Plan"],
     },
     {
         "convention": "MARPOL",
@@ -542,7 +560,7 @@ Required Documents:
         "last_updated": "2024-01-01",
         "applicability": "Ships ≥400 GT or certified to carry >15 persons on international voyages",
         "required_certificates": ["International Sewage Pollution Prevention Certificate (ISPP)"],
-        "required_documents": ["Operation Manual", "Discharge Records"]
+        "required_documents": ["Operation Manual", "Discharge Records"],
     },
     {
         "convention": "MARPOL",
@@ -580,7 +598,11 @@ Record Book Entries:
         "source_convention": "MARPOL 73/78",
         "last_updated": "2024-01-01",
         "applicability": "All ships",
-        "required_documents": ["Garbage Management Plan", "Garbage Record Book", "Disposal Placard"]
+        "required_documents": [
+            "Garbage Management Plan",
+            "Garbage Record Book",
+            "Disposal Placard",
+        ],
     },
     {
         "convention": "MARPOL",
@@ -630,7 +652,12 @@ Required Documents:
         "last_updated": "2024-01-01",
         "applicability": "Ships ≥400 GT, engines >130 kW",
         "required_certificates": ["IAPP Certificate", "EIAPP Certificate", "IEE Certificate"],
-        "required_documents": ["Bunker Delivery Notes", "SEEMP", "Technical File", "Fuel Changeover Procedure"]
+        "required_documents": [
+            "Bunker Delivery Notes",
+            "SEEMP",
+            "Technical File",
+            "Fuel Changeover Procedure",
+        ],
     },
     # STCW Convention
     {
@@ -681,8 +708,12 @@ Required Records:
         "source_convention": "STCW 1978 as amended (Manila 2010)",
         "last_updated": "2024-01-01",
         "applicability": "All seafarers serving on seagoing ships",
-        "required_certificates": ["Certificate of Competency", "Certificates of Proficiency", "Medical Certificate"],
-        "required_documents": ["Training Record Book", "Rest Hour Records"]
+        "required_certificates": [
+            "Certificate of Competency",
+            "Certificates of Proficiency",
+            "Medical Certificate",
+        ],
+        "required_documents": ["Training Record Book", "Rest Hour Records"],
     },
     # Load Line Convention
     {
@@ -731,7 +762,7 @@ Required Documents:
         "last_updated": "2024-01-01",
         "applicability": "Ships ≥24m in length on international voyages",
         "required_certificates": ["International Load Line Certificate"],
-        "required_documents": ["Stability Information", "Loading Manual"]
+        "required_documents": ["Stability Information", "Loading Manual"],
     },
     # Tonnage Convention
     {
@@ -776,7 +807,7 @@ Important Notes:
         "source_convention": "Tonnage Convention 1969",
         "last_updated": "2024-01-01",
         "applicability": "All ships on international voyages",
-        "required_certificates": ["International Tonnage Certificate (1969)"]
+        "required_certificates": ["International Tonnage Certificate (1969)"],
     },
     # Ballast Water Convention
     {
@@ -832,7 +863,7 @@ Required Documents:
         "last_updated": "2024-01-01",
         "applicability": "Ships designed to carry ballast water on international voyages",
         "required_certificates": ["International Ballast Water Management Certificate"],
-        "required_documents": ["Ballast Water Management Plan", "Ballast Water Record Book"]
+        "required_documents": ["Ballast Water Management Plan", "Ballast Water Record Book"],
     },
 ]
 
@@ -841,16 +872,41 @@ Required Documents:
 # PORT STATE CONTROL DATA
 # =============================================================================
 
-PSC_REQUIREMENTS_DATA: List[Dict[str, Any]] = [
+PSC_REQUIREMENTS_DATA: list[dict[str, Any]] = [
     # Paris MOU
     {
         "psc_regime": "Paris MOU",
         "full_name": "Paris Memorandum of Understanding on Port State Control",
         "region": "Europe and North Atlantic",
-        "member_states": ["Belgium", "Bulgaria", "Canada", "Croatia", "Cyprus", "Denmark", "Estonia",
-                         "Finland", "France", "Germany", "Greece", "Iceland", "Ireland", "Italy",
-                         "Latvia", "Lithuania", "Malta", "Netherlands", "Norway", "Poland", "Portugal",
-                         "Romania", "Russia", "Slovenia", "Spain", "Sweden", "United Kingdom"],
+        "member_states": [
+            "Belgium",
+            "Bulgaria",
+            "Canada",
+            "Croatia",
+            "Cyprus",
+            "Denmark",
+            "Estonia",
+            "Finland",
+            "France",
+            "Germany",
+            "Greece",
+            "Iceland",
+            "Ireland",
+            "Italy",
+            "Latvia",
+            "Lithuania",
+            "Malta",
+            "Netherlands",
+            "Norway",
+            "Poland",
+            "Portugal",
+            "Romania",
+            "Russia",
+            "Slovenia",
+            "Spain",
+            "Sweden",
+            "United Kingdom",
+        ],
         "content": """
 Paris MOU - Port State Control in Europe and North Atlantic
 
@@ -895,16 +951,39 @@ Common Detainable Deficiencies:
         "source": "Paris MOU Secretariat",
         "last_updated": "2024-01-01",
         "inspection_rate": "25% of ships calling at ports",
-        "priority_areas": ["ISM compliance", "Fire safety", "Life-saving appliances", "MARPOL compliance"]
+        "priority_areas": [
+            "ISM compliance",
+            "Fire safety",
+            "Life-saving appliances",
+            "MARPOL compliance",
+        ],
     },
     # Tokyo MOU
     {
         "psc_regime": "Tokyo MOU",
         "full_name": "Memorandum of Understanding on Port State Control in the Asia-Pacific Region",
         "region": "Asia-Pacific",
-        "member_states": ["Australia", "Canada", "Chile", "China", "Fiji", "Hong Kong", "Indonesia",
-                         "Japan", "Korea", "Malaysia", "New Zealand", "Papua New Guinea", "Peru",
-                         "Philippines", "Russia", "Singapore", "Thailand", "Vanuatu", "Vietnam"],
+        "member_states": [
+            "Australia",
+            "Canada",
+            "Chile",
+            "China",
+            "Fiji",
+            "Hong Kong",
+            "Indonesia",
+            "Japan",
+            "Korea",
+            "Malaysia",
+            "New Zealand",
+            "Papua New Guinea",
+            "Peru",
+            "Philippines",
+            "Russia",
+            "Singapore",
+            "Thailand",
+            "Vanuatu",
+            "Vietnam",
+        ],
         "content": """
 Tokyo MOU - Port State Control in Asia-Pacific Region
 
@@ -949,7 +1028,7 @@ Information Sharing:
         "source": "Tokyo MOU Secretariat",
         "last_updated": "2024-01-01",
         "inspection_rate": "80% inspection rate target",
-        "priority_areas": ["STCW compliance", "ISM/ISPS", "MARPOL Annex VI", "MLC 2006"]
+        "priority_areas": ["STCW compliance", "ISM/ISPS", "MARPOL Annex VI", "MLC 2006"],
     },
     # USCG PSC
     {
@@ -1008,16 +1087,36 @@ Penalties:
         "source": "US Coast Guard",
         "last_updated": "2024-01-01",
         "inspection_rate": "All foreign vessels examined",
-        "priority_areas": ["QUALSHIP 21", "MTSA security", "MARPOL compliance", "Crew competency"]
+        "priority_areas": ["QUALSHIP 21", "MTSA security", "MARPOL compliance", "Crew competency"],
     },
     # Indian Ocean MOU
     {
         "psc_regime": "Indian Ocean MOU",
         "full_name": "Indian Ocean Memorandum of Understanding on Port State Control",
         "region": "Indian Ocean",
-        "member_states": ["Australia", "Bangladesh", "Comoros", "Djibouti", "Eritrea", "Ethiopia", "France",
-                         "India", "Iran", "Kenya", "Maldives", "Mauritius", "Mozambique", "Myanmar",
-                         "Oman", "Seychelles", "South Africa", "Sri Lanka", "Sudan", "Tanzania", "Yemen"],
+        "member_states": [
+            "Australia",
+            "Bangladesh",
+            "Comoros",
+            "Djibouti",
+            "Eritrea",
+            "Ethiopia",
+            "France",
+            "India",
+            "Iran",
+            "Kenya",
+            "Maldives",
+            "Mauritius",
+            "Mozambique",
+            "Myanmar",
+            "Oman",
+            "Seychelles",
+            "South Africa",
+            "Sri Lanka",
+            "Sudan",
+            "Tanzania",
+            "Yemen",
+        ],
         "content": """
 Indian Ocean MOU - Port State Control in Indian Ocean Region
 
@@ -1059,7 +1158,12 @@ Regional Concerns:
         "source": "Indian Ocean MOU Secretariat",
         "last_updated": "2024-01-01",
         "inspection_rate": "Risk-based approach",
-        "priority_areas": ["ISPS security", "Piracy countermeasures", "MLC welfare", "Pollution prevention"]
+        "priority_areas": [
+            "ISPS security",
+            "Piracy countermeasures",
+            "MLC welfare",
+            "Pollution prevention",
+        ],
     },
     # Common PSC Inspection Checklist
     {
@@ -1137,7 +1241,12 @@ Clear Grounds for More Detailed Inspection:
         "source": "IMO Procedures for PSC 2023",
         "last_updated": "2024-01-01",
         "inspection_rate": "Per regional MOU",
-        "priority_areas": ["Certificates validity", "Crew competency", "Safety equipment", "Operational compliance"]
+        "priority_areas": [
+            "Certificates validity",
+            "Crew competency",
+            "Safety equipment",
+            "Operational compliance",
+        ],
     },
 ]
 
@@ -1146,7 +1255,7 @@ Clear Grounds for More Detailed Inspection:
 # REGIONAL REQUIREMENTS DATA
 # =============================================================================
 
-REGIONAL_REQUIREMENTS_DATA: List[Dict[str, Any]] = [
+REGIONAL_REQUIREMENTS_DATA: list[dict[str, Any]] = [
     # EU MRV
     {
         "requirement_type": "Emissions Monitoring",
@@ -1205,7 +1314,11 @@ Integration with EU ETS (from 1 January 2024):
         "source": "EU Regulation 2015/757, 2023/957",
         "last_updated": "2024-01-01",
         "applicability": "Ships ≥5000 GT calling at EU/EEA ports",
-        "required_documents": ["Monitoring Plan", "Annual Emissions Report", "Document of Compliance"]
+        "required_documents": [
+            "Monitoring Plan",
+            "Annual Emissions Report",
+            "Document of Compliance",
+        ],
     },
     # EU ETS Maritime
     {
@@ -1256,7 +1369,7 @@ Exemptions:
         "source": "EU Directive 2023/959",
         "last_updated": "2024-01-01",
         "applicability": "Ships ≥5000 GT on EU voyages",
-        "required_documents": ["EU ETS Account Registration", "Verified Emissions Report"]
+        "required_documents": ["EU ETS Account Registration", "Verified Emissions Report"],
     },
     # FuelEU Maritime
     {
@@ -1306,7 +1419,7 @@ FuelEU Document of Compliance:
         "source": "EU Regulation 2023/1805",
         "last_updated": "2024-01-01",
         "applicability": "Ships ≥5000 GT calling at EU ports (from 2025)",
-        "required_documents": ["FuelEU Monitoring Plan", "FuelEU Document of Compliance"]
+        "required_documents": ["FuelEU Monitoring Plan", "FuelEU Document of Compliance"],
     },
     # Emission Control Areas
     {
@@ -1378,7 +1491,11 @@ Tier III NOx limits apply to ships constructed on/after specified dates:
         "source": "MARPOL Annex VI",
         "last_updated": "2024-01-01",
         "applicability": "All ships in designated ECAs",
-        "required_documents": ["Bunker Delivery Notes", "Fuel Changeover Procedure", "EGCS Documentation (if fitted)"]
+        "required_documents": [
+            "Bunker Delivery Notes",
+            "Fuel Changeover Procedure",
+            "EGCS Documentation (if fitted)",
+        ],
     },
     # China Domestic ECA
     {
@@ -1423,7 +1540,7 @@ Documentation Required:
         "source": "China Ministry of Transport",
         "last_updated": "2024-01-01",
         "applicability": "All ships in Chinese DECA waters",
-        "required_documents": ["Bunker Delivery Notes", "Fuel Changeover Records"]
+        "required_documents": ["Bunker Delivery Notes", "Fuel Changeover Records"],
     },
 ]
 
@@ -1432,7 +1549,7 @@ Documentation Required:
 # CUSTOMS AND DOCUMENTATION DATA
 # =============================================================================
 
-CUSTOMS_DOCUMENTATION_DATA: List[Dict[str, Any]] = [
+CUSTOMS_DOCUMENTATION_DATA: list[dict[str, Any]] = [
     # US Pre-Arrival Requirements
     {
         "requirement_type": "Pre-Arrival Notification",
@@ -1498,7 +1615,12 @@ Penalties:
         "source": "33 CFR Part 160, USCG",
         "last_updated": "2024-01-01",
         "applicability": "All vessels entering US waters",
-        "required_documents": ["Electronic NOA submission", "Crew List", "Passenger List", "Cargo Manifest"]
+        "required_documents": [
+            "Electronic NOA submission",
+            "Crew List",
+            "Passenger List",
+            "Cargo Manifest",
+        ],
     },
     # EU FAL Requirements
     {
@@ -1561,7 +1683,7 @@ Until EMSWe fully operational, submit via national systems:
         "source": "EU Directive 2010/65/EU, EMSWe Regulation",
         "last_updated": "2024-01-01",
         "applicability": "All ships calling at EU ports",
-        "required_documents": ["FAL Forms 1-7", "Pre-arrival notification", "Waste notification"]
+        "required_documents": ["FAL Forms 1-7", "Pre-arrival notification", "Waste notification"],
     },
     # IMO FAL Convention
     {
@@ -1614,7 +1736,11 @@ Certificates and Documents to be Carried:
         "source": "IMO FAL Convention",
         "last_updated": "2024-01-01",
         "applicability": "All ships engaged in international voyages",
-        "required_documents": ["FAL Forms 1-7", "Maritime Declaration of Health", "Various certificates per IMO circular"]
+        "required_documents": [
+            "FAL Forms 1-7",
+            "Maritime Declaration of Health",
+            "Various certificates per IMO circular",
+        ],
     },
     # Customs Documentation General
     {
@@ -1694,7 +1820,12 @@ AEO (Authorized Economic Operator):
         "source": "WCO, National Customs Authorities",
         "last_updated": "2024-01-01",
         "applicability": "All ships with cargo",
-        "required_documents": ["Cargo Manifest", "Bills of Lading", "Commercial Invoice", "Customs Entry Forms"]
+        "required_documents": [
+            "Cargo Manifest",
+            "Bills of Lading",
+            "Commercial Invoice",
+            "Customs Entry Forms",
+        ],
     },
     # Complete Ship Certificate List
     {
@@ -1798,7 +1929,7 @@ Validity Periods:
         "source": "IMO FAL.2/Circ.133",
         "last_updated": "2024-01-01",
         "applicability": "All ships on international voyages",
-        "required_documents": ["All certificates listed above based on ship type"]
+        "required_documents": ["All certificates listed above based on ship type"],
     },
 ]
 
@@ -1807,7 +1938,10 @@ Validity Periods:
 # HELPER FUNCTIONS
 # =============================================================================
 
-def create_documents_for_collection(data_list: List[Dict[str, Any]], collection_name: str) -> List[Document]:
+
+def create_documents_for_collection(
+    data_list: list[dict[str, Any]], collection_name: str
+) -> list[Document]:
     """Convert data dictionaries to LangChain Documents with appropriate metadata."""
     documents = []
 
@@ -1829,10 +1963,7 @@ def create_documents_for_collection(data_list: List[Dict[str, Any]], collection_
                 else:
                     metadata[key] = str(value)
 
-        documents.append(Document(
-            page_content=content.strip(),
-            metadata=metadata
-        ))
+        documents.append(Document(page_content=content.strip(), metadata=metadata))
 
     return documents
 
@@ -1881,7 +2012,9 @@ def main():
     # Load Regional Requirements
     logger.info("\n" + "-" * 50)
     logger.info("Loading Regional Requirements data...")
-    regional_docs = create_documents_for_collection(REGIONAL_REQUIREMENTS_DATA, "regional_requirements")
+    regional_docs = create_documents_for_collection(
+        REGIONAL_REQUIREMENTS_DATA, "regional_requirements"
+    )
     logger.info(f"  Created {len(regional_docs)} documents")
     added = kb.add_documents("regional_requirements", regional_docs)
     logger.info(f"  Added {added} documents to regional_requirements")
@@ -1890,7 +2023,9 @@ def main():
     # Load Customs Documentation
     logger.info("\n" + "-" * 50)
     logger.info("Loading Customs and Documentation data...")
-    customs_docs = create_documents_for_collection(CUSTOMS_DOCUMENTATION_DATA, "customs_documentation")
+    customs_docs = create_documents_for_collection(
+        CUSTOMS_DOCUMENTATION_DATA, "customs_documentation"
+    )
     logger.info(f"  Created {len(customs_docs)} documents")
     added = kb.add_documents("customs_documentation", customs_docs)
     logger.info(f"  Added {added} documents to customs_documentation")

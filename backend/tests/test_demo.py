@@ -1,19 +1,29 @@
 import asyncio
 import os
 import sys
-from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
+from starlette.requests import Request
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
-from modules.demo.demo_routes import active_sessions, start_demo, _verify_demo_token
-from shared.auth.clerk_auth import User
+from modules.demo.demo_routes import _verify_demo_token, active_sessions, start_demo
+from shared.auth import User
 
 
 def _request(hostname: str = "testserver", port: int = 8000):
-    return SimpleNamespace(url=SimpleNamespace(hostname=hostname, port=port))
+    return Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/api/demo/start",
+            "headers": [(b"host", f"{hostname}:{port}".encode("ascii"))],
+            "server": (hostname, port),
+            "scheme": "http",
+            "client": ("127.0.0.1", 50000),
+        }
+    )
 
 
 def _user(user_id: str = "test-user"):

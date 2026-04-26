@@ -3,6 +3,53 @@ name = "plimsoll-backend"
 version = "0.1.0"
 description = "Plimsoll Maritime Risk Intelligence backend (FastAPI)."
 requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.3",
+    "starlette==0.41.3",
+    "sse-starlette==3.0.3",
+    "python-multipart==0.0.21",
+    "anyio>=3.7.1,<5",
+    "numpy>=1.26.0",
+    "pydantic==2.11.10",
+    "pydantic-settings==2.10.1",
+    "SQLAlchemy==2.0.23",
+    "psycopg2-binary==2.9.11",
+    "psycopg[binary,pool]==3.2.3",
+    "alembic==1.13.1",
+    "python-jose[cryptography]==3.3.0",
+    "python-dotenv==1.1.1",
+    "slowapi>=0.1.9",
+    "redis>=5.0.0",
+    "websockets==16.0",
+    "httpx==0.28.1",
+    "httpx-sse==0.4.3",
+    "uvloop==0.22.1; platform_system != 'Windows'",
+]
+
+[project.optional-dependencies]
+ai = [
+    "crewai==1.7.2",
+    "openai==1.83.0",
+    "langchain>=0.3.0",
+    "langchain-google-genai>=2.0.0",
+    "google-generativeai>=0.8.0",
+    "chromadb>=0.5.0",
+    "sentence-transformers>=3.0.0",
+]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.8.0",
+    "mypy>=1.10",
+    "bandit>=1.7",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
 
 [tool.ruff]
 line-length = 100
@@ -33,9 +80,14 @@ ignore = [
     "E501",  # line length handled by formatter
     "B008",  # FastAPI Depends() in defaults is the supported pattern
     "RUF012", # mutable class defaults: SQLAlchemy attrs trigger this
+    "RUF001", # regulation/source text intentionally contains non-ASCII symbols
+    "RUF003", # comments may preserve copied source snippets
+    "TC002", # runtime imports are clearer in this FastAPI codebase
+    "TC003", # runtime imports are clearer in this FastAPI codebase
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"backend/main.py" = ["E402"] # load .env before routers that read settings at import time
 "backend/scripts/*" = ["E402", "T201"]
 "backend/tests/*" = ["E402", "S101"]
 

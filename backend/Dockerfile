@@ -5,24 +5,35 @@ WORKDIR /app
 # Keep generated caches and bytecode outside the image runtime surface.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    UV_SYSTEM_PYTHON=1
 
-# Install system dependencies used by health checks.
+# Install uv and system dependencies used by health checks.
+COPY --from=ghcr.io/astral-sh/uv:0.9.7 /uv /uvx /usr/local/bin/
 RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
-ARG BACKEND_REQUIREMENTS=requirements.docker.txt
-COPY requirements*.txt .
+# Install runtime dependencies from the repo-level pyproject.
+ARG INSTALL_AI=false
+COPY pyproject.toml .
+RUN if [ "$INSTALL_AI" = "true" ]; then \
+        uv pip install --system --no-cache -r pyproject.toml --extra ai; \
+    else \
+        uv pip install --system --no-cache -r pyproject.toml; \
+    fi
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r "${BACKEND_REQUIREMENTS}"
+# Create an unprivileged runtime user before copying the app.
+RUN groupadd --system plimsoll && \
+    useradd --system --gid plimsoll --home-dir /app --shell /usr/sbin/nologin plimsoll
 
 # Copy application code
-COPY . .
+COPY backend/ .
+RUN mkdir -p /app/data && chown -R plimsoll:plimsoll /app
 
 EXPOSE 8000
+
+USER plimsoll
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8000/healthz || exit 1

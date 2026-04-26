@@ -13,7 +13,6 @@ import signal
 
 from shared.config import get_settings
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

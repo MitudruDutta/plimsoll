@@ -3,20 +3,23 @@ Document Service - User document upload and management
 Stores document metadata + OCR text in ChromaDB Cloud (user_documents collection).
 Physical files are saved to disk.
 """
+
+import contextlib
+import json
 import logging
 import os
 import uuid
-import json
-from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from fastapi import UploadFile
 
-from shared.config import get_settings
-from modules.analytics.ocr_service import get_ocr_service, OCRResult
-from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
+from modules.analytics.ocr_service import OCRResult, get_ocr_service
 from modules.maritime.document_classifier import classify_document_from_text
+from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
+from shared.config import get_settings
+from shared.uploads import UploadTooLargeError, read_upload_limited
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -64,20 +67,20 @@ class DocumentService:
         self,
         *,
         customer_id: int,
-        vessel_id: Optional[int],
+        vessel_id: int | None,
         title: str,
         document_type: str,
         file_path: str,
-        file_name: Optional[str],
+        file_name: str | None,
         file_size: int,
-        mime_type: Optional[str],
+        mime_type: str | None,
         ocr_result: OCRResult,
-        issuing_authority: Optional[str],
-        issue_date: Optional[datetime],
-        expiry_date: Optional[datetime],
-        document_number: Optional[str],
+        issuing_authority: str | None,
+        issue_date: datetime | None,
+        expiry_date: datetime | None,
+        document_number: str | None,
         extracted_fields_json: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build a flat, ChromaDB-safe metadata dict."""
         return {
             "customer_id": customer_id,
@@ -102,7 +105,7 @@ class DocumentService:
         }
 
     @staticmethod
-    def _to_doc_dict(raw: Dict[str, Any]) -> Dict[str, Any]:
+    def _to_doc_dict(raw: dict[str, Any]) -> dict[str, Any]:
         """
         Convert a ChromaDB result dict into the shape expected by API
         endpoints (mirrors the old UserDocument ORM columns).
@@ -138,15 +141,15 @@ class DocumentService:
     async def upload_document(
         self,
         customer_id: int,
-        vessel_id: Optional[int],
+        vessel_id: int | None,
         file: UploadFile,
         document_type: str,
         title: str,
-        issue_date: Optional[datetime] = None,
-        expiry_date: Optional[datetime] = None,
-        document_number: Optional[str] = None,
-        issuing_authority: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        issue_date: datetime | None = None,
+        expiry_date: datetime | None = None,
+        document_number: str | None = None,
+        issuing_authority: str | None = None,
+    ) -> dict[str, Any]:
         """
         Upload and process a document.
 
@@ -162,11 +165,12 @@ class DocumentService:
         unique_filename = f"{doc_id}{file_ext}"
         file_path = os.path.join(self.upload_dir, unique_filename)
 
-        # Save file to disk
-        content = await file.read()
+        # Read with a hard streaming limit before writing to disk or OCR.
         max_bytes = settings.max_upload_size_mb * 1024 * 1024
-        if len(content) > max_bytes:
-            raise ValueError(f"File too large. Maximum size is {settings.max_upload_size_mb}MB")
+        try:
+            content = await read_upload_limited(file, max_bytes=max_bytes)
+        except UploadTooLargeError as exc:
+            raise ValueError(f"File too large. Maximum size is {settings.max_upload_size_mb}MB") from exc
 
         with open(file_path, "wb") as f:
             f.write(content)
@@ -185,16 +189,12 @@ class DocumentService:
             document_number = extracted_fields["document_number"]
 
         if not issue_date and "issue_date_parsed" in extracted_fields:
-            try:
+            with contextlib.suppress(Exception):
                 issue_date = datetime.fromisoformat(extracted_fields["issue_date_parsed"])
-            except Exception:
-                pass
 
         if not expiry_date and "expiry_date_parsed" in extracted_fields:
-            try:
+            with contextlib.suppress(Exception):
                 expiry_date = datetime.fromisoformat(extracted_fields["expiry_date_parsed"])
-            except Exception:
-                pass
 
         if not issuing_authority and "issuing_authority" in extracted_fields:
             issuing_authority = extracted_fields["issuing_authority"]
@@ -207,13 +207,17 @@ class DocumentService:
                 inferred = classify_document_from_text(ocr_result.text)
                 if inferred != "unknown":
                     document_type = inferred
-                    logger.info(f"Auto-classified document as '{document_type}' from OCR text (keyword)")
+                    logger.info(
+                        f"Auto-classified document as '{document_type}' from OCR text (keyword)"
+                    )
             # 2. Keyword matching on title
             if document_type in ("other", "unknown", ""):
                 inferred = classify_document_from_text(title)
                 if inferred != "unknown":
                     document_type = inferred
-                    logger.info(f"Auto-classified document as '{document_type}' from title (keyword)")
+                    logger.info(
+                        f"Auto-classified document as '{document_type}' from title (keyword)"
+                    )
             # 3. Semantic search: find similar already-classified documents
             if document_type in ("other", "unknown", "") and ocr_result.text:
                 try:
@@ -263,7 +267,7 @@ class DocumentService:
         # Return dict matching API expectations
         return self._to_doc_dict({"id": doc_id, "text": ocr_result.text, **metadata})
 
-    def get_document(self, document_id: str) -> Optional[Dict[str, Any]]:
+    def get_document(self, document_id: str) -> dict[str, Any] | None:
         """Get a document by ID."""
         raw = self.kb.get_user_document_by_id(document_id)
         if not raw:
@@ -273,10 +277,10 @@ class DocumentService:
     def get_vessel_documents(
         self,
         vessel_id: int,
-        document_type: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        document_type: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Get all documents for a vessel, optionally filtered by type."""
-        where: Dict[str, Any] = {"vessel_id": vessel_id}
+        where: dict[str, Any] = {"vessel_id": vessel_id}
         if document_type:
             where["document_type"] = document_type
         raw_docs = self.kb.get_user_documents(where, limit=200)
@@ -288,10 +292,10 @@ class DocumentService:
     def get_customer_documents(
         self,
         customer_id: int,
-        document_type: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        document_type: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Get all documents for a customer."""
-        where: Dict[str, Any] = {"customer_id": customer_id}
+        where: dict[str, Any] = {"customer_id": customer_id}
         if document_type:
             where["document_type"] = document_type
         raw_docs = self.kb.get_user_documents(where, limit=200)
@@ -303,7 +307,7 @@ class DocumentService:
         self,
         vessel_id: int,
         warning_days: int = 30,
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    ) -> dict[str, list[dict[str, Any]]]:
         """
         Check for expired or expiring documents.
 
@@ -314,7 +318,7 @@ class DocumentService:
         now = datetime.now()
         warning_threshold = now + timedelta(days=warning_days)
 
-        result: Dict[str, List[Dict[str, Any]]] = {
+        result: dict[str, list[dict[str, Any]]] = {
             "expired": [],
             "expiring_soon": [],
             "valid": [],
@@ -366,8 +370,8 @@ class DocumentService:
         self,
         document_id: str,
         is_valid: bool,
-        notes: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        notes: str | None = None,
+    ) -> dict[str, Any] | None:
         """Validate or invalidate a document."""
         raw = self.kb.get_user_document_by_id(document_id)
         if not raw:
@@ -386,17 +390,17 @@ class DocumentService:
 
     def match_document_to_requirement(
         self,
-        document: Dict[str, Any],
+        document: dict[str, Any],
         required_doc_type: str,
         check_expiry: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check if a document satisfies a requirement.
 
         Returns:
             Dict with 'matches', 'reason', 'is_expired', 'days_until_expiry'.
         """
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "matches": False,
             "reason": "",
             "is_expired": False,
@@ -429,9 +433,9 @@ class DocumentService:
     def find_matching_documents(
         self,
         vessel_id: int,
-        required_doc_types: List[str],
+        required_doc_types: list[str],
         check_expiry: bool = True,
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """
         Find documents matching a list of requirements.
 
@@ -445,7 +449,7 @@ class DocumentService:
         """
         documents = self.get_vessel_documents(vessel_id)
 
-        results: Dict[str, Dict[str, Any]] = {}
+        results: dict[str, dict[str, Any]] = {}
         for req_type in required_doc_types:
             results[req_type] = {
                 "required": True,
@@ -458,39 +462,43 @@ class DocumentService:
             for doc in documents:
                 match = self.match_document_to_requirement(doc, req_type, check_expiry)
                 if match["matches"]:
-                    results[req_type].update({
-                        "found": True,
-                        "document": {
-                            "id": doc["id"],
-                            "title": doc["title"],
-                            "document_number": doc.get("document_number"),
-                            "expiry_date": doc.get("expiry_date") or None,
-                        },
-                        "is_expired": match["is_expired"],
-                        "days_until_expiry": match["days_until_expiry"],
-                    })
+                    results[req_type].update(
+                        {
+                            "found": True,
+                            "document": {
+                                "id": doc["id"],
+                                "title": doc["title"],
+                                "document_number": doc.get("document_number"),
+                                "expiry_date": doc.get("expiry_date") or None,
+                            },
+                            "is_expired": match["is_expired"],
+                            "days_until_expiry": match["days_until_expiry"],
+                        }
+                    )
                     break
                 elif match["is_expired"] and not results[req_type]["found"]:
-                    results[req_type].update({
-                        "found": True,
-                        "document": {
-                            "id": doc["id"],
-                            "title": doc["title"],
-                            "document_number": doc.get("document_number"),
-                            "expiry_date": doc.get("expiry_date") or None,
-                        },
-                        "is_expired": True,
-                        "days_until_expiry": None,
-                    })
+                    results[req_type].update(
+                        {
+                            "found": True,
+                            "document": {
+                                "id": doc["id"],
+                                "title": doc["title"],
+                                "document_number": doc.get("document_number"),
+                                "expiry_date": doc.get("expiry_date") or None,
+                            },
+                            "is_expired": True,
+                            "days_until_expiry": None,
+                        }
+                    )
 
         return results
 
-    def get_document_summary(self, vessel_id: int) -> Dict[str, Any]:
+    def get_document_summary(self, vessel_id: int) -> dict[str, Any]:
         """Get summary of documents for a vessel."""
         documents = self.get_vessel_documents(vessel_id)
         expiry_check = self.check_document_expiry(vessel_id)
 
-        type_counts: Dict[str, int] = {}
+        type_counts: dict[str, int] = {}
         for doc in documents:
             doc_type = doc.get("document_type", "other")
             type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
@@ -515,7 +523,11 @@ class DocumentService:
 
         ext = Path(file.filename).suffix.lower()
         if ext not in self.ALLOWED_EXTENSIONS:
-            raise ValueError(f"File extension {ext} not allowed. Allowed: {self.ALLOWED_EXTENSIONS}")
+            raise ValueError(
+                f"File extension {ext} not allowed. Allowed: {self.ALLOWED_EXTENSIONS}"
+            )
 
         if file.content_type not in self.ALLOWED_MIME_TYPES:
-            raise ValueError(f"MIME type {file.content_type} not allowed. Allowed: {self.ALLOWED_MIME_TYPES}")
+            raise ValueError(
+                f"MIME type {file.content_type} not allowed. Allowed: {self.ALLOWED_MIME_TYPES}"
+            )

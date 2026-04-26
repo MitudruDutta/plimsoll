@@ -2,13 +2,13 @@
 CrewAI Crew for Maritime Compliance Checking
 Multi-agent system for comprehensive route compliance analysis
 """
-import os
-import time
+
 import json
 import logging
-from typing import List, Optional, Dict, Any, Tuple
+from typing import Any
 
 from shared.config import get_settings
+from shared.llm.factory import get_default_llm
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -16,22 +16,12 @@ settings = get_settings()
 
 # Try to import CrewAI
 try:
-    from crewai import Agent, Task, Crew, LLM
+    from crewai import Agent, Crew, Task
+
     HAS_CREWAI = True
 except Exception as exc:
     HAS_CREWAI = False
     logger.warning("CrewAI maritime compliance crew unavailable: %s", exc)
-
-
-def test_gemini_connection(api_key: str, timeout: int = 10) -> None:
-    """Test Google Gemini connection before initializing crew"""
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
-    try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        model.generate_content("ping", request_options={"timeout": timeout})
-    except Exception as e:
-        raise RuntimeError(f"Gemini health check failed: {type(e).__name__}: {e}") from e
 
 
 MARITIME_COMPLIANCE_RULES = """You MUST follow these maritime compliance rules:
@@ -46,36 +36,15 @@ Keep outputs concise and actionable.
 
 
 def _init_llm():
-    """Initialize LLM for CrewAI - uses Google Gemini by default"""
+    """Initialize LLM for CrewAI."""
     if not HAS_CREWAI:
         raise RuntimeError("CrewAI not installed")
-
-    # Try Google Gemini first (preferred)
-    if settings.google_api_key:
-        os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key)
-        # Test connection
-        test_gemini_connection(api_key=settings.google_api_key)
-        return LLM(
-            model="gemini/gemini-2.0-flash",
-            api_key=settings.google_api_key
-        )
-
-    # Fall back to OpenAI if configured
-    if settings.openai_api_key:
-        os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
-        if settings.openai_base_url:
-            os.environ.setdefault("OPENAI_BASE_URL", settings.openai_base_url)
-        model_name = settings.openai_model or "gpt-4o-mini"
-        return LLM(model=model_name)
-
-    raise RuntimeError("No LLM API key configured. Set GOOGLE_API_KEY or OPENAI_API_KEY.")
+    return get_default_llm()
 
 
 def build_maritime_compliance_crew(
-    vessel_info: Dict[str, Any],
-    route_ports: List[str],
-    user_documents: List[Dict[str, Any]]
-) -> Tuple[Any, List[Any]]:
+    vessel_info: dict[str, Any], route_ports: list[str], user_documents: list[dict[str, Any]]
+) -> tuple[Any, list[Any]]:
     """
     Build CrewAI crew for maritime compliance checking
 
@@ -104,10 +73,12 @@ def build_maritime_compliance_crew(
     # Format inputs for agents
     vessel_str = json.dumps(vessel_info, indent=2)
     route_str = " -> ".join(route_ports)
-    docs_summary = "\n".join([
-        f"- {d.get('document_type')}: expires {d.get('expiry_date', 'N/A')}"
-        for d in user_documents
-    ])
+    docs_summary = "\n".join(
+        [
+            f"- {d.get('document_type')}: expires {d.get('expiry_date', 'N/A')}"
+            for d in user_documents
+        ]
+    )
 
     # ========== AGENTS ==========
 
@@ -115,7 +86,7 @@ def build_maritime_compliance_crew(
         role="Maritime Regulation Researcher",
         goal="Identify all applicable international and regional regulations for the voyage",
         backstory=common_backstory + "\nYou specialize in IMO conventions (SOLAS, MARPOL, STCW), "
-                  "port state control regimes, and regional requirements.",
+        "port state control regimes, and regional requirements.",
         llm=llm,
         tools=tools,
         verbose=True,
@@ -125,7 +96,7 @@ def build_maritime_compliance_crew(
         role="Document Compliance Analyst",
         goal="Compare vessel documents against regulatory requirements, identify gaps and expiration issues",
         backstory=common_backstory + "\nYou are expert at certificate validation, understanding "
-                  "document requirements, and identifying compliance gaps.",
+        "document requirements, and identifying compliance gaps.",
         llm=llm,
         verbose=True,
     )
@@ -134,7 +105,7 @@ def build_maritime_compliance_crew(
         role="Port Requirements Specialist",
         goal="Identify port-specific requirements including advance notices, local regulations, and ECA compliance",
         backstory=common_backstory + "\nYou have deep knowledge of individual port requirements, "
-                  "PSC inspection priorities, and local authority procedures.",
+        "PSC inspection priorities, and local authority procedures.",
         llm=llm,
         tools=tools,
         verbose=True,
@@ -143,8 +114,9 @@ def build_maritime_compliance_crew(
     risk_officer = Agent(
         role="Risk Assessment Officer",
         goal="Assess compliance risks, prioritize gaps by severity, recommend mitigation strategies",
-        backstory=common_backstory + "\nYou focus on PSC inspection risks, detention probabilities, "
-                  "and operational impacts of compliance failures.",
+        backstory=common_backstory
+        + "\nYou focus on PSC inspection risks, detention probabilities, "
+        "and operational impacts of compliance failures.",
         llm=llm,
         verbose=True,
     )
@@ -152,19 +124,21 @@ def build_maritime_compliance_crew(
     report_writer = Agent(
         role="Compliance Report Writer",
         goal="Synthesize all findings into clear, actionable compliance reports",
-        backstory=common_backstory + "\nYou excel at communicating complex compliance matters clearly "
-                  "to ship operators and management.",
+        backstory=common_backstory
+        + "\nYou excel at communicating complex compliance matters clearly "
+        "to ship operators and management.",
         llm=llm,
         verbose=True,
     )
 
     # ========== TASKS ==========
 
-    tasks: List[Task] = []
+    tasks: list[Task] = []
 
     # Task 1: Research applicable regulations
-    tasks.append(Task(
-        description=f"""
+    tasks.append(
+        Task(
+            description=f"""
 Research all applicable maritime regulations for this voyage:
 
 VESSEL INFORMATION:
@@ -186,16 +160,18 @@ Output as JSON with keys:
 
 Limit: 500 words total.
 """,
-        agent=regulation_researcher,
-        expected_output="JSON with categorized applicable regulations"
-    ))
+            agent=regulation_researcher,
+            expected_output="JSON with categorized applicable regulations",
+        )
+    )
 
     # Task 2: Port-specific requirements
-    tasks.append(Task(
-        description=f"""
+    tasks.append(
+        Task(
+            description=f"""
 For each port on the route ({route_str}), identify specific requirements:
 
-VESSEL TYPE: {vessel_info.get('vessel_type', 'container')}
+VESSEL TYPE: {vessel_info.get("vessel_type", "container")}
 
 For each port determine:
 1. Required documents for port entry
@@ -218,13 +194,15 @@ Output as JSON:
 
 Limit: 400 words.
 """,
-        agent=port_specialist,
-        expected_output="JSON with per-port requirements"
-    ))
+            agent=port_specialist,
+            expected_output="JSON with per-port requirements",
+        )
+    )
 
     # Task 3: Document gap analysis
-    tasks.append(Task(
-        description=f"""
+    tasks.append(
+        Task(
+            description=f"""
 Compare the vessel's documents against all requirements identified.
 
 VESSEL DOCUMENTS:
@@ -250,13 +228,15 @@ Output as JSON:
 
 Limit: 400 words.
 """,
-        agent=document_analyst,
-        expected_output="JSON document gap analysis"
-    ))
+            agent=document_analyst,
+            expected_output="JSON document gap analysis",
+        )
+    )
 
     # Task 4: Risk assessment
-    tasks.append(Task(
-        description=f"""
+    tasks.append(
+        Task(
+            description="""
 Based on all previous findings, assess compliance risks:
 
 Consider:
@@ -273,41 +253,43 @@ Provide:
 4. Priority actions ranked by urgency
 
 Output as JSON:
-{{
+{
   "overall_risk_level": "LOW|MEDIUM|HIGH|CRITICAL",
   "risk_score": 0-100,
-  "port_risks": [{{port, risk_level, detention_probability, key_concerns}}],
-  "priority_actions": [{{action, urgency, deadline, impact}}],
+  "port_risks": [{port, risk_level, detention_probability, key_concerns}],
+  "priority_actions": [{action, urgency, deadline, impact}],
   "mitigation_recommendations": []
-}}
+}
 
 Limit: 400 words.
 """,
-        agent=risk_officer,
-        expected_output="JSON risk assessment with prioritized actions"
-    ))
+            agent=risk_officer,
+            expected_output="JSON risk assessment with prioritized actions",
+        )
+    )
 
     # Task 5: Final report
-    tasks.append(Task(
-        description=f"""
+    tasks.append(
+        Task(
+            description="""
 Synthesize all findings into a comprehensive compliance report.
 
 Create TWO outputs:
 
 1. STRUCTURED JSON:
-{{
+{
   "overall_status": "COMPLIANT|PARTIAL|NON_COMPLIANT",
   "compliance_score": 0-100,
-  "route_summary": {{
+  "route_summary": {
     "total_ports": int,
     "compliant_ports": int,
     "risk_level": "string"
-  }},
+  },
   "critical_findings": [],
   "missing_documents": [],
   "recommendations": [],
   "next_steps": []
-}}
+}
 
 2. EXECUTIVE SUMMARY (narrative):
 - 2-3 sentence overview of compliance status
@@ -319,9 +301,10 @@ Write for ship operators who need clear, actionable guidance.
 
 Limit: 600 words total (both outputs combined).
 """,
-        agent=report_writer,
-        expected_output="JSON structured report + narrative executive summary"
-    ))
+            agent=report_writer,
+            expected_output="JSON structured report + narrative executive summary",
+        )
+    )
 
     # Create Crew
     crew = Crew(
@@ -330,20 +313,18 @@ Limit: 600 words total (both outputs combined).
             document_analyst,
             port_specialist,
             risk_officer,
-            report_writer
+            report_writer,
         ],
         tasks=tasks,
-        verbose=True
+        verbose=True,
     )
 
     return crew, tasks
 
 
 async def run_compliance_check(
-    vessel_info: Dict[str, Any],
-    route_ports: List[str],
-    user_documents: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+    vessel_info: dict[str, Any], route_ports: list[str], user_documents: list[dict[str, Any]]
+) -> dict[str, Any]:
     """
     Run the full compliance check using CrewAI
 
@@ -355,14 +336,12 @@ async def run_compliance_check(
             "error": "CrewAI not installed",
             "mock_result": True,
             "overall_status": "PENDING_REVIEW",
-            "message": "Compliance check requires CrewAI to be installed"
+            "message": "Compliance check requires CrewAI to be installed",
         }
 
     try:
         crew, tasks = build_maritime_compliance_crew(
-            vessel_info=vessel_info,
-            route_ports=route_ports,
-            user_documents=user_documents
+            vessel_info=vessel_info, route_ports=route_ports, user_documents=user_documents
         )
 
         # Run the crew
@@ -373,16 +352,12 @@ async def run_compliance_check(
             "success": True,
             "crew_output": str(result),
             "tasks_completed": len(tasks),
-            "raw_result": result
+            "raw_result": result,
         }
 
     except Exception as e:
         logger.error(f"Compliance crew error: {e}")
-        return {
-            "error": str(e),
-            "success": False,
-            "overall_status": "ERROR"
-        }
+        return {"error": str(e), "success": False, "overall_status": "ERROR"}
 
 
 class CrewAIComplianceOrchestrator:
@@ -411,15 +386,13 @@ class CrewAIComplianceOrchestrator:
 
     async def check_compliance(
         self,
-        vessel_info: Dict[str, Any],
-        route_ports: List[str],
-        user_documents: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        vessel_info: dict[str, Any],
+        route_ports: list[str],
+        user_documents: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """Run compliance check"""
         return await run_compliance_check(
-            vessel_info=vessel_info,
-            route_ports=route_ports,
-            user_documents=user_documents
+            vessel_info=vessel_info, route_ports=route_ports, user_documents=user_documents
         )
 
 

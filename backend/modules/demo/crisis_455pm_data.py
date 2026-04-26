@@ -1,8 +1,5 @@
 """4:55 PM CrisisMock"""
 
-from datetime import datetime, timedelta
-from typing import Dict, List
-
 # ?
 CRISIS_TIMELINE = {
     "t0_normal_state": {
@@ -18,7 +15,7 @@ CRISIS_TIMELINE = {
                 "location": {"lat": 33.7, "lng": -142.1},
                 "eta_hours": 50,
                 "route_to": "US-LAX",
-                "route_from": "CN-SHA"
+                "route_from": "CN-SHA",
             },
             {
                 "id": "SHP-002",
@@ -30,7 +27,7 @@ CRISIS_TIMELINE = {
                 "location": {"lat": 22.5, "lng": 114.1},
                 "eta_hours": 120,
                 "route_to": "US-NYC",
-                "route_from": "CN-SZX"
+                "route_from": "CN-SZX",
             },
             {
                 "id": "SHP-003",
@@ -42,11 +39,11 @@ CRISIS_TIMELINE = {
                 "location": {"lat": 30.0, "lng": 122.0},
                 "eta_hours": 15,
                 "route_to": "US-SEA",
-                "route_from": "CN-NGB"
-            }
+                "route_from": "CN-NGB",
+            },
         ],
         "risk_score": 12.5,
-        "alerts": []
+        "alerts": [],
     },
     "t1_black_swan": {
         "title": "USTR Tariff Increase Detected",
@@ -55,7 +52,7 @@ CRISIS_TIMELINE = {
         "confidence": 0.997,
         "azure_service": "Azure Cognitive Services",
         "timestamp": "2025-12-26T16:55:00Z",
-        "affected_shipments": ["SHP-001", "SHP-003"]
+        "affected_shipments": ["SHP-001", "SHP-003"],
     },
     "t2_ai_reasoning": {
         "fermi_estimation": {
@@ -64,7 +61,7 @@ CRISIS_TIMELINE = {
                 "ラ2: $◣ (25% -> 45%)",
                 "ラ3: ?($335,000 * 20% = $67,000)",
                 "ラ4: ╂ (ㄨタユц?",
-                "ラ5: ч╀"
+                "ラ5: ч╀",
             ]
         }
     },
@@ -78,7 +75,7 @@ CRISIS_TIMELINE = {
                 "savings": 112500,
                 "roi": 14.06,
                 "risk_level": "LOW",
-                "execution_time": "2h"
+                "execution_time": "2h",
             },
             {
                 "id": "B",
@@ -87,7 +84,7 @@ CRISIS_TIMELINE = {
                 "savings": 67000,
                 "roi": 1.49,
                 "risk_level": "MEDIUM",
-                "execution_time": "12h"
+                "execution_time": "12h",
             },
             {
                 "id": "C",
@@ -96,9 +93,9 @@ CRISIS_TIMELINE = {
                 "savings": 0,
                 "roi": 0.0,
                 "risk_level": "HIGH",
-                "execution_time": "0h"
-            }
-        ]
+                "execution_time": "0h",
+            },
+        ],
     },
     "t4_execution": {
         "timestamp": "2025-12-26T16:58:58Z",
@@ -106,22 +103,19 @@ CRISIS_TIMELINE = {
             {
                 "service": "DHL Integration API",
                 "status": "SUCCESS",
-                "details": "Booking confirmed: BKG-998877"
+                "details": "Booking confirmed: BKG-998877",
             },
             {
                 "service": "Customs Form Generation (Azure Form Recognizer)",
                 "status": "SUCCESS",
-                "details": "Generated Form 7501"
+                "details": "Generated Form 7501",
             },
             {
                 "service": "Notification Service",
                 "status": "SUCCESS",
-                "details": "Email sent to Logistics Manager"
-            }
+                "details": "Email sent to Logistics Manager",
+            },
         ],
-        "final_outcome": {
-            "loss_avoided_usd": 104500,
-            "execution_time_seconds": 178
-        }
-    }
+        "final_outcome": {"loss_avoided_usd": 104500, "execution_time_seconds": 178},
+    },
 }

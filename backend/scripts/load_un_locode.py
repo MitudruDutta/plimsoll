@@ -32,6 +32,7 @@ The full UNECE dataset has tens of thousands of rows. The starter set
 covers the 46 ports we actually exercise in the demo. When we go live
 with real customers we point this loader at the UNECE export.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -39,15 +40,15 @@ import csv
 import logging
 import os
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.orm import Session
 
-from shared.database.database import Base, SessionLocal, engine
+from shared.database.database import Base, SessionLocal, get_engine
 from shared.database.models import Port, PSCRegime
 
 logger = logging.getLogger(__name__)
@@ -67,15 +68,15 @@ class PortRow:
     un_locode: str
     name: str
     country: str
-    country_code: Optional[str]
-    region: Optional[str]
-    longitude: Optional[float]
-    latitude: Optional[float]
-    psc_regime: Optional[PSCRegime]
+    country_code: str | None
+    region: str | None
+    longitude: float | None
+    latitude: float | None
+    psc_regime: PSCRegime | None
     is_eca: bool
 
 
-def _coerce_float(raw: str | None) -> Optional[float]:
+def _coerce_float(raw: str | None) -> float | None:
     if raw in (None, ""):
         return None
     try:
@@ -167,8 +168,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Seed the ports table from a UN/LOCODE CSV.")
     parser.add_argument("--csv", type=Path, default=DEFAULT_CSV)
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--create-tables", action="store_true",
-                        help="Run create_all() before loading. Use only for local SQLite.")
+    parser.add_argument(
+        "--create-tables",
+        action="store_true",
+        help="Run create_all() before loading. Use only for local SQLite.",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -178,7 +182,7 @@ def main() -> int:
         return 2
 
     if args.create_tables:
-        Base.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=get_engine())
 
     rows = list(_read_csv(args.csv))
     logger.info("Loaded %d candidate ports from %s", len(rows), args.csv)

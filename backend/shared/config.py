@@ -1,99 +1,103 @@
-from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+"""Application settings.
+
+Single source of truth for runtime configuration. Values are loaded from the
+process environment (and optionally a `.env` file). All defaults are safe for
+local development; production must override secrets-bearing fields explicitly.
+"""
+
+from __future__ import annotations
+
 from functools import lru_cache
-from typing import Optional
+
+from pydantic import ValidationInfo, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEMO_SECRET_DEV_DEFAULT = "dev-demo-session-secret"
 
 
 class Settings(BaseSettings):
-    """"""
-    
-    # Pydantic V2 config
+    """All env-driven settings."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore",  # Ignore extra env vars not defined here
+        extra="ignore",
     )
-    
-    # Database connection. Override via DATABASE_URL env. SQLite default
-    # keeps local development friction-free; production must set Postgres.
+
+    # --- Database ----------------------------------------------------------
     database_url: str = "sqlite:///./data/sully.db"
     auto_create_tables: bool = True
     database_pool_size: int = 20
     database_max_overflow: int = 10
 
-    # 1.0 migration toggles. These let us move one subsystem at a time while
-    # keeping the current prototype runnable.
-    auth_backend: str = "clerk"  # clerk | supabase | dual
-    kb_backend: str = "chroma"  # chroma | pgvector | dual
+    # --- 1.0 migration toggles --------------------------------------------
+    auth_backend: str = "supabase"  # supabase | dual
+    kb_backend: str = "chroma"  # chroma | pgvector | dual | disabled
     upload_backend: str = "disk"  # disk | supabase_storage
     queue_backend: str = "none"  # none | pgmq | arq
-    redis_url: Optional[str] = None
-    
-    # LLM: ollama  openai
+    redis_url: str | None = None
+    rate_limit_storage_url: str | None = None
+    rate_limit_default: str = "120/minute"
+
+    # --- LLM providers -----------------------------------------------------
     llm_provider: str = "ollama"
-
-    # Ollama(LLM)
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen2.5:latest"  #  llama3, mistral
-
-    # OpenAI(ChatGPT)
-    openai_api_key: Optional[str] = None
-    openai_base_url: Optional[str] = None  # /
+    ollama_model: str = "qwen2.5:latest"
+    openai_api_key: str | None = None
+    openai_base_url: str | None = None
     openai_model: str = "gpt-4o-mini"
-    
-    # Google API (for Gemini embeddings)
-    google_api_key: Optional[str] = None
-    
-    # Google Maps API (for Static Maps - can be same or different from google_api_key)
-    google_maps_api_key: Optional[str] = None
+    google_api_key: str | None = None
+    google_maps_api_key: str | None = None
 
-    # Supabase / storage integration placeholders for the 1.0 migration.
-    supabase_url: Optional[str] = None
-    supabase_anon_key: Optional[str] = None
-    supabase_service_role_key: Optional[str] = None
-    supabase_jwks_url: Optional[str] = None
+    # --- Supabase / Storage -----------------------------------------------
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
+    supabase_service_role_key: str | None = None
+    supabase_jwks_url: str | None = None
+    supabase_jwt_secret: str | None = None  # legacy HS256 projects
     storage_bucket_documents: str = "documents"
     storage_bucket_satellite_cache: str = "satellite-cache"
     storage_bucket_reports: str = "reports"
 
-    # 
+    # --- Vector store -----------------------------------------------------
     chroma_persist_dir: str = "./data/vectordb"
     maritime_kb_persist_dir: str = "./data/vectordb/maritime"
-    chroma_api_key: Optional[str] = None
-    chroma_tenant: Optional[str] = None
-    chroma_database: Optional[str] = None
+    chroma_api_key: str | None = None
+    chroma_tenant: str | None = None
+    chroma_database: str | None = None
 
-    # 
+    # --- Uploads ----------------------------------------------------------
     upload_dir: str = "./data/uploads"
     documents_upload_dir: str = "./data/uploads/documents"
     max_upload_size_mb: int = 50
-
-    # Maritime Compliance Settings
     maritime_regulations_dir: str = "./data/maritime_regulations"
 
-    # CrewAI Feature Flags
+    # --- Feature flags ----------------------------------------------------
     document_analysis_use_crewai: bool = True
-    
-    # Clerk
-    clerk_issuer_url: Optional[str] = None
-    # Comma-separated list of admin emails. Configure via env, never hardcode.
+
+    # --- Auth -------------------------------------------------------------
     admin_whitelist: str = ""
 
-    # Demo sessions
-    demo_session_secret: str = "dev-demo-session-secret"
+    # --- Demo sessions ----------------------------------------------------
+    demo_session_secret: str = _DEMO_SECRET_DEV_DEFAULT
     demo_session_ttl_seconds: int = 3600
 
-    # HTTP/CORS
+    # --- HTTP / CORS ------------------------------------------------------
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
-    # 
+    # --- LLM cost ledger --------------------------------------------------
+    # Optional JSON map of "model_name": [in_per_M, out_per_M] in USD.
+    llm_pricing_overrides_json: str | None = None
+
+    # --- Logging ----------------------------------------------------------
+    environment: str = "development"
     log_level: str = "INFO"
     debug: bool = False
 
     @field_validator("debug", mode="before")
     @classmethod
-    def parse_debug_flag(cls, value):
+    def _parse_debug_flag(cls, value: object) -> object:
         if isinstance(value, str):
             normalized = value.strip().lower()
             if normalized in {"release", "production", "prod", "off"}:
@@ -102,8 +106,32 @@ class Settings(BaseSettings):
                 return True
         return value
 
+    @field_validator("cors_origins")
+    @classmethod
+    def _no_wildcard_with_credentials(cls, value: str, info: ValidationInfo) -> str:
+        if "*" in value and not info.data.get("debug", False):
+            raise ValueError("CORS_ORIGINS=* is forbidden when DEBUG is false")
+        return value
 
-@lru_cache()
+    @model_validator(mode="after")
+    def _enforce_prod_secrets(self) -> Settings:
+        """Refuse to boot prod with insecure defaults."""
+        if self.debug or self.environment.lower() not in {"production", "prod"}:
+            return self
+        if self.demo_session_secret == _DEMO_SECRET_DEV_DEFAULT:
+            raise ValueError(
+                "DEMO_SESSION_SECRET is using the dev default; set a real secret in production."
+            )
+        if self.auth_backend in {"supabase", "dual"}:
+            jwks_configured = bool(self.supabase_jwks_url or self.supabase_url)
+            if not jwks_configured and not self.supabase_jwt_secret:
+                raise ValueError(
+                    "Supabase auth requires SUPABASE_URL (or SUPABASE_JWKS_URL) "
+                    "or SUPABASE_JWT_SECRET when DEBUG=false."
+                )
+        return self
+
+
+@lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """(singleton)"""
     return Settings()

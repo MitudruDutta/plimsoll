@@ -11,23 +11,26 @@ This script populates the ChromaDB vector store with:
 - Pilotage and berthing requirements
 - Regional environmental regulations
 """
-import sys
+
 import os
+import sys
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import json
 import logging
-from typing import List, Dict, Any
+from typing import Any
+
 from langchain_core.documents import Document
+
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Major world ports data
-MAJOR_PORTS_DATA: List[Dict[str, Any]] = [
+MAJOR_PORTS_DATA: list[dict[str, Any]] = [
     # Asia Pacific
     {
         "port_code": "SGSIN",
@@ -57,7 +60,7 @@ MAJOR_PORTS_DATA: List[Dict[str, Any]] = [
             "Cargo Manifest",
             "Dangerous Goods Manifest (if applicable)",
             "Ship Stores Declaration",
-            "Crew Effects Declaration"
+            "Crew Effects Declaration",
         ],
         "pre_arrival_notice": "48 hours for vessels over 300 GT",
         "regulations": """
@@ -123,7 +126,7 @@ SINGAPORE CUSTOMS REQUIREMENTS
 - Personal effects duty-free within limits
 - Currency declaration required over SGD 20,000
 - Prohibited items strictly enforced
-"""
+""",
     },
     {
         "port_code": "CNSHA",
@@ -152,7 +155,7 @@ SINGAPORE CUSTOMS REQUIREMENTS
             "Dangerous Goods Manifest",
             "Ship Stores Declaration",
             "Bonded Stores List",
-            "Last 10 Ports of Call List"
+            "Last 10 Ports of Call List",
         ],
         "pre_arrival_notice": "24 hours",
         "regulations": """
@@ -216,7 +219,7 @@ CHINA CUSTOMS REQUIREMENTS - SHANGHAI
 3. TEMPORARY IMPORTS
 - Ship spare parts may require permits
 - Returnable items need temporary import declaration
-"""
+""",
     },
     {
         "port_code": "HKHKG",
@@ -240,7 +243,7 @@ CHINA CUSTOMS REQUIREMENTS - SHANGHAI
             "Maritime Declaration of Health",
             "Cargo Manifest",
             "Dangerous Goods Declaration",
-            "Ship Stores Declaration"
+            "Ship Stores Declaration",
         ],
         "pre_arrival_notice": "24 hours",
         "regulations": """
@@ -284,7 +287,7 @@ Hong Kong operates as a free port:
 - Excise duties only on tobacco, alcohol, hydrocarbon fuels
 - Simple import/export documentation
 - Efficient cargo clearance procedures
-"""
+""",
     },
     # Europe
     {
@@ -315,7 +318,7 @@ Hong Kong operates as a free port:
             "Dangerous Goods Manifest",
             "Waste Notification Form",
             "EU MRV Data (CO2 emissions)",
-            "Ship Sanitation Certificate"
+            "Ship Sanitation Certificate",
         ],
         "pre_arrival_notice": "24 hours via SafeSeaNet",
         "regulations": """
@@ -381,7 +384,7 @@ NETHERLANDS/EU CUSTOMS - ROTTERDAM
 - Union goods procedure for stores
 - Bonded stores management
 - Simplified procedures for regular callers
-"""
+""",
     },
     {
         "port_code": "DEHAM",
@@ -408,7 +411,7 @@ NETHERLANDS/EU CUSTOMS - ROTTERDAM
             "Cargo Manifest",
             "Dangerous Goods Manifest",
             "Waste Notification Form",
-            "EU MRV Documentation"
+            "EU MRV Documentation",
         ],
         "pre_arrival_notice": "24 hours via SafeSeaNet",
         "regulations": """
@@ -459,7 +462,7 @@ GERMAN CUSTOMS - HAMBURG
 2. FREE PORT
 - Free Port area for certain operations
 - Simplified procedures for transshipment
-"""
+""",
     },
     {
         "port_code": "GBFXT",
@@ -484,7 +487,7 @@ GERMAN CUSTOMS - HAMBURG
             "Cargo Manifest",
             "Dangerous Goods Manifest",
             "Ship Sanitation Certificate",
-            "UK MRV Documentation (post-Brexit)"
+            "UK MRV Documentation (post-Brexit)",
         ],
         "pre_arrival_notice": "24 hours",
         "regulations": """
@@ -534,7 +537,7 @@ UK CUSTOMS - FELIXSTOWE (POST-BREXIT)
 - Felixstowe designated as Freeport
 - Customs and tax benefits available
 - Simplified procedures for qualifying goods
-"""
+""",
     },
     # Americas
     {
@@ -564,7 +567,7 @@ UK CUSTOMS - FELIXSTOWE (POST-BREXIT)
             "Dangerous Goods Manifest",
             "Importer Security Filing (ISF)",
             "CBP Entry Documents",
-            "USCG Certificate of Compliance (if applicable)"
+            "USCG Certificate of Compliance (if applicable)",
         ],
         "pre_arrival_notice": "96 hours (USCG NVMC)",
         "regulations": """
@@ -634,7 +637,7 @@ US CUSTOMS AND BORDER PROTECTION - NY/NJ
 - Sealed storage required
 - Accurate declaration mandatory
 - Penalties for discrepancies
-"""
+""",
     },
     {
         "port_code": "USLAX",
@@ -661,7 +664,7 @@ US CUSTOMS AND BORDER PROTECTION - NY/NJ
             "Dangerous Goods Manifest",
             "Importer Security Filing (ISF)",
             "CBP Documents",
-            "CARB Documentation (California)"
+            "CARB Documentation (California)",
         ],
         "pre_arrival_notice": "96 hours (USCG NVMC)",
         "regulations": """
@@ -712,7 +715,7 @@ Same as other US ports:
 - ISF required
 - C-TPAT benefits available
 - Container examination facilities on-site
-"""
+""",
     },
     # Middle East
     {
@@ -739,7 +742,7 @@ Same as other US ports:
             "Ship Sanitation Certificate",
             "Cargo Manifest",
             "Dangerous Goods Manifest",
-            "Last 10 Ports of Call"
+            "Last 10 Ports of Call",
         ],
         "pre_arrival_notice": "48 hours",
         "regulations": """
@@ -794,7 +797,7 @@ UAE CUSTOMS - JEBEL ALI
 - Dubai Trade portal for customs procedures
 - ATA Carnet accepted
 - Controlled goods require permits
-"""
+""",
     },
     # Additional major ports
     {
@@ -821,7 +824,7 @@ UAE CUSTOMS - JEBEL ALI
             "Quarantine Declaration",
             "Cargo Manifest",
             "Dangerous Goods Manifest",
-            "Ship Stores Declaration"
+            "Ship Stores Declaration",
         ],
         "pre_arrival_notice": "24 hours",
         "regulations": """
@@ -869,7 +872,7 @@ JAPAN CUSTOMS - YOKOHAMA
 2. AEO PROGRAM
 - Authorized Economic Operator benefits
 - Simplified procedures for qualified traders
-"""
+""",
     },
     {
         "port_code": "KRPUS",
@@ -892,7 +895,7 @@ JAPAN CUSTOMS - YOKOHAMA
             "Crew List",
             "Maritime Declaration of Health",
             "Cargo Manifest",
-            "Dangerous Goods Manifest"
+            "Dangerous Goods Manifest",
         ],
         "pre_arrival_notice": "24 hours",
         "regulations": """
@@ -938,7 +941,7 @@ KOREA CUSTOMS - BUSAN
 2. FREE TRADE ZONES
 - Busan-Jinhae Free Economic Zone
 - Tax and duty incentives
-"""
+""",
     },
     {
         "port_code": "BRSSZ",
@@ -964,7 +967,7 @@ KOREA CUSTOMS - BUSAN
             "Ship Sanitation Certificate",
             "Cargo Manifest",
             "Dangerous Goods Manifest",
-            "Last 10 Ports of Call"
+            "Last 10 Ports of Call",
         ],
         "pre_arrival_notice": "48 hours",
         "regulations": """
@@ -1022,7 +1025,7 @@ BRAZIL CUSTOMS - SANTOS
 3. CONTROLLED ITEMS
 - Extensive list of controlled products
 - Special permits for many categories
-"""
+""",
     },
     {
         "port_code": "AUSYD",
@@ -1049,7 +1052,7 @@ BRAZIL CUSTOMS - SANTOS
             "Cargo Manifest",
             "Dangerous Goods Manifest",
             "Australian Quarantine Declaration",
-            "Maritime Arrival Report"
+            "Maritime Arrival Report",
         ],
         "pre_arrival_notice": "96 hours",
         "regulations": """
@@ -1113,14 +1116,14 @@ AUSTRALIAN BORDER FORCE - SYDNEY
 - 10% GST on most imports
 - Various duty rates by product
 - Free Trade Agreements with many countries
-"""
+""",
     },
 ]
 
 
-def create_port_documents() -> Dict[str, List[Document]]:
+def create_port_documents() -> dict[str, list[Document]]:
     """Create documents from port data for each collection."""
-    documents_by_collection: Dict[str, List[Document]] = {
+    documents_by_collection: dict[str, list[Document]] = {
         "imo_conventions": [],
         "psc_requirements": [],
         "port_regulations": [],
@@ -1149,14 +1152,14 @@ def create_port_documents() -> Dict[str, List[Document]]:
 PORT REGULATIONS: {port_name} ({port_code})
 Country: {country}
 Region: {region}
-Timezone: {port.get('timezone', 'N/A')}
+Timezone: {port.get("timezone", "N/A")}
 
-VTS Channel: {port.get('vts_channel', 'N/A')}
-Pilot Boarding: {port.get('pilot_boarding', 'N/A')}
-Maximum Draft: {port.get('max_draft', 'N/A')} meters
-Pre-Arrival Notice: {port.get('pre_arrival_notice', 'N/A')}
+VTS Channel: {port.get("vts_channel", "N/A")}
+Pilot Boarding: {port.get("pilot_boarding", "N/A")}
+Maximum Draft: {port.get("max_draft", "N/A")} meters
+Pre-Arrival Notice: {port.get("pre_arrival_notice", "N/A")}
 
-{port.get('regulations', '')}
+{port.get("regulations", "")}
 """
         port_reg_doc = Document(
             page_content=port_reg_content,
@@ -1165,7 +1168,7 @@ Pre-Arrival Notice: {port.get('pre_arrival_notice', 'N/A')}
                 "document_type": "port_regulations",
                 "max_draft": port.get("max_draft"),
                 "vts_channel": port.get("vts_channel"),
-            }
+            },
         )
         documents_by_collection["port_regulations"].append(port_reg_doc)
 
@@ -1184,7 +1187,7 @@ The following documents are required for vessel entry at {port_name}:
 
         required_docs_content += f"""
 
-Pre-Arrival Notice: {port.get('pre_arrival_notice', 'Contact agent for details')}
+Pre-Arrival Notice: {port.get("pre_arrival_notice", "Contact agent for details")}
 
 NOTE: Always verify current requirements with your local agent as regulations may change.
 Additional documents may be required based on:
@@ -1199,7 +1202,7 @@ Additional documents may be required based on:
                 **base_metadata,
                 "document_type": "required_documents_list",
                 "required_documents": json.dumps(required_docs),
-            }
+            },
         )
         documents_by_collection["psc_requirements"].append(required_docs_doc)
 
@@ -1209,7 +1212,7 @@ CUSTOMS AND DOCUMENTATION REQUIREMENTS: {port_name} ({port_code})
 Country: {country}
 Region: {region}
 
-{port.get('customs_info', 'Contact local customs authority for specific requirements.')}
+{port.get("customs_info", "Contact local customs authority for specific requirements.")}
 
 GENERAL CUSTOMS DOCUMENTATION CHECKLIST:
 - Cargo Manifest
@@ -1229,12 +1232,17 @@ Contact your local shipping agent for current customs procedures and requirement
             metadata={
                 **base_metadata,
                 "document_type": "customs_documentation",
-            }
+            },
         )
         documents_by_collection["customs_documentation"].append(customs_doc)
 
         # 4. Regional Requirements (for ports with specific regional regs)
-        if "ECA" in port.get("regulations", "") or "SECA" in port.get("regulations", "") or "MRV" in port.get("regulations", "") or "CARB" in port.get("regulations", ""):
+        if (
+            "ECA" in port.get("regulations", "")
+            or "SECA" in port.get("regulations", "")
+            or "MRV" in port.get("regulations", "")
+            or "CARB" in port.get("regulations", "")
+        ):
             regional_content = f"""
 REGIONAL ENVIRONMENTAL REQUIREMENTS: {port_name} ({port_code})
 Country: {country}
@@ -1287,14 +1295,14 @@ CALIFORNIA AIR RESOURCES BOARD (CARB) REQUIREMENTS:
                 metadata={
                     **base_metadata,
                     "document_type": "regional_requirements",
-                }
+                },
             )
             documents_by_collection["regional_requirements"].append(regional_doc)
 
     return documents_by_collection
 
 
-def create_imo_convention_summaries() -> List[Document]:
+def create_imo_convention_summaries() -> list[Document]:
     """Create summary documents for key IMO conventions."""
     conventions = [
         {
@@ -1337,7 +1345,7 @@ APPLICABILITY:
 Applies to ships engaged in international voyages:
 - Passenger ships (all sizes)
 - Cargo ships of 500 GT and above
-"""
+""",
         },
         {
             "name": "MARPOL",
@@ -1380,7 +1388,7 @@ Certain sea areas have stricter discharge requirements including:
 - Red Sea
 - North Sea
 - Antarctic Area
-"""
+""",
         },
         {
             "name": "STCW",
@@ -1427,7 +1435,7 @@ RECORDS:
 - Hours of rest records must be maintained
 - Records available for PSC inspection
 - Non-compliance is a detainable deficiency
-"""
+""",
         },
         {
             "name": "MLC",
@@ -1476,7 +1484,7 @@ PSC INSPECTION:
 - Accommodation inspected
 - Employment records reviewed
 - Deficiencies can lead to detention
-"""
+""",
         },
         {
             "name": "ISM Code",
@@ -1522,7 +1530,7 @@ KEY REQUIREMENTS:
 - Internal audits
 - Management review
 - Objective evidence of compliance
-"""
+""",
         },
         {
             "name": "ISPS Code",
@@ -1575,7 +1583,7 @@ DECLARATION OF SECURITY (DOS):
 - Agreement between ship and port facility
 - Required when there is a security concern
 - Documents security measures to be implemented
-"""
+""",
         },
     ]
 
@@ -1588,7 +1596,7 @@ DECLARATION OF SECURITY (DOS):
                 "convention_full_name": conv["full_name"],
                 "document_type": "convention_summary",
                 "source": "imo_convention_loader",
-            }
+            },
         )
         documents.append(doc)
 

@@ -7,21 +7,21 @@ Usage:
     python scripts/ingest_maritime_data.py --source psc
     python scripts/ingest_maritime_data.py --source all
 """
-import sys
-import os
-import json
+
 import argparse
+import json
 import logging
+import os
+import sys
 from pathlib import Path
-from typing import List, Dict, Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.config import get_settings
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
+from shared.config import get_settings
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
@@ -30,8 +30,9 @@ settings = get_settings()
 try:
     from langchain_core.documents import Document
 except ImportError:
+
     class Document:
-        def __init__(self, page_content: str, metadata: Dict = None):
+        def __init__(self, page_content: str, metadata: dict | None = None):
             self.page_content = page_content
             self.metadata = metadata or {}
 
@@ -58,7 +59,14 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "II-2",
         "summary": "Comprehensive requirements for fire safety including structural fire protection, fire detection systems, fire-fighting equipment, and escape routes.",
         "required_documents": ["safety_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+        ],
         "min_gross_tonnage": 500,
     },
     {
@@ -68,7 +76,14 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "III",
         "summary": "Requirements for lifeboats, liferafts, rescue boats, lifejackets, and other life-saving equipment. Includes specifications for survival craft capacity and launching systems.",
         "required_documents": ["safety_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+        ],
         "min_gross_tonnage": 500,
     },
     {
@@ -78,7 +93,15 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "V",
         "summary": "Navigation safety requirements including voyage planning, AIS, ECDIS, radar, and voyage data recorders. Applies to all ships on international voyages.",
         "required_documents": ["safety_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier", "general_cargo"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+            "general_cargo",
+        ],
         "min_gross_tonnage": 300,
     },
     {
@@ -88,7 +111,14 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "IX",
         "summary": "International Safety Management (ISM) Code requirements for a safety management system. Ships must have a Safety Management Certificate (SMC) and company must have Document of Compliance (DOC).",
         "required_documents": ["ism_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+        ],
         "min_gross_tonnage": 500,
     },
     {
@@ -98,10 +128,16 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "XI-2",
         "summary": "International Ship and Port Facility Security (ISPS) Code requirements. Ships must have International Ship Security Certificate (ISSC), Ship Security Plan, and designated Ship Security Officer.",
         "required_documents": ["isps_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+        ],
         "min_gross_tonnage": 500,
     },
-
     # MARPOL - Marine Pollution
     {
         "title": "MARPOL Annex I: Prevention of Pollution by Oil",
@@ -140,7 +176,15 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "Annex V",
         "summary": "Regulations for disposal of garbage from ships. Complete ban on plastic disposal. Garbage Management Plan and Garbage Record Book required.",
         "required_documents": ["marpol_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier", "general_cargo"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+            "general_cargo",
+        ],
         "min_gross_tonnage": 100,
     },
     {
@@ -150,10 +194,17 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "Annex VI",
         "summary": "Regulations for SOx, NOx emissions and fuel quality. Global sulphur cap of 0.5% (0.1% in ECAs). Ships require IAPP Certificate.",
         "required_documents": ["marpol_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier", "general_cargo"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+            "general_cargo",
+        ],
         "min_gross_tonnage": 400,
     },
-
     # STCW - Crew Training
     {
         "title": "STCW Convention: Standards of Training, Certification and Watchkeeping",
@@ -162,10 +213,17 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "All",
         "summary": "Requirements for seafarer training, certification, and watchkeeping. All crew must have valid STCW certificates of competency appropriate to their rank and duties.",
         "required_documents": ["crew_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier", "general_cargo"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+            "general_cargo",
+        ],
         "min_gross_tonnage": 200,
     },
-
     # Load Line Convention
     {
         "title": "International Convention on Load Lines",
@@ -174,10 +232,15 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "1966/1988",
         "summary": "Requirements for load line marks and freeboard calculations ensuring ships are not overloaded. International Load Line Certificate required.",
         "required_documents": ["load_line_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "general_cargo", "ro_ro"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "general_cargo",
+            "ro_ro",
+        ],
         "min_gross_tonnage": 150,
     },
-
     # Tonnage Convention
     {
         "title": "International Convention on Tonnage Measurement",
@@ -186,10 +249,17 @@ IMO_CONVENTIONS_DATA = [
         "chapter": "1969",
         "summary": "Universal tonnage measurement system. International Tonnage Certificate (ITC 69) required for all international voyages.",
         "required_documents": ["tonnage_certificate"],
-        "applicable_vessel_types": ["container", "tanker", "bulk_carrier", "passenger", "ro_ro", "lng_carrier", "general_cargo"],
+        "applicable_vessel_types": [
+            "container",
+            "tanker",
+            "bulk_carrier",
+            "passenger",
+            "ro_ro",
+            "lng_carrier",
+            "general_cargo",
+        ],
         "min_gross_tonnage": 24,
     },
-
     # BWM Convention
     {
         "title": "Ballast Water Management Convention",
@@ -227,7 +297,13 @@ PSC_REQUIREMENTS_DATA = [
         "region": "Americas",
         "summary": "USCG PSC includes examination of vessel documentation, hull structure, machinery, navigation equipment, life-saving, fire-fighting, pollution prevention, and crew certifications. 96-hour advance notice required.",
         "applicable_regions": ["Americas"],
-        "required_documents": ["safety_certificate", "load_line_certificate", "marpol_certificate", "ism_certificate", "isps_certificate"],
+        "required_documents": [
+            "safety_certificate",
+            "load_line_certificate",
+            "marpol_certificate",
+            "ism_certificate",
+            "isps_certificate",
+        ],
     },
 ]
 
@@ -282,7 +358,7 @@ REGIONAL_REQUIREMENTS_DATA = [
 ]
 
 
-def create_documents_from_data(data_list: List[Dict], collection_name: str) -> List[Document]:
+def create_documents_from_data(data_list: list[dict], collection_name: str) -> list[Document]:
     """Convert regulation data to LangChain Documents"""
     documents = []
 
@@ -293,18 +369,20 @@ def create_documents_from_data(data_list: List[Dict], collection_name: str) -> L
             f"Source: {item.get('source_convention', 'Unknown')}",
         ]
 
-        if item.get('chapter'):
+        if item.get("chapter"):
             content_parts.append(f"Chapter: {item['chapter']}")
 
         content_parts.append(f"\nSummary:\n{item.get('summary', '')}")
 
-        if item.get('required_documents'):
+        if item.get("required_documents"):
             content_parts.append(f"\nRequired Documents: {', '.join(item['required_documents'])}")
 
-        if item.get('applicable_vessel_types'):
-            content_parts.append(f"Applicable Vessel Types: {', '.join(item['applicable_vessel_types'])}")
+        if item.get("applicable_vessel_types"):
+            content_parts.append(
+                f"Applicable Vessel Types: {', '.join(item['applicable_vessel_types'])}"
+            )
 
-        if item.get('min_gross_tonnage'):
+        if item.get("min_gross_tonnage"):
             content_parts.append(f"Minimum Gross Tonnage: {item['min_gross_tonnage']} GT")
 
         content = "\n".join(content_parts)
@@ -387,7 +465,7 @@ class MaritimeDataIngester:
         """Ingest regulation data from a JSON file"""
         logger.info(f"Ingesting from {json_path}...")
 
-        with open(json_path, 'r') as f:
+        with open(json_path) as f:
             data = json.load(f)
 
         if isinstance(data, dict) and "regulations" in data:
@@ -429,18 +507,14 @@ def main():
         "--source",
         choices=["imo", "psc", "regional", "all"],
         default="all",
-        help="Data source to ingest"
+        help="Data source to ingest",
     )
-    parser.add_argument(
-        "--json-file",
-        type=str,
-        help="Path to JSON file to ingest"
-    )
+    parser.add_argument("--json-file", type=str, help="Path to JSON file to ingest")
     parser.add_argument(
         "--collection",
         type=str,
         default="imo_conventions",
-        help="Collection name for JSON file ingestion"
+        help="Collection name for JSON file ingestion",
     )
 
     args = parser.parse_args()

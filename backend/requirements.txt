@@ -36,6 +36,7 @@ python-dotenv==1.1.1
 
 # Rate limiting
 slowapi>=0.1.9
+redis>=5.0.0
 
 # WebSockets
 websockets==16.0

@@ -15,6 +15,7 @@ The script fails fast if the schema drifts: it only relies on attributes
 that ``compliance_service.PortComplianceResult`` and
 ``RouteComplianceResult`` actually define.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -30,7 +31,7 @@ from sqlalchemy.orm import Session
 from modules.maritime.compliance_service import ComplianceService
 from modules.maritime.document_service import DocumentService
 from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
-from shared.database.database import Base, SessionLocal, engine
+from shared.database.database import Base, SessionLocal, get_engine
 from shared.database.models import Customer, Vessel, VesselType
 
 
@@ -226,7 +227,7 @@ async def main() -> None:
     print("MARITIME COMPLIANCE SYSTEM - TEST SUITE")
     print("=" * 70)
 
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=get_engine())
     db = SessionLocal()
     try:
         print("\nSetting up test data...")

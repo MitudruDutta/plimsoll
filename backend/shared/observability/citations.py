@@ -18,14 +18,20 @@ The contract is enforced by ``ensure_citations()``: if a payload claims
 ``confidence > 0`` but ships zero citations, that's a bug that should fail
 loud in tests/CI rather than ship a hallucination to a customer.
 """
+
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Iterable, Literal, Optional
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 CitationKind = Literal["regulation", "document", "source"]
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 class Citation(BaseModel):
@@ -33,24 +39,24 @@ class Citation(BaseModel):
 
     kind: CitationKind
     title: str
-    url: Optional[str] = None
+    url: str | None = None
 
     # `regulation` extras
-    convention: Optional[str] = None  # e.g. "SOLAS", "MARPOL Annex VI"
-    regulation_number: Optional[str] = None
-    chapter: Optional[str] = None
+    convention: str | None = None  # e.g. "SOLAS", "MARPOL Annex VI"
+    regulation_number: str | None = None
+    chapter: str | None = None
 
     # `document` extras
-    document_id: Optional[str] = None
-    page: Optional[int] = None
+    document_id: str | None = None
+    page: int | None = None
 
     # `source` extras
-    publisher: Optional[str] = None
-    published_at: Optional[datetime] = None
+    publisher: str | None = None
+    published_at: datetime | None = None
 
     # Provenance
-    retrieved_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    snippet: Optional[str] = None  # short quote for transparency
+    retrieved_at: datetime | None = Field(default_factory=_utcnow)
+    snippet: str | None = None  # short quote for transparency
 
 
 class CitedPayload(BaseModel):

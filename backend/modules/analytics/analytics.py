@@ -1,98 +1,112 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any, List
+"""Lightweight analytics dashboard.
+
+The data source is the bundled ``virtual_users.json`` snapshot. The file is
+~2 MB and parsing it on every request burns CPU + IO, so we cache the parsed
+form per process. Bust the cache on startup if the file is replaced.
+"""
+
+from __future__ import annotations
+
 import json
-import os
+import logging
 from collections import Counter
 from datetime import datetime
-from api.routes.deps import get_current_user
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
-router = APIRouter(prefix="/api/analytics", tags=["analytics"])
+from fastapi import APIRouter, Depends
 
-DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "virtual_users.json")
+from shared.auth import User, get_current_user
 
-def load_virtual_data():
-    if not os.path.exists(DATA_PATH):
-        return []
-    with open(DATA_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+logger = logging.getLogger(__name__)
 
-@router.get("/dashboard")
-def get_dashboard_data(user: dict = Depends(get_current_user)):
-    """
-    Get analytics dashboard data from virtual users.
-    Requires authentication.
-    """
-    # Simply verify user is authenticated via dependency
-    
-    users = load_virtual_data()
-    
+router = APIRouter(
+    prefix="/api/analytics",
+    tags=["analytics"],
+    dependencies=[Depends(get_current_user)],
+)
+
+DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "virtual_users.json"
+
+
+@lru_cache(maxsize=1)
+def _load_virtual_users() -> tuple[dict[str, Any], ...]:
+    if not DATA_PATH.exists():
+        logger.warning("Analytics data missing at %s", DATA_PATH)
+        return ()
+    try:
+        with DATA_PATH.open(encoding="utf-8") as handle:
+            return tuple(json.load(handle))
+    except (OSError, json.JSONDecodeError):
+        logger.exception("Failed to load analytics dataset")
+        return ()
+
+
+@lru_cache(maxsize=1)
+def _build_dashboard() -> dict[str, Any]:
+    users = _load_virtual_users()
     if not users:
         return {"error": "No data available"}
 
-    # 1. KPI Cards
     total_users = len(users)
     total_tokens = sum(u.get("total_tokens", 0) for u in users)
-    
-    # 2. Location Distribution (Pie Chart) with "Others" grouping
-    locations = []
+
+    locations: list[str] = []
     for u in users:
         loc = u.get("location", "Unknown")
-        # Extract City if format is "City, Country"
         if "," in loc:
-            city_name = loc.split(",")[0].strip()
-            locations.append(city_name)
+            locations.append(loc.split(",")[0].strip())
         else:
             locations.append(loc)
-    
-    total_locations = len(locations)
+
     location_counts = Counter(locations)
-    
-    # Process logic: Top 20 -> Specific, Rest -> Others
-    # Convert Counter to list of dicts for sorting
-    all_location_data = [{"name": k, "value": v} for k, v in location_counts.items()]
-    # Sort by value descending
-    all_location_data.sort(key=lambda x: x["value"], reverse=True)
-    
-    final_location_data = []
-    
-    if len(all_location_data) <= 20:
-        final_location_data = all_location_data
+    sorted_locations = sorted(
+        ({"name": k, "value": v} for k, v in location_counts.items()),
+        key=lambda x: x["value"],
+        reverse=True,
+    )
+    if len(sorted_locations) <= 20:
+        location_data = sorted_locations
     else:
-        # Take Top 20
-        final_location_data = all_location_data[:20]
-        # Sum the rest
-        others_count = sum(item["value"] for item in all_location_data[20:])
-        if others_count > 0:
-            final_location_data.append({"name": "Others", "value": others_count})
-            
-    # No need to resort as Top 20 are already sorted and Others is appended at end
-    
-    # 3. Top Token Users (Bar Chart)
+        location_data = sorted_locations[:20]
+        others = sum(item["value"] for item in sorted_locations[20:])
+        if others:
+            location_data.append({"name": "Others", "value": others})
+
     sorted_by_tokens = sorted(users, key=lambda x: x.get("total_tokens", 0), reverse=True)
-    top_users = sorted_by_tokens[:5]
-    top_users_data = [{"name": u["name"], "tokens": u["total_tokens"]} for u in top_users]
-    
-    # 4. Registration Trend (Line Chart) -- Mocking a bit based on register_date
-    # Group by date
-    dates = []
+    top_users_data = [
+        {"name": u.get("name", "Unknown"), "tokens": u.get("total_tokens", 0)}
+        for u in sorted_by_tokens[:5]
+    ]
+
+    dates: list[str] = []
     for u in users:
         dt_str = u.get("register_date")
-        if dt_str:
+        if not dt_str:
+            continue
+        try:
             dt = datetime.fromisoformat(dt_str)
-            dates.append(dt.strftime("%Y-%m-%d"))
-    
-    date_counts = Counter(dates)
-    trend_data = [{"date": k, "count": v} for k, v in sorted(date_counts.items())]
+        except ValueError:
+            continue
+        dates.append(dt.strftime("%Y-%m-%d"))
+    trend_data = [{"date": k, "count": v} for k, v in sorted(Counter(dates).items())]
 
     return {
         "kpi": {
             "total_users": total_users,
             "total_tokens": total_tokens,
-            "avg_tokens_per_user": int(total_tokens / total_users) if total_users > 0 else 0
+            "avg_tokens_per_user": (int(total_tokens / total_users) if total_users else 0),
         },
         "charts": {
-            "location_distribution": final_location_data,
+            "location_distribution": location_data,
             "top_users": top_users_data,
-            "registration_trend": trend_data
-        }
+            "registration_trend": trend_data,
+        },
     }
+
+
+@router.get("/dashboard")
+def get_dashboard_data(_user: User = Depends(get_current_user)) -> dict[str, Any]:
+    """Return cached analytics dashboard payload."""
+    return _build_dashboard()

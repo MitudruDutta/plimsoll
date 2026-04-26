@@ -2,11 +2,12 @@
 CrewAI Tools for Document Processing
 Tools for classifying documents, extracting metadata, and checking requirements
 """
-import logging
+
 import json
+import logging
 import re
-from datetime import datetime, date
-from typing import Optional, List, Dict, Any, ClassVar
+from datetime import date, datetime
+from typing import Any, ClassVar
 
 from modules.maritime.document_classifier import DOCUMENT_TYPES, classify_document_from_text
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Try to import CrewAI tools
 try:
     from crewai.tools import BaseTool
-    from pydantic import Field
+
     HAS_CREWAI = True
 except Exception as exc:
     HAS_CREWAI = False
@@ -68,18 +69,22 @@ if HAS_CREWAI:
                             matched_keywords.append(keyword)
 
                     if score > 0:
-                        matches.append({
-                            "document_type": doc_type,
-                            "score": score,
-                            "matched_keywords": matched_keywords
-                        })
+                        matches.append(
+                            {
+                                "document_type": doc_type,
+                                "score": score,
+                                "matched_keywords": matched_keywords,
+                            }
+                        )
 
                 # Sort by score descending
                 matches.sort(key=lambda x: x["score"], reverse=True)
 
                 if matches:
                     best_match = matches[0]
-                    confidence = min(best_match["score"] / len(DOCUMENT_TYPES[best_match["document_type"]]), 1.0)
+                    confidence = min(
+                        best_match["score"] / len(DOCUMENT_TYPES[best_match["document_type"]]), 1.0
+                    )
 
                     result = {
                         "classification": best_match["document_type"],
@@ -88,20 +93,21 @@ if HAS_CREWAI:
                         "alternative_matches": [
                             {"type": m["document_type"], "score": m["score"]}
                             for m in matches[1:3]  # Top 2 alternatives
-                        ]
+                        ],
                     }
                     return json.dumps(result, indent=2)
                 else:
-                    return json.dumps({
-                        "classification": "unknown",
-                        "confidence": 0.0,
-                        "message": "Could not classify document. No matching keywords found."
-                    })
+                    return json.dumps(
+                        {
+                            "classification": "unknown",
+                            "confidence": 0.0,
+                            "message": "Could not classify document. No matching keywords found.",
+                        }
+                    )
 
             except Exception as e:
                 logger.error(f"DocumentClassifierTool error: {e}")
                 return json.dumps({"error": str(e)})
-
 
     class MetadataExtractorTool(BaseTool):
         """Tool for extracting structured metadata from document text"""
@@ -124,7 +130,7 @@ if HAS_CREWAI:
         """
 
         # Regex patterns for field extraction
-        PATTERNS: ClassVar[Dict[str, List[str]]] = {
+        PATTERNS: ClassVar[dict[str, list[str]]] = {
             "document_number": [
                 r"(?:Certificate|Doc(?:ument)?)\s*(?:No\.?|Number|#)\s*[:.]?\s*([A-Z0-9\-/]+)",
                 r"(?:No\.?|Number)\s*[:.]?\s*([A-Z0-9\-/]{5,})",
@@ -176,8 +182,14 @@ if HAS_CREWAI:
                         try:
                             date_str = extracted[date_field]
                             # Try common date formats
-                            for fmt in ["%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y",
-                                       "%m/%d/%Y", "%Y-%m-%d", "%d/%m/%y"]:
+                            for fmt in [
+                                "%d/%m/%Y",
+                                "%d-%m-%Y",
+                                "%d.%m.%Y",
+                                "%m/%d/%Y",
+                                "%Y-%m-%d",
+                                "%d/%m/%y",
+                            ]:
                                 try:
                                     parsed = datetime.strptime(date_str, fmt)
                                     extracted[date_field] = parsed.strftime("%Y-%m-%d")
@@ -212,7 +224,11 @@ if HAS_CREWAI:
                 result = {
                     "extracted_fields": extracted,
                     "fields_found": len(extracted),
-                    "confidence": "high" if len(extracted) >= 4 else "medium" if len(extracted) >= 2 else "low"
+                    "confidence": "high"
+                    if len(extracted) >= 4
+                    else "medium"
+                    if len(extracted) >= 2
+                    else "low",
                 }
 
                 return json.dumps(result, indent=2)
@@ -220,7 +236,6 @@ if HAS_CREWAI:
             except Exception as e:
                 logger.error(f"MetadataExtractorTool error: {e}")
                 return json.dumps({"error": str(e)})
-
 
     class RequirementsLookupTool(BaseTool):
         """Tool for looking up document requirements based on context"""
@@ -237,12 +252,7 @@ if HAS_CREWAI:
         Returns a comprehensive list of required documents for the voyage.
         """
 
-        def _run(
-            self,
-            vessel_type: str,
-            flag_state: str,
-            port_codes_json: str
-        ) -> str:
+        def _run(self, vessel_type: str, flag_state: str, port_codes_json: str) -> str:
             """Look up document requirements"""
             try:
                 port_codes = json.loads(port_codes_json)
@@ -262,7 +272,7 @@ if HAS_CREWAI:
                                 "document_type": doc_type,
                                 "required_by_ports": [],
                                 "regulation_sources": set(),
-                                "description": doc.get("description", "")
+                                "description": doc.get("description", ""),
                             }
                         all_requirements[doc_type]["required_by_ports"].append(port_code)
                         all_requirements[doc_type]["regulation_sources"].add(
@@ -290,7 +300,7 @@ if HAS_CREWAI:
                             "document_type": cert,
                             "required_by_ports": ["ALL"],
                             "regulation_sources": {"IMO Conventions"},
-                            "description": "Mandatory for international voyages"
+                            "description": "Mandatory for international voyages",
                         }
 
                 # Format output
@@ -298,7 +308,7 @@ if HAS_CREWAI:
                     "vessel_context": {
                         "vessel_type": vessel_type,
                         "flag_state": flag_state,
-                        "ports": port_codes
+                        "ports": port_codes,
                     },
                     "total_required_documents": len(all_requirements),
                     "requirements": [
@@ -306,20 +316,19 @@ if HAS_CREWAI:
                             "document_type": req["document_type"],
                             "required_by_ports": req["required_by_ports"],
                             "regulation_sources": list(req["regulation_sources"]),
-                            "description": req["description"][:200] if req["description"] else ""
+                            "description": req["description"][:200] if req["description"] else "",
                         }
                         for req in all_requirements.values()
-                    ]
+                    ],
                 }
 
                 return json.dumps(result, indent=2)
 
             except json.JSONDecodeError as e:
-                return json.dumps({"error": f"Invalid JSON for port_codes: {str(e)}"})
+                return json.dumps({"error": f"Invalid JSON for port_codes: {e!s}"})
             except Exception as e:
                 logger.error(f"RequirementsLookupTool error: {e}")
                 return json.dumps({"error": str(e)})
-
 
     class SemanticDocumentMatchTool(BaseTool):
         """Batch semantic search: check all missing documents in one call"""
@@ -367,7 +376,11 @@ if HAS_CREWAI:
                 missing_types = json.loads(missing_documents_json)
                 if isinstance(missing_types, dict):
                     missing_types = missing_types.get("missing_documents", [])
-                if isinstance(missing_types, list) and missing_types and isinstance(missing_types[0], dict):
+                if (
+                    isinstance(missing_types, list)
+                    and missing_types
+                    and isinstance(missing_types[0], dict)
+                ):
                     missing_types = [d.get("document_type", "") for d in missing_types]
                 missing_types = [t for t in missing_types if t]
 
@@ -405,11 +418,13 @@ if HAS_CREWAI:
                     )
 
                     if not search_results:
-                        results_out.append({
-                            "document_type": doc_type_name,
-                            "matched": False,
-                            "reason": "no_stored_documents",
-                        })
+                        results_out.append(
+                            {
+                                "document_type": doc_type_name,
+                                "matched": False,
+                                "reason": "no_stored_documents",
+                            }
+                        )
                         continue
 
                     best = search_results[0]
@@ -422,7 +437,11 @@ if HAS_CREWAI:
                         stored_key = stored_type
                         if stored_key not in DOCUMENT_TYPES:
                             c = classify_document_from_text(stored_key)
-                            stored_key = c if c != "unknown" else stored_key.lower().replace(" ", "_").replace("'", "")
+                            stored_key = (
+                                c
+                                if c != "unknown"
+                                else stored_key.lower().replace(" ", "_").replace("'", "")
+                            )
                     else:
                         c = classify_document_from_text(stored_title)
                         stored_key = c if c != "unknown" else "other"
@@ -444,16 +463,18 @@ if HAS_CREWAI:
                     if is_match:
                         matched_count += 1
 
-                return json.dumps({
-                    "results": results_out,
-                    "matched_count": matched_count,
-                    "still_missing_count": len(missing_types) - matched_count,
-                }, indent=2)
+                return json.dumps(
+                    {
+                        "results": results_out,
+                        "matched_count": matched_count,
+                        "still_missing_count": len(missing_types) - matched_count,
+                    },
+                    indent=2,
+                )
 
             except Exception as e:
                 logger.error(f"SemanticDocumentMatchTool error: {e}")
                 return json.dumps({"error": str(e), "results": [], "matched_count": 0})
-
 
     class DocumentComparisonTool(BaseTool):
         """Tool for comparing user documents against requirements"""
@@ -476,11 +497,7 @@ if HAS_CREWAI:
         - Compliance score
         """
 
-        def _run(
-            self,
-            user_documents_json: str,
-            required_documents_json: str
-        ) -> str:
+        def _run(self, user_documents_json: str, required_documents_json: str) -> str:
             """Compare documents against requirements"""
             try:
                 user_docs = json.loads(user_documents_json)
@@ -488,9 +505,19 @@ if HAS_CREWAI:
 
                 # Normalize required_types: the LLM may pass a dict wrapper or list of dicts
                 if isinstance(required_types, dict):
-                    required_types = required_types.get("required_documents", required_types.get("requirements", []))
-                if isinstance(required_types, list) and required_types and isinstance(required_types[0], dict):
-                    required_types = [item.get("document_type", "") for item in required_types if isinstance(item, dict)]
+                    required_types = required_types.get(
+                        "required_documents", required_types.get("requirements", [])
+                    )
+                if (
+                    isinstance(required_types, list)
+                    and required_types
+                    and isinstance(required_types[0], dict)
+                ):
+                    required_types = [
+                        item.get("document_type", "")
+                        for item in required_types
+                        if isinstance(item, dict)
+                    ]
                 required_types = [t for t in required_types if t]
 
                 # Normalize required type names to canonical snake_case keys.
@@ -561,7 +588,7 @@ if HAS_CREWAI:
                                 "document_type": doc_type,
                                 "title": title,
                                 "expiry_date": expiry_str,
-                                "days_until_expiry": days_until
+                                "days_until_expiry": days_until,
                             }
 
                             if days_until < 0:
@@ -575,26 +602,30 @@ if HAS_CREWAI:
                                 valid_docs.append(doc_info)
                         except ValueError:
                             # Date parsing failed, assume valid
-                            valid_docs.append({
+                            valid_docs.append(
+                                {
+                                    "document_type": doc_type,
+                                    "title": title,
+                                    "status": "valid",
+                                    "note": "Could not parse expiry date",
+                                }
+                            )
+                    else:
+                        # No expiry date, assume valid
+                        valid_docs.append(
+                            {
                                 "document_type": doc_type,
                                 "title": title,
                                 "status": "valid",
-                                "note": "Could not parse expiry date"
-                            })
-                    else:
-                        # No expiry date, assume valid
-                        valid_docs.append({
-                            "document_type": doc_type,
-                            "title": title,
-                            "status": "valid",
-                            "note": "No expiry date"
-                        })
+                                "note": "No expiry date",
+                            }
+                        )
 
                 # Find missing documents
                 required_set = set(required_types)
-                valid_types = set(d["document_type"] for d in valid_docs)
-                expiring_types = set(d["document_type"] for d in expiring_soon_docs)
-                expired_types = set(d["document_type"] for d in expired_docs)
+                valid_types = {d["document_type"] for d in valid_docs}
+                expiring_types = {d["document_type"] for d in expiring_soon_docs}
+                {d["document_type"] for d in expired_docs}
 
                 missing_types = required_set - user_doc_types
                 missing_docs = [{"document_type": t, "status": "missing"} for t in missing_types]
@@ -615,7 +646,7 @@ if HAS_CREWAI:
                         "valid_documents": valid_docs,
                         "expiring_soon_documents": expiring_soon_docs,
                         "expired_documents": expired_docs,
-                        "missing_documents": missing_docs
+                        "missing_documents": missing_docs,
                     },
                     "summary": {
                         "total_required": total_required,
@@ -623,43 +654,49 @@ if HAS_CREWAI:
                         "expiring_soon_count": len(expiring_soon_docs),
                         "expired_count": len(expired_docs),
                         "missing_count": len(missing_docs),
-                        "compliance_score": round(score, 1)
+                        "compliance_score": round(score, 1),
                     },
-                    "recommendations": []
+                    "recommendations": [],
                 }
 
                 # Generate recommendations
                 if expired_docs:
-                    result["recommendations"].append({
-                        "priority": "critical",
-                        "action": f"Renew {len(expired_docs)} expired document(s) immediately",
-                        "documents": [d["document_type"] for d in expired_docs]
-                    })
+                    result["recommendations"].append(
+                        {
+                            "priority": "critical",
+                            "action": f"Renew {len(expired_docs)} expired document(s) immediately",
+                            "documents": [d["document_type"] for d in expired_docs],
+                        }
+                    )
 
                 if expiring_soon_docs:
-                    result["recommendations"].append({
-                        "priority": "high",
-                        "action": f"Schedule renewal for {len(expiring_soon_docs)} document(s) expiring within 30 days",
-                        "documents": [d["document_type"] for d in expiring_soon_docs]
-                    })
+                    result["recommendations"].append(
+                        {
+                            "priority": "high",
+                            "action": f"Schedule renewal for {len(expiring_soon_docs)} document(s) expiring within 30 days",
+                            "documents": [d["document_type"] for d in expiring_soon_docs],
+                        }
+                    )
 
                 if missing_docs:
-                    result["recommendations"].append({
-                        "priority": "critical",
-                        "action": f"Obtain {len(missing_docs)} missing document(s)",
-                        "documents": [d["document_type"] for d in missing_docs]
-                    })
+                    result["recommendations"].append(
+                        {
+                            "priority": "critical",
+                            "action": f"Obtain {len(missing_docs)} missing document(s)",
+                            "documents": [d["document_type"] for d in missing_docs],
+                        }
+                    )
 
                 return json.dumps(result, indent=2)
 
             except json.JSONDecodeError as e:
-                return json.dumps({"error": f"Invalid JSON input: {str(e)}"})
+                return json.dumps({"error": f"Invalid JSON input: {e!s}"})
             except Exception as e:
                 logger.error(f"DocumentComparisonTool error: {e}")
                 return json.dumps({"error": str(e)})
 
 
-def get_document_tools() -> List[Any]:
+def get_document_tools() -> list[Any]:
     """Get list of all document processing tools for CrewAI"""
     if not HAS_CREWAI:
         logger.warning("CrewAI not available. Returning empty tools list.")

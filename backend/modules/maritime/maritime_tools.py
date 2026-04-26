@@ -2,16 +2,17 @@
 Custom CrewAI Tools for Maritime Compliance
 Tools for querying maritime regulations, port info, and documents
 """
-import logging
+
 import json
-from typing import Optional, List, Dict, Any
+import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # Try to import CrewAI tools
 try:
     from crewai.tools import BaseTool
-    from pydantic import Field
+
     HAS_CREWAI = True
 except Exception as exc:
     HAS_CREWAI = False
@@ -28,7 +29,6 @@ except Exception as exc:
 
 if HAS_CREWAI:
     from modules.maritime.maritime_knowledge_base import get_maritime_knowledge_base
-    from modules.maritime.compliance_service import ComplianceService
 
     class MaritimeRAGTool(BaseTool):
         """Tool for querying maritime regulations knowledge base"""
@@ -56,11 +56,11 @@ if HAS_CREWAI:
         def _run(
             self,
             query: str,
-            port_code: Optional[str] = None,
-            region: Optional[str] = None,
-            regulation_type: Optional[str] = None,
-            vessel_type: Optional[str] = None,
-            top_k: int = 5
+            port_code: str | None = None,
+            region: str | None = None,
+            regulation_type: str | None = None,
+            vessel_type: str | None = None,
+            top_k: int = 5,
         ) -> str:
             """Execute the search"""
             try:
@@ -79,9 +79,7 @@ if HAS_CREWAI:
 
                 # Search
                 results = kb.search_general(
-                    query=query,
-                    filters=filters if filters else None,
-                    top_k=top_k
+                    query=query, filters=filters if filters else None, top_k=top_k
                 )
 
                 if not results:
@@ -95,8 +93,11 @@ if HAS_CREWAI:
                     output_lines.append(f"[{i}] Source: {source}")
                     output_lines.append(f"    Content: {result.content[:300]}...")
                     if result.metadata:
-                        meta_str = ", ".join(f"{k}={v}" for k, v in result.metadata.items()
-                                             if k not in ["source_convention"])
+                        meta_str = ", ".join(
+                            f"{k}={v}"
+                            for k, v in result.metadata.items()
+                            if k not in ["source_convention"]
+                        )
                         if meta_str:
                             output_lines.append(f"    Metadata: {meta_str}")
                     output_lines.append("")
@@ -105,8 +106,7 @@ if HAS_CREWAI:
 
             except Exception as e:
                 logger.error(f"MaritimeRAGTool error: {e}")
-                return f"Error searching regulations: {str(e)}"
-
+                return f"Error searching regulations: {e!s}"
 
     class PortInfoTool(BaseTool):
         """Tool for getting port information and requirements"""
@@ -124,26 +124,19 @@ if HAS_CREWAI:
         Optional: vessel_type to filter applicable requirements
         """
 
-        def _run(
-            self,
-            port_code: str,
-            vessel_type: Optional[str] = None
-        ) -> str:
+        def _run(self, port_code: str, vessel_type: str | None = None) -> str:
             """Get port information"""
             try:
                 kb = get_maritime_knowledge_base()
 
                 # Search for port-specific info
                 port_results = kb.search_by_port(
-                    port_code=port_code,
-                    vessel_type=vessel_type,
-                    top_k=10
+                    port_code=port_code, vessel_type=vessel_type, top_k=10
                 )
 
                 # Get required documents
                 required_docs = kb.search_required_documents(
-                    port_code=port_code,
-                    vessel_type=vessel_type or "container"
+                    port_code=port_code, vessel_type=vessel_type or "container"
                 )
 
                 # Format output
@@ -155,7 +148,9 @@ if HAS_CREWAI:
                 if port_results:
                     for result in port_results[:5]:
                         output_lines.append(f"- {result.content[:200]}...")
-                        output_lines.append(f"  (Source: {result.metadata.get('source', result.source)})")
+                        output_lines.append(
+                            f"  (Source: {result.metadata.get('source', result.source)})"
+                        )
                 else:
                     output_lines.append("- No specific regulations found in database")
 
@@ -163,8 +158,12 @@ if HAS_CREWAI:
                 output_lines.append("\nREQUIRED DOCUMENTS:")
                 if required_docs:
                     for doc in required_docs[:10]:
-                        output_lines.append(f"- {doc['document_type']}: {doc.get('description', '')[:100]}")
-                        output_lines.append(f"  (Regulation: {doc.get('regulation_source', 'Unknown')})")
+                        output_lines.append(
+                            f"- {doc['document_type']}: {doc.get('description', '')[:100]}"
+                        )
+                        output_lines.append(
+                            f"  (Regulation: {doc.get('regulation_source', 'Unknown')})"
+                        )
                 else:
                     output_lines.append("- Standard SOLAS/MARPOL certificates required")
 
@@ -172,8 +171,7 @@ if HAS_CREWAI:
 
             except Exception as e:
                 logger.error(f"PortInfoTool error: {e}")
-                return f"Error getting port info: {str(e)}"
-
+                return f"Error getting port info: {e!s}"
 
     class DocumentCheckTool(BaseTool):
         """Tool for checking document compliance"""
@@ -188,11 +186,7 @@ if HAS_CREWAI:
         Returns comparison showing which documents are available, missing, or expired.
         """
 
-        def _run(
-            self,
-            vessel_documents_json: str,
-            required_documents_json: str
-        ) -> str:
+        def _run(self, vessel_documents_json: str, required_documents_json: str) -> str:
             """Check documents against requirements"""
             try:
                 vessel_docs = json.loads(vessel_documents_json)
@@ -243,11 +237,10 @@ if HAS_CREWAI:
                 return "\n".join(output_lines)
 
             except json.JSONDecodeError as e:
-                return f"Error parsing JSON input: {str(e)}"
+                return f"Error parsing JSON input: {e!s}"
             except Exception as e:
                 logger.error(f"DocumentCheckTool error: {e}")
-                return f"Error checking documents: {str(e)}"
-
+                return f"Error checking documents: {e!s}"
 
     class RouteAnalysisTool(BaseTool):
         """Tool for analyzing route compliance"""
@@ -263,11 +256,7 @@ if HAS_CREWAI:
         Returns analysis of requirements for each port on the route.
         """
 
-        def _run(
-            self,
-            route_ports_json: str,
-            vessel_type: str = "container"
-        ) -> str:
+        def _run(self, route_ports_json: str, vessel_type: str = "container") -> str:
             """Analyze route compliance"""
             try:
                 port_codes = json.loads(route_ports_json)
@@ -300,7 +289,7 @@ if HAS_CREWAI:
                         output_lines.append("Required Documents:")
                         for doc in required_docs[:5]:
                             output_lines.append(f"  - {doc['document_type']}")
-                            all_requirements.add(doc['document_type'])
+                            all_requirements.add(doc["document_type"])
 
                 # Summary of all unique requirements
                 output_lines.append("\n" + "=" * 50)
@@ -312,13 +301,13 @@ if HAS_CREWAI:
                 return "\n".join(output_lines)
 
             except json.JSONDecodeError as e:
-                return f"Error parsing route ports JSON: {str(e)}"
+                return f"Error parsing route ports JSON: {e!s}"
             except Exception as e:
                 logger.error(f"RouteAnalysisTool error: {e}")
-                return f"Error analyzing route: {str(e)}"
+                return f"Error analyzing route: {e!s}"
 
 
-def get_maritime_tools() -> List[Any]:
+def get_maritime_tools() -> list[Any]:
     """Get list of all maritime tools for CrewAI"""
     if not HAS_CREWAI:
         logger.warning("CrewAI not available. Returning empty tools list.")
