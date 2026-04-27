@@ -1,3 +1,4 @@
+"use client";
 // @ts-nocheck
 /**
  * RAGSourceCard - RAG Knowledge Source Display

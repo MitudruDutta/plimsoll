@@ -1,5 +1,5 @@
-// @ts-nocheck
 "use client";
+// @ts-nocheck
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { DemoStartScreen } from '@/components/DemoStartScreen';

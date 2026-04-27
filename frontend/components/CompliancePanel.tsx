@@ -1,3 +1,4 @@
+"use client";
 // @ts-nocheck
 /**
  * CompliancePanel - Sidebar-optimized compliance analysis panel

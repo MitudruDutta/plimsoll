@@ -1,5 +1,5 @@
-// @ts-nocheck
 "use client";
+// @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import { Table, Tag, Space, Typography, Card, Statistic, Row, Col, Spin, message, Tooltip as AntTooltip } from 'antd';
 import { useCurrentUser } from '@/context/SupabaseAuthContext';
@@ -161,7 +161,7 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div style={{ padding: '32px', background: '#f5f5f7', minHeight: '100vh' }}>
       <div style={{ marginBottom: 16 }}>
-        <ModeBanner message="Admin telemetry is demo-only until /api/admin/stats and /api/admin/performance ship in v1.x." />
+        <ModeBanner mode="demo" message="Admin telemetry is demo-only until /api/admin/stats and /api/admin/performance ship in v1.x." />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
         <div>

@@ -1,3 +1,4 @@
+"use client";
 // @ts-nocheck
 /**
  * ReasoningStep - Single CoT Reasoning Step Display

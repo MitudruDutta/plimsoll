@@ -1,5 +1,5 @@
-// @ts-nocheck
 "use client";
+// @ts-nocheck
 import * as React from 'react';
 import { useState, useCallback, useEffect } from 'react';
 import { useCurrentUser } from '@/context/SupabaseAuthContext';

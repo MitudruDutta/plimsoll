@@ -1,3 +1,4 @@
+"use client";
 // @ts-nocheck
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DeckGL from '@deck.gl/react';

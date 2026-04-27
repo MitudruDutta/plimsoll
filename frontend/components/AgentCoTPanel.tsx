@@ -1,3 +1,4 @@
+"use client";
 // @ts-nocheck
 ﻿/**
  * AgentCoTPanel - Agent Chain-of-Thought Main Panel

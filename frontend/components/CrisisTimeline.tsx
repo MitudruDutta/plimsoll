@@ -1,3 +1,4 @@
+"use client";
 // @ts-nocheck
 import { motion, AnimatePresence } from 'motion/react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
