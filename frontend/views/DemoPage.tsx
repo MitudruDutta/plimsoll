@@ -719,45 +719,54 @@ export const DemoPage: React.FC = () => {
       setSubtitle(`${origin?.name} → ${destination?.name} · T+${currentTime.toFixed(0)}s · ${scenarioPhase}`);
 
       setExtraContent(
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {isCotActive && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#4a90e2]/20 border border-[#4a90e2]/30 rounded-sm animate-pulse">
-              <Brain className="w-3.5 h-3.5 text-[#4a90e2]" />
-              <span className="text-xs text-[#4a90e2] font-medium">CoT Active</span>
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-[rgba(37,99,235,0.32)] bg-[rgba(37,99,235,0.10)] animate-pulse">
+              <Brain className="w-3.5 h-3.5 text-[#1d4ed8]" strokeWidth={2.2} />
+              <span className="text-[11.5px] font-semibold tracking-[-0.005em] text-[#1d4ed8]">CoT Active</span>
             </div>
           )}
 
           <button
             onClick={() => setIsChangingRoute(true)}
-            style={{ background: '#1a2332', border: '1px solid #2d3a4f', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
-            className="px-3 py-1.5 rounded-sm transition-all flex items-center gap-2 hover:bg-[#2d3a4f]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line-strong)] bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[var(--text-hi)] shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_8px_18px_-12px_rgba(15,23,42,0.35)] transition-all hover:-translate-y-px hover:border-[rgba(37,99,235,0.45)] hover:text-[var(--accent-3)]"
           >
-            <RefreshCw className="w-4 h-4" strokeWidth={2} style={{ color: '#ffffff' }} />
+            <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.2} />
             Change Route
           </button>
 
-          <div className="flex items-center gap-1 bg-[#1a2332] border border-[#2d3a4f] rounded-sm p-1">
+          <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line-strong)] bg-white p-0.5 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_8px_18px_-12px_rgba(15,23,42,0.35)]">
             <button
               onClick={() => setIs3D(false)}
-              style={{ background: !is3D ? '#0078d4' : 'transparent', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
-              className="px-3 py-1.5 rounded-sm transition-all flex items-center gap-2"
+              aria-pressed={!is3D}
+              className={
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold transition-all ' +
+                (!is3D
+                  ? 'bg-[var(--accent-2)] text-white shadow-[0_4px_12px_-4px_rgba(37,99,235,0.55)]'
+                  : 'text-[var(--text-mid)] hover:text-[var(--text-hi)]')
+              }
             >
-              <Map className="w-4 h-4" strokeWidth={2} style={{ color: '#ffffff' }} />
+              <Map className="w-3.5 h-3.5" strokeWidth={2.2} />
               2D
             </button>
             <button
               onClick={() => setIs3D(true)}
-              style={{ background: is3D ? '#0078d4' : 'transparent', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
-              className="px-3 py-1.5 rounded-sm transition-all flex items-center gap-2"
+              aria-pressed={is3D}
+              className={
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold transition-all ' +
+                (is3D
+                  ? 'bg-[var(--accent-2)] text-white shadow-[0_4px_12px_-4px_rgba(37,99,235,0.55)]'
+                  : 'text-[var(--text-mid)] hover:text-[var(--text-hi)]')
+              }
             >
-              <Globe className="w-4 h-4" strokeWidth={2} style={{ color: '#ffffff' }} />
+              <Globe className="w-3.5 h-3.5" strokeWidth={2.2} />
               3D
             </button>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1a4a3a] border border-[#2d5a4a] rounded-sm">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] animate-pulse" />
-            <span className="text-xs text-[#4ade80] font-semibold">System Running</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(22,163,74,0.30)] bg-[rgba(22,163,74,0.10)] px-3 py-1.5">
+            <span className="size-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+            <span className="text-[11.5px] font-semibold text-[#15803d]">System Running</span>
           </div>
         </div>
       );
@@ -770,7 +779,7 @@ export const DemoPage: React.FC = () => {
   }
 
   return (
-    <div className="demo-page h-screen max-h-screen bg-[var(--bg-0)] text-white overflow-hidden flex flex-col">
+    <div className="demo-page h-screen max-h-screen bg-[#eef3fa] text-[var(--text-hi)] overflow-hidden flex flex-col">
       {/* Page-scoped typography reset to avoid global base button/label styles affecting alignment */}
       <style>{`
         .demo-page button { font-size: 0.75rem; line-height: 1rem; }
@@ -826,10 +835,10 @@ export const DemoPage: React.FC = () => {
 
           {/* Resize Handle for Bottom Panel */}
           <div
-            className="h-1 cursor-row-resize hover:bg-[#4a90e2] transition-colors z-10 group flex items-center justify-center relative"
+            className="h-1.5 cursor-row-resize transition-colors z-10 group flex items-center justify-center relative bg-[var(--line)]"
             onMouseDown={handleBottomMouseDown}
           >
-            <div className="w-16 h-1 bg-[#1a2332] group-hover:bg-[#4a90e2] rounded-full transition-colors" />
+            <div className="w-16 h-1 bg-[var(--line-strong)] group-hover:bg-[var(--accent-2)] rounded-full transition-colors" />
 
             {/* Bottom Collapse Button */}
             <button
@@ -837,15 +846,16 @@ export const DemoPage: React.FC = () => {
                 e.stopPropagation(); // Prevent drag start
                 setIsBottomCollapsed(!isBottomCollapsed);
               }}
-              className="absolute right-4 -top-3 w-6 h-4 bg-[#1a2332] rounded-t-sm flex items-center justify-center hover:bg-[#4a90e2] transition-colors z-20 group border border-b-0 border-[#white]/10"
+              aria-label={isBottomCollapsed ? 'Expand timeline' : 'Collapse timeline'}
+              className="absolute right-4 -top-3 w-7 h-5 bg-white rounded-t-md flex items-center justify-center text-[var(--text-mid)] hover:text-[var(--accent-3)] hover:bg-white transition-colors z-20 border border-b-0 border-[var(--line-strong)] shadow-[0_-4px_10px_-6px_rgba(15,23,42,0.18)]"
             >
-              {isBottomCollapsed ? <ChevronUp className="w-3 h-3 text-white/60 group-hover:text-white" /> : <ChevronDown className="w-3 h-3 text-white/60 group-hover:text-white" />}
+              {isBottomCollapsed ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
           </div>
 
           {/* Timeline */}
           <div
-            className="shrink-0 transition-all duration-300 ease-in-out border-t border-[#1a2332]"
+            className="shrink-0 transition-all duration-300 ease-in-out border-t border-[var(--line)] bg-white"
             style={{
               height: isBottomCollapsed ? 0 : bottomHeight,
               overflow: 'hidden'
@@ -862,57 +872,65 @@ export const DemoPage: React.FC = () => {
 
         {/* Resizable Right Sidebar */}
         <div
-          className="bg-[var(--bg-0)] border-l border-[#1a2332] flex flex-col overflow-hidden relative transition-[width] duration-300 ease-in-out"
-          style={{ width: isRightCollapsed ? 24 : sidebarWidth }}
+          className="bg-white border-l border-[var(--line)] flex flex-col overflow-hidden relative transition-[width] duration-300 ease-in-out shadow-[-12px_0_28px_-22px_rgba(15,23,42,0.35)]"
+          style={{ width: isRightCollapsed ? 28 : sidebarWidth }}
         >
           {/* Resize Handle */}
           {!isRightCollapsed && (
             <div
-              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#4a90e2] transition-colors z-10 group"
+              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize transition-colors z-10 group"
               onMouseDown={handleMouseDown}
             >
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-[#1a2332] group-hover:bg-[#4a90e2] rounded-full transition-colors" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-[var(--line-strong)] group-hover:bg-[var(--accent-2)] rounded-full transition-colors" />
             </div>
           )}
 
           {/* Right Collapse Button */}
           <button
             onClick={() => setIsRightCollapsed(!isRightCollapsed)}
-            className="absolute left-0 top-2 z-20 w-6 h-6 flex items-center justify-center bg-[#1a2332] hover:bg-[#4a90e2] transition-colors rounded-r-sm"
+            aria-label={isRightCollapsed ? 'Expand intelligence panel' : 'Collapse intelligence panel'}
+            className="absolute left-0 top-3 z-20 w-7 h-7 flex items-center justify-center bg-white hover:bg-[rgba(37,99,235,0.08)] text-[var(--text-mid)] hover:text-[var(--accent-3)] transition-colors rounded-r-md border border-l-0 border-[var(--line-strong)] shadow-[0_4px_12px_-6px_rgba(15,23,42,0.25)]"
           >
-            {isRightCollapsed ? <ChevronLeft className="w-3 h-3 text-white/60" /> : <ChevronRight className="w-3 h-3 text-white/60" />}
+            {isRightCollapsed ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           </button>
 
           <div className={`flex-1 flex flex-col overflow-hidden transition-opacity duration-200 ${isRightCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
 
             {/* Tab Bar */}
-            <div className="flex border-b border-[#1a2332] shrink-0 bg-[#0d1422]">
+            <div className="flex border-b border-[var(--line)] shrink-0 bg-[#f7f9fc]">
               {([
                 { id: 'intelligence' as const, label: 'AI', icon: <Brain className="w-3.5 h-3.5" /> },
                 { id: 'agents' as const, label: 'Agents', icon: <Activity className="w-3.5 h-3.5" /> },
                 { id: 'risk' as const, label: 'Risk', icon: <Eye className="w-3.5 h-3.5" /> },
                 { id: 'compliance' as const, label: 'Comply', icon: <Shield className="w-3.5 h-3.5" /> },
-              ]).map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSidebarTab(tab.id)}
-                  className="flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium transition-all relative"
-                  style={{
-                    color: sidebarTab === tab.id ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
-                    background: sidebarTab === tab.id ? SIDEBAR_TAB_THEME[tab.id].activeBg : 'transparent',
-                    boxShadow: sidebarTab === tab.id ? `inset 0 0 0 1px ${SIDEBAR_TAB_THEME[tab.id].border}` : 'none'
-                  }}
-                >
-                  {tab.icon}
-                  <span>{tab.label}</span>
-                  {sidebarTab === tab.id && (
-                    <div
-                      className="absolute bottom-0 inset-x-2 h-[2px] rounded-full"
-                      style={{ background: SIDEBAR_TAB_THEME[tab.id].accent }}
-                    />
-                  )}
-                </button>
-              ))}
+              ]).map((tab) => {
+                const active = sidebarTab === tab.id;
+                const accent = SIDEBAR_TAB_THEME[tab.id].accent;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSidebarTab(tab.id)}
+                    aria-pressed={active}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-1 py-2.5 text-[11.5px] font-semibold tracking-[-0.005em] transition-all relative"
+                    style={{
+                      color: active ? '#0b1220' : '#64748b',
+                      background: active ? '#ffffff' : 'transparent',
+                      boxShadow: active
+                        ? `inset 0 1px 0 rgba(15,23,42,0.04), 0 -1px 0 ${accent} inset`
+                        : 'none',
+                    }}
+                  >
+                    <span style={{ color: active ? accent : 'currentColor' }}>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                    {active && (
+                      <div
+                        className="absolute bottom-[-1px] inset-x-2 h-[2px] rounded-full"
+                        style={{ background: accent }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Tab Content */}
@@ -971,12 +989,12 @@ export const DemoPage: React.FC = () => {
               )}
               {sidebarTab === 'compliance' && (
                 <div className="p-3">
-                  <div className="mb-3 flex items-center justify-between rounded-sm border border-[#4c3a15] bg-[#1f1a12] px-3 py-2">
+                  <div className="mb-3 flex items-center justify-between rounded-lg border border-[rgba(217,119,6,0.30)] bg-[rgba(254,243,199,0.55)] px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <Shield className="h-3.5 w-3.5 text-[#f59e0b]" />
-                      <span className="text-xs font-semibold tracking-wide text-[#fbbf24]">Compliance Check</span>
+                      <Shield className="h-3.5 w-3.5 text-[var(--warn)]" />
+                      <span className="text-xs font-semibold tracking-[-0.005em] text-[#92400e]">Compliance Check</span>
                     </div>
-                    <div className="rounded-full border border-[#3f3420] bg-[#2b2418] px-2 py-0.5 text-[10px] font-medium text-[#fde68a]">
+                    <div className="rounded-full border border-[rgba(217,119,6,0.40)] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#b45309]">
                       Policy Guard
                     </div>
                   </div>
@@ -992,9 +1010,9 @@ export const DemoPage: React.FC = () => {
 
           {/* Collapsed Text */}
           {isRightCollapsed && (
-            <div className="absolute top-10 w-full flex flex-col items-center gap-4 py-4">
-              <div className="[writing-mode:vertical-rl] rotate-180 text-xs font-medium text-white/40 tracking-wider whitespace-nowrap">
-                INTELLIGENCE
+            <div className="absolute top-12 w-full flex flex-col items-center gap-4 py-4">
+              <div className="[writing-mode:vertical-rl] rotate-180 text-[10.5px] font-mono uppercase tracking-[0.18em] text-[var(--text-mid)] whitespace-nowrap">
+                Intelligence
               </div>
             </div>
           )}
@@ -1003,46 +1021,46 @@ export const DemoPage: React.FC = () => {
 
       {/* Keyboard Shortcuts Help Modal */}
       {showKeyboardHelp && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.45)] backdrop-blur-sm"
           onClick={() => setShowKeyboardHelp(false)}
         >
-          <div 
-            className="bg-[#0f1621] border border-[#1a2332] rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl"
+          <div
+            className="bg-white border border-[var(--line)] rounded-2xl p-6 max-w-md w-full mx-4 shadow-[0_24px_60px_-20px_rgba(15,23,42,0.35)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#4a90e2]/20 flex items-center justify-center">
-                  <Keyboard className="w-4 h-4 text-[#4a90e2]" />
+                <div className="w-9 h-9 rounded-xl bg-[rgba(37,99,235,0.10)] border border-[rgba(37,99,235,0.20)] flex items-center justify-center">
+                  <Keyboard className="w-4 h-4 text-[var(--accent-3)]" />
                 </div>
-                <h2 className="text-lg font-semibold text-white">Keyboard Shortcuts</h2>
+                <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-[var(--text-hi)]">Keyboard Shortcuts</h2>
               </div>
               <button
                 onClick={() => setShowKeyboardHelp(false)}
-                className="w-8 h-8 rounded-lg bg-[#1a2332] hover:bg-[#252f42] flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                className="w-8 h-8 rounded-lg bg-[var(--bg-1)] hover:bg-[rgba(37,99,235,0.10)] flex items-center justify-center text-[var(--text-mid)] hover:text-[var(--accent-3)] transition-colors"
                 aria-label="Close keyboard shortcuts"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
-            <div className="space-y-3">
-              {KEYBOARD_SHORTCUTS.map((shortcut, index) => (
-                <div 
+
+            <div className="space-y-1">
+              {KEYBOARD_SHORTCUTS.map((shortcut) => (
+                <div
                   key={shortcut.key}
-                  className="flex items-center justify-between py-2 border-b border-[#1a2332] last:border-0"
+                  className="flex items-center justify-between py-2.5 border-b border-[var(--line)] last:border-0"
                 >
-                  <span className="text-sm text-white/70">{shortcut.action}</span>
-                  <kbd className="px-2 py-1 bg-[#1a2332] rounded text-xs font-mono text-[#4a90e2] border border-[#2a3342]">
+                  <span className="text-[13.5px] text-[var(--text-mid)]">{shortcut.action}</span>
+                  <kbd className="px-2 py-1 bg-[var(--bg-1)] rounded text-[11px] font-mono text-[var(--accent-3)] border border-[var(--line-strong)]">
                     {shortcut.label}
                   </kbd>
                 </div>
               ))}
             </div>
-            
-            <p className="mt-4 text-xs text-white/40 text-center">
-              Press <kbd className="px-1 py-0.5 bg-[#1a2332] rounded text-[10px] font-mono">?</kbd> anytime to show this help
+
+            <p className="mt-4 text-xs text-[var(--text-low)] text-center">
+              Press <kbd className="px-1 py-0.5 bg-[var(--bg-1)] rounded text-[10px] font-mono border border-[var(--line)]">?</kbd> anytime to show this help
             </p>
           </div>
         </div>
@@ -1053,12 +1071,12 @@ export const DemoPage: React.FC = () => {
         <div className="fixed bottom-4 right-4 z-40">
           <button
             onClick={() => setShowKeyboardHelp(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-[#1a2332]/80 hover:bg-[#252f42] border border-[#2a3342] rounded-lg text-xs text-white/60 hover:text-white transition-colors backdrop-blur-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-white/90 hover:bg-white border border-[var(--line-strong)] rounded-full text-[12px] font-medium text-[var(--text-mid)] hover:text-[var(--accent-3)] transition-colors backdrop-blur-md shadow-[0_6px_18px_-8px_rgba(15,23,42,0.25)]"
             aria-label="Show keyboard shortcuts"
           >
             <Keyboard className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Press</span>
-            <kbd className="px-1.5 py-0.5 bg-[#0f1621] rounded text-[10px] font-mono">?</kbd>
+            <kbd className="px-1.5 py-0.5 bg-[var(--bg-1)] rounded text-[10px] font-mono border border-[var(--line)]">?</kbd>
             <span className="hidden sm:inline">for shortcuts</span>
           </button>
         </div>

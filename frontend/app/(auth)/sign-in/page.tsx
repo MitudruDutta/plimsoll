@@ -106,7 +106,7 @@ export function SignInPage() {
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1100px] flex-col items-center justify-center px-6 py-16">
         <Link
-          href="/pay"
+          href="/"
           className="mb-10 flex items-center gap-3 transition-opacity hover:opacity-80"
         >
           <PlimsollMark size={28} />

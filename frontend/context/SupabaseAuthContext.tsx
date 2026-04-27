@@ -12,6 +12,7 @@ import type { Session, User } from "@supabase/supabase-js";
 
 import { getSupabaseClient, supabaseConfigured } from "../services/supabaseClient";
 import { setApiAuthToken } from "../services/api";
+import { setApiAccessToken } from "../services/apiClient";
 import { setDocumentAuthToken } from "../services/documentApi";
 
 export interface SupabaseAuthValue {
@@ -48,10 +49,16 @@ export const SupabaseAuthProvider: React.FC<React.PropsWithChildren> = ({
   // so all REST calls carry an `Authorization: Bearer <jwt>` header
   // that the FastAPI backend's Supabase verifier accepts.
   useEffect(() => {
+    // Wait until Supabase has had a chance to rehydrate the persisted
+    // session before we clear the cached access token. Otherwise we'd
+    // wipe a perfectly good token in the millisecond between mount and
+    // `getSession()` resolving, and any in-flight demo button would 401.
+    if (!isLoaded) return;
     const token = session?.access_token ?? null;
     setApiAuthToken(token);
+    setApiAccessToken(token);
     setDocumentAuthToken(token);
-  }, [session?.access_token]);
+  }, [isLoaded, session?.access_token]);
 
   useEffect(() => {
     if (!supabaseConfigured) return;

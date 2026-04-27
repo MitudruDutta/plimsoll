@@ -4,8 +4,9 @@
  * Provides functions to interact with the Financial Hedging backend API
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
-const HEDGE_BASE_URL = `${API_BASE_URL}/hedge`;
+import { apiRequest, getApiBaseUrl } from "./apiClient";
+
+const HEDGE_BASE_URL = `${getApiBaseUrl()}/hedge`;
 
 // ========== Request Models ==========
 
@@ -108,20 +109,12 @@ export const DEFAULT_OPERATION_PARAMS: HedgeOperationParams = {
  * Assess financial risk exposure
  */
 export async function assessRisk(
-  params: HedgeOperationParams = DEFAULT_OPERATION_PARAMS
+  params: HedgeOperationParams = DEFAULT_OPERATION_PARAMS,
 ): Promise<RiskAssessment> {
-  const response = await fetch(`${HEDGE_BASE_URL}/assess-risk`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+  return apiRequest<RiskAssessment>(`${HEDGE_BASE_URL}/assess-risk`, {
+    method: "POST",
+    json: params,
   });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Risk assessment failed');
-  }
-
-  return response.json();
 }
 
 /**
@@ -129,77 +122,45 @@ export async function assessRisk(
  */
 export async function recommendStrategy(
   params: HedgeOperationParams = DEFAULT_OPERATION_PARAMS,
-  crisisOverride: boolean = false
+  crisisOverride: boolean = false,
 ): Promise<HedgeRecommendation> {
-  const url = new URL(`${HEDGE_BASE_URL}/recommend`);
-  if (crisisOverride) {
-    url.searchParams.set('crisis_override', 'true');
-  }
-
-  const response = await fetch(url.toString(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+  return apiRequest<HedgeRecommendation>(`${HEDGE_BASE_URL}/recommend`, {
+    method: "POST",
+    json: params,
+    searchParams: crisisOverride ? { crisis_override: "true" } : undefined,
   });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Strategy recommendation failed');
-  }
-
-  return response.json();
 }
 
 /**
  * Activate emergency crisis hedging protocol
  */
 export async function activateCrisisHedging(
-  request: CrisisActivationRequest
+  request: CrisisActivationRequest,
 ): Promise<CrisisActivationResponse> {
-  const response = await fetch(`${HEDGE_BASE_URL}/crisis-activate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
+  return apiRequest<CrisisActivationResponse>(`${HEDGE_BASE_URL}/crisis-activate`, {
+    method: "POST",
+    json: request,
   });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Crisis activation failed');
-  }
-
-  return response.json();
 }
 
 /**
  * Get current market data for all asset classes
  */
 export async function getMarketData(
-  crisisScenario?: string
+  crisisScenario?: string,
 ): Promise<MarketDataResponse> {
-  const url = new URL(`${HEDGE_BASE_URL}/market-data`);
-  if (crisisScenario) {
-    url.searchParams.set('crisis_scenario', crisisScenario);
-  }
-
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Market data retrieval failed');
-  }
-
-  return response.json();
+  return apiRequest<MarketDataResponse>(`${HEDGE_BASE_URL}/market-data`, {
+    method: "GET",
+    searchParams: crisisScenario ? { crisis_scenario: crisisScenario } : undefined,
+  });
 }
 
 /**
  * Check health status of hedging module
  */
 export async function checkHedgeHealth(): Promise<HedgeHealthResponse> {
-  const response = await fetch(`${HEDGE_BASE_URL}/health`);
-
-  if (!response.ok) {
-    throw new Error(`Hedge health check failed: ${response.statusText}`);
-  }
-
-  return response.json();
+  return apiRequest<HedgeHealthResponse>(`${HEDGE_BASE_URL}/health`, {
+    method: "GET",
+    requireAuth: false,
+  });
 }

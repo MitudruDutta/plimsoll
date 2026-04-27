@@ -22,11 +22,11 @@ import { RAGSourceCard } from './RAGSourceCard';
 
 // Agent configuration
 const AGENT_CONFIG: Record<string, { icon: LucideIcon; color: string; name: string }> = {
-  market_sentinel: { icon: AlertTriangle, color: '#c94444', name: 'Market Sentinel' },
-  risk_hedger: { icon: TrendingUp, color: '#c9a227', name: 'Risk Hedger' },
-  logistics: { icon: Package, color: '#4a90e2', name: 'Logistics' },
-  compliance: { icon: Shield, color: '#5a9a7a', name: 'Compliance' },
-  adversarial: { icon: GitBranch, color: '#9b59b6', name: 'Adversarial' },
+  market_sentinel: { icon: AlertTriangle, color: '#dc2626', name: 'Market Sentinel' },
+  risk_hedger: { icon: TrendingUp, color: '#d97706', name: 'Risk Hedger' },
+  logistics: { icon: Package, color: '#2563eb', name: 'Logistics' },
+  compliance: { icon: Shield, color: '#16a34a', name: 'Compliance' },
+  adversarial: { icon: GitBranch, color: '#7c3aed', name: 'Adversarial' },
 };
 
 interface RAGSource {
@@ -71,13 +71,13 @@ export function DebateView({
   const DefenderIcon = defenderConfig.icon;
 
   return (
-    <div className="bg-[#0f1621] border border-purple-500/30 rounded-sm overflow-hidden">
+    <div className="bg-white border border-[rgba(124,58,237,0.30)] rounded-xl overflow-hidden shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_4px_14px_-10px_rgba(15,23,42,0.30)]">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-500/10 to-transparent px-4 py-3 border-b border-purple-500/20">
+      <div className="bg-gradient-to-r from-[rgba(124,58,237,0.08)] to-transparent px-4 py-3 border-b border-[rgba(124,58,237,0.20)]">
         <div className="flex items-center gap-2">
-          <Swords className="w-4 h-4 text-purple-400" />
-          <h3 className="text-sm font-semibold text-white/90">Adversarial Debate</h3>
-          <span className="text-[10px] text-white/40 ml-auto">
+          <Swords className="w-4 h-4 text-[#7c3aed]" />
+          <h3 className="text-sm font-semibold text-[var(--text-hi)] tracking-[-0.01em]">Adversarial Debate</h3>
+          <span className="text-[10.5px] text-[var(--text-low)] ml-auto">
             Exchange {activeExchangeIndex + 1} of {exchanges.length}
           </span>
         </div>
@@ -105,18 +105,18 @@ export function DebateView({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-purple-400">
+                <span className="text-[12.5px] font-semibold text-[#7c3aed]">
                   {challengerConfig.name}
                 </span>
-                <span className="text-[10px] text-red-400/80 bg-red-500/10 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-semibold text-[#b91c1c] bg-[rgba(220,38,38,0.10)] border border-[rgba(220,38,38,0.30)] px-1.5 py-0.5 rounded-full">
                   CHALLENGE
                 </span>
               </div>
-              <p className="text-xs text-white/70 leading-relaxed">
+              <p className="text-[12.5px] text-[var(--text-mid)] leading-relaxed">
                 {currentExchange?.challenge}
               </p>
               {currentExchange?.challenge_reason && (
-                <p className="text-[10px] text-white/40 mt-1 italic">
+                <p className="text-[10.5px] text-[var(--text-low)] mt-1 italic">
                   Reason: {currentExchange.challenge_reason}
                 </p>
               )}
@@ -131,7 +131,7 @@ export function DebateView({
             animate={{ opacity: phase !== 'challenge' ? 1 : 0.3, scale: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <ArrowRight className="w-5 h-5 text-white/20 rotate-90" />
+            <ArrowRight className="w-5 h-5 text-[var(--text-low)] rotate-90" />
           </motion.div>
         </div>
 
@@ -159,14 +159,14 @@ export function DebateView({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium" style={{ color: defenderConfig.color }}>
+                    <span className="text-[12.5px] font-semibold" style={{ color: defenderConfig.color }}>
                       {defenderConfig.name}
                     </span>
-                    <span className="text-[10px] text-blue-400/80 bg-blue-500/10 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] font-semibold text-[var(--accent-3)] bg-[rgba(37,99,235,0.10)] border border-[rgba(37,99,235,0.30)] px-1.5 py-0.5 rounded-full">
                       RESPONSE
                     </span>
                   </div>
-                  <p className="text-xs text-white/70 leading-relaxed">
+                  <p className="text-[12.5px] text-[var(--text-mid)] leading-relaxed">
                     {currentExchange.response}
                   </p>
                 </div>
@@ -182,28 +182,28 @@ export function DebateView({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mt-4 pt-3 border-t border-[#1a2332]"
+              className="mt-4 pt-3 border-t border-[var(--line)]"
             >
               <div className="flex items-start gap-2">
                 {currentExchange.resolution_accepted ? (
-                  <CheckCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+                  <CheckCircle className="w-4 h-4 text-[var(--success)] shrink-0 mt-0.5" />
                 ) : (
-                  <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <XCircle className="w-4 h-4 text-[var(--danger)] shrink-0 mt-0.5" />
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-white/80">Resolution</span>
+                    <span className="text-[12.5px] font-semibold text-[var(--text-hi)]">Resolution</span>
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded ${
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${
                         currentExchange.resolution_accepted
-                          ? 'text-green-400/80 bg-green-500/10'
-                          : 'text-red-400/80 bg-red-500/10'
+                          ? 'text-[#15803d] bg-[rgba(22,163,74,0.10)] border-[rgba(22,163,74,0.30)]'
+                          : 'text-[#b91c1c] bg-[rgba(220,38,38,0.10)] border-[rgba(220,38,38,0.30)]'
                       }`}
                     >
                       {currentExchange.resolution_accepted ? 'ACCEPTED' : 'REJECTED'}
                     </span>
                   </div>
-                  <p className="text-xs text-white/60 leading-relaxed">
+                  <p className="text-[12.5px] text-[var(--text-mid)] leading-relaxed">
                     {currentExchange.resolution}
                   </p>
                   
@@ -219,16 +219,16 @@ export function DebateView({
 
         {/* Exchange progress dots */}
         {exchanges.length > 1 && (
-          <div className="flex justify-center gap-1.5 mt-4 pt-3 border-t border-[#1a2332]">
+          <div className="flex justify-center gap-1.5 mt-4 pt-3 border-t border-[var(--line)]">
             {exchanges.map((_, index) => (
               <div
                 key={index}
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${
                   index === activeExchangeIndex
-                    ? 'bg-purple-400'
+                    ? 'bg-[#7c3aed]'
                     : index < activeExchangeIndex
-                      ? 'bg-purple-400/40'
-                      : 'bg-white/10'
+                      ? 'bg-[rgba(124,58,237,0.45)]'
+                      : 'bg-[rgba(15,23,42,0.12)]'
                 }`}
               />
             ))}

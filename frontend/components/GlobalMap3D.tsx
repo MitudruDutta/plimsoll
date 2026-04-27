@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DeckGL from '@deck.gl/react';
-import { ScatterplotLayer, SolidPolygonLayer, GeoJsonLayer, TextLayer, PathLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, SolidPolygonLayer, GeoJsonLayer, TextLayer, PathLayer, IconLayer } from '@deck.gl/layers';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import { _GlobeView as GlobeView } from '@deck.gl/core';
 import { CollisionFilterExtension } from '@deck.gl/extensions';
@@ -39,7 +39,17 @@ const COLOR_PORT_GLOW: [number, number, number, number] = [56, 189, 248, 60]; //
 
 // Ships
 const COLOR_SHIP: [number, number, number] = [255, 255, 255]; // White ships
-const COLOR_SHIP_GLOW: [number, number, number, number] = [66, 133, 244, 80]; // Blue glow
+const COLOR_SHIP_GLOW: [number, number, number, number] = [37, 99, 235, 110]; // Blue glow
+
+// Ship icon asset (top-down vessel, bow pointing up/north)
+const SHIP_ICON = {
+  url: '/ship.svg',
+  width: 64,
+  height: 64,
+  anchorX: 32,
+  anchorY: 32,
+  mask: false,
+};
 
 // Crisis & Alerts
 const COLOR_CRISIS: [number, number, number] = [239, 68, 68]; // Red for crisis
@@ -601,17 +611,17 @@ export function GlobalMap3D({
       }
     }),
 
-    // 7. Ships glow effect
+    // 7. Ship glow halo (soft pulsing aura behind icon)
     new ScatterplotLayer({
       id: 'ship-glow-layer',
       data: currentShipData,
       pickable: false,
-      opacity: 0.5,
+      opacity: 0.6,
       stroked: false,
       filled: true,
       radiusScale: 15000 * (shipSize / 5),
-      radiusMinPixels: 5 + shipSize * 1.5,
-      radiusMaxPixels: 10 + shipSize * 2,
+      radiusMinPixels: 8 + shipSize * 1.6,
+      radiusMaxPixels: 16 + shipSize * 2.4,
       getPosition: (d: any) => d.position,
       getFillColor: (d: any) => {
         if (d.pathId) {
@@ -630,19 +640,20 @@ export function GlobalMap3D({
       }
     }),
 
-    // 7b. Ships (white dots)
-    new ScatterplotLayer({
-      id: 'ship-dots',
+    // 7b. Ships rendered as ship icon (top-down vessel image)
+    new IconLayer({
+      id: 'ship-icons',
       data: currentShipData,
       pickable: true,
-      opacity: 1,
-      stroked: false,
-      filled: true,
-      radiusScale: 15000 * (shipSize / 5),
-      radiusMinPixels: 2 + shipSize,
-      radiusMaxPixels: 4 + shipSize * 2,
       getPosition: (d: any) => d.position,
-      getFillColor: COLOR_SHIP,
+      getIcon: () => SHIP_ICON,
+      getAngle: (d: any) => -d.angleDeg,
+      getSize: 18 + shipSize * 3,
+      sizeUnits: 'pixels',
+      sizeMinPixels: 14,
+      sizeMaxPixels: 56,
+      billboard: true,
+      parameters: { depthTest: false },
     })
   ];
 

@@ -4,8 +4,9 @@
  * Provides functions to interact with the Market Sentinel geopolitical risk detection API
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
-const MARKET_SENTINEL_BASE_URL = `${API_BASE_URL}/market-sentinel`;
+import { apiRequest, getApiBaseUrl } from "./apiClient";
+
+const MARKET_SENTINEL_BASE_URL = `${getApiBaseUrl()}/market-sentinel`;
 
 // Response types
 export interface AffectedLane {
@@ -91,13 +92,10 @@ export interface MarketSentinelRequest {
  * Check if the Market Sentinel API is healthy
  */
 export async function checkHealth(): Promise<HealthCheckResponse> {
-  const response = await fetch(`${MARKET_SENTINEL_BASE_URL}/health`);
-  
-  if (!response.ok) {
-    throw new Error(`Health check failed: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return apiRequest<HealthCheckResponse>(`${MARKET_SENTINEL_BASE_URL}/health`, {
+    method: "GET",
+    requireAuth: false,
+  });
 }
 
 /**
@@ -129,20 +127,10 @@ export async function runSimpleAnalysis(): Promise<MarketSentinelResponse> {
  * Run Market Sentinel analysis with custom parameters
  */
 export async function runAnalysis(params: MarketSentinelRequest): Promise<MarketSentinelResponse> {
-  const response = await fetch(`${MARKET_SENTINEL_BASE_URL}/run`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(params),
+  return apiRequest<MarketSentinelResponse>(`${MARKET_SENTINEL_BASE_URL}/run`, {
+    method: "POST",
+    json: params,
   });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Market Sentinel analysis failed');
-  }
-
-  return response.json();
 }
 
 /**
@@ -154,13 +142,9 @@ export const runFullAnalysis = runAnalysis;
  * Get the status of all Market Sentinel agents
  */
 export async function getAgentsStatus(): Promise<AgentStatusResponse> {
-  const response = await fetch(`${MARKET_SENTINEL_BASE_URL}/agents/status`);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to get agents status: ${response.statusText}`);
-  }
-  
-  return response.json();
+  return apiRequest<AgentStatusResponse>(`${MARKET_SENTINEL_BASE_URL}/agents/status`, {
+    method: "GET",
+  });
 }
 
 /**

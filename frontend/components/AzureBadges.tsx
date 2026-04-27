@@ -92,10 +92,10 @@ export const AzureBadges: React.FC = () => {
   const getServiceById = (id: string) => services.find((s) => s.id === id);
 
   return (
-    <div className="p-4 border-b border-[#1a2332] box-border">
+    <div className="p-4 border-b border-[var(--line)] box-border bg-[var(--bg-1)]">
       <div className="flex items-center gap-2 mb-4 box-border">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#0078d4]" />
-        <h2 className="text-xs font-semibold text-white/60 tracking-wider uppercase leading-tight text-left m-0 p-0">
+        <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-2)]" />
+        <h2 className="text-[11px] font-semibold text-[var(--text-mid)] tracking-[0.12em] uppercase leading-tight text-left m-0 p-0">
           Azure OpenAI Agents
         </h2>
       </div>

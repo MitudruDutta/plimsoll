@@ -4,8 +4,9 @@
  * Provides functions to interact with the Visual Risk Analysis backend API (Gemini Vision)
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
-const VISUAL_RISK_BASE_URL = `${API_BASE_URL}/visual-risk`;
+import { apiRequest, getApiBaseUrl } from "./apiClient";
+
+const VISUAL_RISK_BASE_URL = `${getApiBaseUrl()}/visual-risk`;
 
 // ========== Response Models ==========
 
@@ -64,44 +65,28 @@ export interface ServiceStatusResponse {
  * Get demo visual risk analysis result for a given scenario
  */
 export async function getDemoAnalysis(
-  scenario: string = 'suez_blockage'
+  scenario: string = "suez_blockage",
 ): Promise<DemoAnalysisResponse> {
-  const url = new URL(`${VISUAL_RISK_BASE_URL}/demo`);
-  url.searchParams.set('scenario', scenario);
-
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Demo analysis failed');
-  }
-
-  return response.json();
+  return apiRequest<DemoAnalysisResponse>(`${VISUAL_RISK_BASE_URL}/demo`, {
+    method: "GET",
+    searchParams: { scenario },
+  });
 }
 
 /**
  * List available demo scenarios
  */
 export async function listScenarios(): Promise<ScenariosResponse> {
-  const response = await fetch(`${VISUAL_RISK_BASE_URL}/scenarios`);
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Failed to list scenarios');
-  }
-
-  return response.json();
+  return apiRequest<ScenariosResponse>(`${VISUAL_RISK_BASE_URL}/scenarios`, {
+    method: "GET",
+  });
 }
 
 /**
  * Get Visual Risk service status
  */
 export async function getServiceStatus(): Promise<ServiceStatusResponse> {
-  const response = await fetch(`${VISUAL_RISK_BASE_URL}/status`);
-
-  if (!response.ok) {
-    throw new Error(`Visual Risk status check failed: ${response.statusText}`);
-  }
-
-  return response.json();
+  return apiRequest<ServiceStatusResponse>(`${VISUAL_RISK_BASE_URL}/status`, {
+    method: "GET",
+  });
 }

@@ -24,8 +24,8 @@ import { RAGSourceCard } from './RAGSourceCard';
 
 // Agent configuration
 const AGENT_CONFIG: Record<string, { icon: LucideIcon; color: string; name: string }> = {
-  market_sentinel: { icon: AlertTriangle, color: '#c94444', name: 'Market Sentinel' },
-  risk_hedger: { icon: TrendingUp, color: '#c9a227', name: 'Risk Hedger' },
+  market_sentinel: { icon: AlertTriangle, color: '#dc2626', name: 'Market Sentinel' },
+  risk_hedger: { icon: TrendingUp, color: '#d97706', name: 'Risk Hedger' },
 };
 
 // Action label mapping
@@ -115,10 +115,10 @@ export function ReasoningStep({
 
   // Confidence color
   const getConfidenceColor = () => {
-    if (confidence >= 0.9) return '#5a9a7a';
-    if (confidence >= 0.8) return '#4a90e2';
-    if (confidence >= 0.7) return '#c9a227';
-    return '#c94444';
+    if (confidence >= 0.9) return '#16a34a';
+    if (confidence >= 0.8) return '#2563eb';
+    if (confidence >= 0.7) return '#d97706';
+    return '#dc2626';
   };
 
   return (
@@ -126,18 +126,18 @@ export function ReasoningStep({
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className={`relative bg-[#0f1621] border rounded-sm p-4 overflow-hidden ${
-        isActive 
-          ? 'border-[#4a90e2]/50 shadow-lg shadow-[#4a90e2]/10' 
-          : isComplete 
-            ? 'border-[#5a9a7a]/30' 
-            : 'border-[#1a2332]'
+      className={`relative bg-white border rounded-xl p-4 overflow-hidden shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_4px_14px_-10px_rgba(15,23,42,0.30)] ${
+        isActive
+          ? 'border-[rgba(37,99,235,0.45)] shadow-[0_8px_24px_-12px_rgba(37,99,235,0.30)]'
+          : isComplete
+            ? 'border-[rgba(22,163,74,0.30)]'
+            : 'border-[var(--line)]'
       }`}
     >
       {/* Active indicator glow */}
       {isActive && (
         <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-[#4a90e2]/5 to-transparent pointer-events-none"
+          className="absolute inset-0 bg-gradient-to-r from-[rgba(37,99,235,0.06)] to-transparent pointer-events-none"
           animate={{ opacity: [0.3, 0.6, 0.3] }}
           transition={{ duration: 2, repeat: Infinity }}
         />
@@ -148,46 +148,46 @@ export function ReasoningStep({
         <div className="flex items-start gap-3 mb-3">
           {/* Agent icon */}
           <div
-            className="p-2 rounded-sm shrink-0"
+            className="p-2 rounded-lg shrink-0"
             style={{
-              backgroundColor: `${agentConfig.color}15`,
-              border: `1px solid ${agentConfig.color}30`,
+              backgroundColor: `${agentConfig.color}14`,
+              border: `1px solid ${agentConfig.color}33`,
             }}
           >
             <Icon
               className="w-4 h-4"
               style={{ color: agentConfig.color }}
-              strokeWidth={1.5}
+              strokeWidth={2}
             />
           </div>
 
           {/* Title and agent info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2 mb-1">
-              <h4 className="font-medium text-white/90 text-sm truncate">
+              <h4 className="font-semibold text-[var(--text-hi)] text-sm truncate tracking-[-0.01em]">
                 {title}
               </h4>
               <span
-                className="text-[10px] font-mono tracking-wider px-2 py-0.5 rounded-sm shrink-0"
+                className="text-[10px] font-mono tracking-[0.06em] px-2 py-0.5 rounded-full shrink-0"
                 style={{
                   color: agentConfig.color,
-                  backgroundColor: `${agentConfig.color}20`,
+                  backgroundColor: `${agentConfig.color}14`,
                   border: `1px solid ${agentConfig.color}40`,
                 }}
               >
                 {ACTION_LABELS[action] || action.toUpperCase()}
               </span>
             </div>
-            <p className="text-[11px] text-white/40">{agentConfig.name}</p>
+            <p className="text-[11.5px] text-[var(--text-mid)]">{agentConfig.name}</p>
           </div>
         </div>
 
         {/* Content */}
-        <div className="text-xs text-white/70 leading-relaxed mb-3">
+        <div className="text-[12.5px] text-[var(--text-mid)] leading-relaxed mb-3">
           {displayedContent}
           {showTypewriter && isActive && displayedContent.length < content.length && (
             <motion.span
-              className="inline-block w-2 h-4 bg-[#4a90e2] ml-0.5"
+              className="inline-block w-2 h-4 bg-[var(--accent-2)] ml-0.5"
               animate={{ opacity: [1, 0, 1] }}
               transition={{ duration: 0.8, repeat: Infinity }}
             />
@@ -199,18 +199,18 @@ export function ReasoningStep({
           <div className="flex items-center gap-3">
             {/* Confidence */}
             <div className="flex items-center gap-1">
-              <span className="text-white/30">Confidence:</span>
+              <span className="text-[var(--text-low)]">Confidence:</span>
               <span
-                className="font-mono"
+                className="font-mono font-semibold"
                 style={{ color: getConfidenceColor() }}
               >
                 {(confidence * 100).toFixed(0)}%
               </span>
             </div>
-            
+
             {/* Duration */}
             {durationMs > 0 && (
-              <div className="flex items-center gap-1 text-white/30">
+              <div className="flex items-center gap-1 text-[var(--text-low)]">
                 <Clock className="w-3 h-3" />
                 <span>{durationMs}ms</span>
               </div>
@@ -218,9 +218,9 @@ export function ReasoningStep({
           </div>
 
           {/* Azure service badge */}
-          <div className="flex items-center gap-1 text-white/30 bg-[#1a2332] px-2 py-1 rounded-sm">
-            <Zap className="w-3 h-3 text-[#0078d4]" />
-            <span className="text-[9px]">{azureService}</span>
+          <div className="flex items-center gap-1 text-[var(--text-mid)] bg-[var(--bg-1)] border border-[var(--line)] px-2 py-1 rounded-full">
+            <Zap className="w-3 h-3 text-[var(--accent-3)]" />
+            <span className="text-[9px] font-semibold">{azureService}</span>
           </div>
         </div>
 
@@ -233,7 +233,7 @@ export function ReasoningStep({
       {/* Progress indicator for active step */}
       {isActive && (
         <motion.div
-          className="absolute bottom-0 left-0 h-0.5 bg-[#4a90e2]"
+          className="absolute bottom-0 left-0 h-0.5 bg-[var(--accent-2)]"
           initial={{ width: 0 }}
           animate={{ width: '100%' }}
           transition={{ duration: 3, ease: 'linear' }}

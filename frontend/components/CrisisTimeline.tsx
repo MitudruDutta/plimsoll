@@ -193,60 +193,62 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
   const getEventColor = (type: TimelineEvent['type']) => {
     switch (type) {
       case 'critical':
-        return '#c94444';
+        return '#dc2626';
       case 'success':
-        return '#5a9a7a';
+        return '#16a34a';
       default:
-        return '#4a90e2';
+        return '#2563eb';
     }
   };
 
   return (
-    <div className="bg-[#0a0e1a] border-t border-[#1a2332] h-full flex">
+    <div className="bg-white border-t border-[var(--line)] h-full flex">
       {/* Risk trend chart */}
-      <div className="w-1/2 border-r border-[#1a2332] p-4">
+      <div className="w-1/2 border-r border-[var(--line)] p-4">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-2 h-2 rounded-full bg-[#4a90e2]" />
-          <h3 className="text-xs font-medium text-white/70 tracking-wider uppercase">
+          <div className="w-2 h-2 rounded-full bg-[var(--accent-2)] animate-pulse" />
+          <h3 className="text-[11px] font-semibold text-[var(--text-mid)] tracking-[0.12em] uppercase">
             LIVE: Global Supply Chain Risk Monitor
           </h3>
         </div>
-        
+
         <ResponsiveContainer width="100%" height={120}>
           <LineChart data={riskData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
             <defs>
               <linearGradient id="riskLine" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#4a90e2" />
-                <stop offset="60%" stopColor="#c94444" />
-                <stop offset="100%" stopColor="#5a9a7a" />
+                <stop offset="0%" stopColor="#2563eb" />
+                <stop offset="60%" stopColor="#dc2626" />
+                <stop offset="100%" stopColor="#16a34a" />
               </linearGradient>
             </defs>
             <XAxis
               dataKey="time"
-              stroke="#3a4a5a"
-              tick={{ fill: '#6a7a8a', fontSize: 10 }}
+              stroke="#cbd5e1"
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickLine={false}
             />
             <YAxis
-              stroke="#3a4a5a"
-              tick={{ fill: '#6a7a8a', fontSize: 10 }}
+              stroke="#cbd5e1"
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickLine={false}
               domain={[0, 100]}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#0f1621',
-                border: '1px solid #1a2332',
-                borderRadius: '2px',
+                backgroundColor: '#ffffff',
+                border: '1px solid rgba(15,23,42,0.12)',
+                borderRadius: '8px',
                 fontSize: '11px',
+                boxShadow: '0 8px 24px -10px rgba(15,23,42,0.25)',
+                color: '#0b1220',
               }}
-              labelStyle={{ color: '#8a9aaa' }}
+              labelStyle={{ color: '#475569' }}
             />
             <Line
               type="monotone"
               dataKey="risk"
               stroke="url(#riskLine)"
-              strokeWidth={2}
+              strokeWidth={2.5}
               dot={false}
               animationDuration={1500}
               animationEasing="ease-out"
@@ -258,60 +260,62 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
       {/* Event log */}
       <div className="w-1/2 p-4 flex flex-col">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-2 h-2 rounded-full bg-[#4a90e2]" />
-          <h3 className="text-xs font-medium text-white/70 tracking-wider uppercase">
+          <div className="w-2 h-2 rounded-full bg-[var(--accent-2)] animate-pulse" />
+          <h3 className="text-[11px] font-semibold text-[var(--text-mid)] tracking-[0.12em] uppercase">
             System Event Log
           </h3>
         </div>
 
         <div
           ref={scrollRef}
-          className="flex-1 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-[#1a2332] scrollbar-track-transparent pr-2"
+          className="flex-1 space-y-2 overflow-y-auto scrollbar-plimsoll pr-2"
         >
           {/* Empty state when no events */}
           {events.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center py-8">
-              <div className="w-12 h-12 mb-3 rounded-full bg-[#1a2332] flex items-center justify-center">
-                <Info className="w-6 h-6 text-[#4a90e2]/40" />
+              <div className="w-12 h-12 mb-3 rounded-full bg-[rgba(37,99,235,0.10)] border border-[rgba(37,99,235,0.20)] flex items-center justify-center">
+                <Info className="w-6 h-6 text-[var(--accent-2)]" />
               </div>
-              <p className="text-xs text-white/50 mb-1">No events yet</p>
-              <p className="text-[10px] text-white/30">
+              <p className="text-[12.5px] font-medium text-[var(--text-mid)] mb-1">No events yet</p>
+              <p className="text-[11px] text-[var(--text-low)]">
                 System events will appear here as they occur
               </p>
             </div>
           )}
-          
+
           <AnimatePresence>
             {events.map((event) => {
               const Icon = getEventIcon(event.type);
               const color = getEventColor(event.type);
               const isCritical = event.type === 'critical';
-              
+
               return (
                 <motion.div
                   key={event.id}
-                  className="flex items-start gap-2 text-xs"
+                  className="flex items-start gap-2 text-[12.5px]"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <span className="font-mono text-white/40 text-[10px] mt-0.5 shrink-0">
+                  <span className="font-mono text-[var(--text-low)] text-[10.5px] mt-0.5 shrink-0">
                     {event.time}
                   </span>
                   <Icon
-                    className="w-3 h-3 mt-0.5 shrink-0"
+                    className="w-3.5 h-3.5 mt-0.5 shrink-0"
                     style={{ color }}
-                    strokeWidth={2}
+                    strokeWidth={2.2}
                   />
                   <span
                     className={`leading-relaxed ${
-                      isCritical ? 'text-[#c94444] font-medium' : 'text-white/60'
+                      isCritical
+                        ? 'text-[#b91c1c] font-semibold'
+                        : 'text-[var(--text-mid)]'
                     }`}
                   >
                     {event.message}
                   </span>
-                  
+
                   {/* Interactive Ship Link if message contains known ship name */}
                   {(() => {
                     const foundShip = MOCK_SHIPS.find(s => event.message.includes(s.name));
@@ -322,7 +326,7 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
                             e.stopPropagation();
                             if (onShipClick) onShipClick(foundShip);
                           }}
-                          className="ml-auto px-1.5 py-0.5 rounded-xs bg-[#4a90e2]/10 hover:bg-[#4a90e2]/30 border border-[#4a90e2]/30 text-[9px] text-[#4a90e2] flex items-center gap-1 transition-colors cursor-pointer"
+                          className="ml-auto inline-flex items-center gap-1 rounded-full border border-[rgba(37,99,235,0.30)] bg-[rgba(37,99,235,0.10)] hover:bg-[rgba(37,99,235,0.18)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-3)] transition-colors cursor-pointer"
                         >
                           <ShipIcon className="w-2.5 h-2.5" />
                           <span>View Ship</span>
@@ -338,7 +342,7 @@ export function CrisisTimeline({ executionPhase = 'pending', onShipClick }: Cris
         </div>
 
         {/* Fade indicator for older events */}
-        <div className="h-8 bg-gradient-to-t from-[#0a0e1a] to-transparent pointer-events-none -mt-8 relative z-10" />
+        <div className="h-8 bg-gradient-to-t from-white to-transparent pointer-events-none -mt-8 relative z-10" />
       </div>
     </div>
   );

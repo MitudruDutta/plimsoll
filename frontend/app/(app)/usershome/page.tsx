@@ -580,7 +580,7 @@ export function UsersHome() {
                           <button
                             onClick={async () => {
                               await signOut();
-                              router.push('/pay');
+                              router.push('/');
                             }}
                             className="w-full py-3 text-[var(--danger)]/80 hover:text-[var(--danger)] transition-colors font-medium text-sm"
                           >

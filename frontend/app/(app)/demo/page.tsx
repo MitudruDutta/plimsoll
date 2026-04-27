@@ -31,10 +31,10 @@ const KEYBOARD_SHORTCUTS = [
 ];
 
 const SIDEBAR_TAB_THEME = {
-  intelligence: { accent: '#4a90e2', activeBg: 'rgba(74, 144, 226, 0.16)', border: 'rgba(74, 144, 226, 0.34)' },
-  agents: { accent: '#2dd4bf', activeBg: 'rgba(45, 212, 191, 0.16)', border: 'rgba(45, 212, 191, 0.34)' },
-  risk: { accent: '#c084fc', activeBg: 'rgba(192, 132, 252, 0.16)', border: 'rgba(192, 132, 252, 0.34)' },
-  compliance: { accent: '#f59e0b', activeBg: 'rgba(245, 158, 11, 0.16)', border: 'rgba(245, 158, 11, 0.34)' },
+  intelligence: { accent: '#2563EB', activeBg: 'rgba(37, 99, 235, 0.10)', border: 'rgba(37, 99, 235, 0.28)' },
+  agents: { accent: '#1D4ED8', activeBg: 'rgba(29, 78, 216, 0.10)', border: 'rgba(29, 78, 216, 0.28)' },
+  risk: { accent: '#7C3AED', activeBg: 'rgba(124, 58, 237, 0.10)', border: 'rgba(124, 58, 237, 0.28)' },
+  compliance: { accent: '#D97706', activeBg: 'rgba(217, 119, 6, 0.10)', border: 'rgba(217, 119, 6, 0.28)' },
 } as const;
 
 import {
@@ -183,6 +183,7 @@ export const DemoPage: React.FC = () => {
   const [visualRiskSource, setVisualRiskSource] = useState('');
   const [visualRiskLocation, setVisualRiskLocation] = useState('');
   const [visualRiskAnalysis, setVisualRiskAnalysis] = useState<any>(null);
+  const [visualRiskError, setVisualRiskError] = useState<string | null>(null);
 
   // === Keyboard Shortcuts State ===
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
@@ -551,6 +552,7 @@ export const DemoPage: React.FC = () => {
     setVisualRiskSource('');
     setVisualRiskLocation('');
     setVisualRiskAnalysis(null);
+    setVisualRiskError(null);
 
     setCurrentTime(0);
 
@@ -688,13 +690,15 @@ export const DemoPage: React.FC = () => {
     setVisualRiskSource('Satellite Feed');
     setVisualRiskLocation(scenario === 'port_congestion' ? 'Rotterdam Port' : 'Suez Canal');
     setVisualRiskAnalysis(null);
+    setVisualRiskError(null);
 
     try {
       const result = await getDemoAnalysis(scenario);
       setVisualRiskAnalysis(result.analysis);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Visual risk analysis failed';
       console.error('Visual risk analysis error:', err);
-      setVisualRiskAnalysis(null);
+      setVisualRiskError(message);
     } finally {
       setVisualRiskAnalyzing(false);
     }
@@ -733,45 +737,42 @@ export const DemoPage: React.FC = () => {
       setSubtitle(`${origin?.name} → ${destination?.name} · T+${currentTime.toFixed(0)}s · ${scenarioPhase}`);
 
       setExtraContent(
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {isCotActive && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#4a90e2]/20 border border-[#4a90e2]/30 rounded-sm animate-pulse">
-              <Brain className="w-3.5 h-3.5 text-[#4a90e2]" />
-              <span className="text-xs text-[#4a90e2] font-medium">CoT Active</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[rgba(37,99,235,0.30)] bg-[rgba(37,99,235,0.10)] animate-pulse">
+              <Brain className="w-3.5 h-3.5 text-[var(--accent-3)]" />
+              <span className="text-xs text-[var(--accent-3)] font-semibold">CoT Active</span>
             </div>
           )}
 
           <button
             onClick={() => setIsChangingRoute(true)}
-            style={{ background: '#1a2332', border: '1px solid #2d3a4f', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
-            className="px-3 py-1.5 rounded-sm transition-all flex items-center gap-2 hover:bg-[#2d3a4f]"
+            className="px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-semibold text-[var(--text-hi)] bg-white border border-[var(--line-strong)] hover:bg-[var(--bg-2)] hover:border-[var(--accent-2)] transition-all"
           >
-            <RefreshCw className="w-4 h-4" strokeWidth={2} style={{ color: '#ffffff' }} />
+            <RefreshCw className="w-3.5 h-3.5 text-[var(--accent-3)]" strokeWidth={2.2} />
             Change Route
           </button>
 
-          <div className="flex items-center gap-1 bg-[#1a2332] border border-[#2d3a4f] rounded-sm p-1">
+          <div className="flex items-center gap-1 rounded-md border border-[var(--line-strong)] bg-white p-0.5">
             <button
               onClick={() => setIs3D(false)}
-              style={{ background: !is3D ? '#0078d4' : 'transparent', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
-              className="px-3 py-1.5 rounded-sm transition-all flex items-center gap-2"
+              className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all ${!is3D ? 'bg-[var(--accent-2)] text-white shadow-sm' : 'text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:bg-[var(--bg-2)]'}`}
             >
-              <Map className="w-4 h-4" strokeWidth={2} style={{ color: '#ffffff' }} />
+              <Map className="w-3.5 h-3.5" strokeWidth={2.2} />
               2D
             </button>
             <button
               onClick={() => setIs3D(true)}
-              style={{ background: is3D ? '#0078d4' : 'transparent', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}
-              className="px-3 py-1.5 rounded-sm transition-all flex items-center gap-2"
+              className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all ${is3D ? 'bg-[var(--accent-2)] text-white shadow-sm' : 'text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:bg-[var(--bg-2)]'}`}
             >
-              <Globe className="w-4 h-4" strokeWidth={2} style={{ color: '#ffffff' }} />
+              <Globe className="w-3.5 h-3.5" strokeWidth={2.2} />
               3D
             </button>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1a4a3a] border border-[#2d5a4a] rounded-sm">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] animate-pulse" />
-            <span className="text-xs text-[#4ade80] font-semibold">System Running</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[rgba(22,163,74,0.30)] bg-[rgba(22,163,74,0.10)]">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
+            <span className="text-[11px] text-[#15803D] font-semibold tracking-wide">Live</span>
           </div>
         </div>
       );
@@ -784,7 +785,7 @@ export const DemoPage: React.FC = () => {
   }
 
   return (
-    <div className="demo-page h-screen max-h-screen bg-[var(--bg-0)] text-white overflow-hidden flex flex-col">
+    <div className="demo-page h-screen max-h-screen bg-[var(--bg-2)] text-[var(--text-hi)] overflow-hidden flex flex-col">
       {/* Page-scoped typography reset to avoid global base button/label styles affecting alignment */}
       <style>{`
         .demo-page button { font-size: 0.75rem; line-height: 1rem; }
@@ -840,10 +841,10 @@ export const DemoPage: React.FC = () => {
 
           {/* Resize Handle for Bottom Panel */}
           <div
-            className="h-1 cursor-row-resize hover:bg-[#4a90e2] transition-colors z-10 group flex items-center justify-center relative"
+            className="h-1 cursor-row-resize hover:bg-[var(--accent-2)] transition-colors z-10 group flex items-center justify-center relative bg-[var(--line)]"
             onMouseDown={handleBottomMouseDown}
           >
-            <div className="w-16 h-1 bg-[#1a2332] group-hover:bg-[#4a90e2] rounded-full transition-colors" />
+            <div className="w-16 h-1 bg-[var(--line-strong)] group-hover:bg-[var(--accent-2)] rounded-full transition-colors" />
 
             {/* Bottom Collapse Button */}
             <button
@@ -851,15 +852,15 @@ export const DemoPage: React.FC = () => {
                 e.stopPropagation(); // Prevent drag start
                 setIsBottomCollapsed(!isBottomCollapsed);
               }}
-              className="absolute right-4 -top-3 w-6 h-4 bg-[#1a2332] rounded-t-sm flex items-center justify-center hover:bg-[#4a90e2] transition-colors z-20 group border border-b-0 border-[#white]/10"
+              className="absolute right-4 -top-3 w-6 h-4 bg-white rounded-t-sm flex items-center justify-center hover:bg-[var(--accent-2)] hover:text-white transition-colors z-20 group border border-b-0 border-[var(--line-strong)] text-[var(--text-mid)]"
             >
-              {isBottomCollapsed ? <ChevronUp className="w-3 h-3 text-white/60 group-hover:text-white" /> : <ChevronDown className="w-3 h-3 text-white/60 group-hover:text-white" />}
+              {isBottomCollapsed ? <ChevronUp className="w-3 h-3 group-hover:text-white" /> : <ChevronDown className="w-3 h-3 group-hover:text-white" />}
             </button>
           </div>
 
           {/* Timeline */}
           <div
-            className="shrink-0 transition-all duration-300 ease-in-out border-t border-[#1a2332]"
+            className="shrink-0 transition-all duration-300 ease-in-out border-t border-[var(--line)] bg-white"
             style={{
               height: isBottomCollapsed ? 0 : bottomHeight,
               overflow: 'hidden'
@@ -876,31 +877,31 @@ export const DemoPage: React.FC = () => {
 
         {/* Resizable Right Sidebar */}
         <div
-          className="bg-[var(--bg-0)] border-l border-[#1a2332] flex flex-col overflow-hidden relative transition-[width] duration-300 ease-in-out"
+          className="bg-[var(--bg-1)] border-l border-[var(--line)] flex flex-col overflow-hidden relative transition-[width] duration-300 ease-in-out"
           style={{ width: isRightCollapsed ? 24 : sidebarWidth }}
         >
           {/* Resize Handle */}
           {!isRightCollapsed && (
             <div
-              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#4a90e2] transition-colors z-10 group"
+              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-2)] transition-colors z-10 group"
               onMouseDown={handleMouseDown}
             >
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-[#1a2332] group-hover:bg-[#4a90e2] rounded-full transition-colors" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-[var(--line-strong)] group-hover:bg-[var(--accent-2)] rounded-full transition-colors" />
             </div>
           )}
 
           {/* Right Collapse Button */}
           <button
             onClick={() => setIsRightCollapsed(!isRightCollapsed)}
-            className="absolute left-0 top-2 z-20 w-6 h-6 flex items-center justify-center bg-[#1a2332] hover:bg-[#4a90e2] transition-colors rounded-r-sm"
+            className="absolute left-0 top-2 z-20 w-6 h-6 flex items-center justify-center bg-white border border-l-0 border-[var(--line-strong)] hover:bg-[var(--accent-2)] hover:text-white transition-colors rounded-r-sm text-[var(--text-mid)]"
           >
-            {isRightCollapsed ? <ChevronLeft className="w-3 h-3 text-white/60" /> : <ChevronRight className="w-3 h-3 text-white/60" />}
+            {isRightCollapsed ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
           </button>
 
           <div className={`flex-1 flex flex-col overflow-hidden transition-opacity duration-200 ${isRightCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
 
             {/* Tab Bar */}
-            <div className="flex border-b border-[#1a2332] shrink-0 bg-[#0d1422]">
+            <div className="flex border-b border-[var(--line)] shrink-0 bg-white">
               {([
                 { id: 'intelligence' as const, label: 'AI', icon: <Brain className="w-3.5 h-3.5" /> },
                 { id: 'agents' as const, label: 'Agents', icon: <Activity className="w-3.5 h-3.5" /> },
@@ -910,9 +911,9 @@ export const DemoPage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setSidebarTab(tab.id)}
-                  className="flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium transition-all relative"
+                  className="flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[11px] font-semibold transition-all relative"
                   style={{
-                    color: sidebarTab === tab.id ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
+                    color: sidebarTab === tab.id ? SIDEBAR_TAB_THEME[tab.id].accent : 'var(--text-mid)',
                     background: sidebarTab === tab.id ? SIDEBAR_TAB_THEME[tab.id].activeBg : 'transparent',
                     boxShadow: sidebarTab === tab.id ? `inset 0 0 0 1px ${SIDEBAR_TAB_THEME[tab.id].border}` : 'none'
                   }}
@@ -972,7 +973,15 @@ export const DemoPage: React.FC = () => {
                 />
               )}
               {sidebarTab === 'risk' && (
-                <div className="p-3">
+                <div className="p-3 space-y-3">
+                  {visualRiskError && (
+                    <div className="rounded-md border border-[rgba(220,38,38,0.30)] bg-[rgba(254,226,226,0.55)] px-3 py-2">
+                      <p className="text-[11px] font-semibold tracking-wide text-[#B91C1C] uppercase">
+                        Visual Risk Service Error
+                      </p>
+                      <p className="mt-1 text-[12.5px] text-[#7F1D1D]">{visualRiskError}</p>
+                    </div>
+                  )}
                   <VisualRiskPanel
                     isAnalyzing={visualRiskAnalyzing}
                     analysisSource={visualRiskSource}
@@ -985,12 +994,12 @@ export const DemoPage: React.FC = () => {
               )}
               {sidebarTab === 'compliance' && (
                 <div className="p-3">
-                  <div className="mb-3 flex items-center justify-between rounded-sm border border-[#4c3a15] bg-[#1f1a12] px-3 py-2">
+                  <div className="mb-3 flex items-center justify-between rounded-md border border-[rgba(217,119,6,0.30)] bg-[rgba(217,119,6,0.08)] px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <Shield className="h-3.5 w-3.5 text-[#f59e0b]" />
-                      <span className="text-xs font-semibold tracking-wide text-[#fbbf24]">Compliance Check</span>
+                      <Shield className="h-3.5 w-3.5 text-[#D97706]" />
+                      <span className="text-[11px] font-semibold tracking-wide text-[#92400E]">Compliance Check</span>
                     </div>
-                    <div className="rounded-full border border-[#3f3420] bg-[#2b2418] px-2 py-0.5 text-[10px] font-medium text-[#fde68a]">
+                    <div className="rounded-full border border-[rgba(217,119,6,0.30)] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#92400E]">
                       Policy Guard
                     </div>
                   </div>
@@ -1007,8 +1016,8 @@ export const DemoPage: React.FC = () => {
           {/* Collapsed Text */}
           {isRightCollapsed && (
             <div className="absolute top-10 w-full flex flex-col items-center gap-4 py-4">
-              <div className="[writing-mode:vertical-rl] rotate-180 text-xs font-medium text-white/40 tracking-wider whitespace-nowrap">
-                INTELLIGENCE
+              <div className="[writing-mode:vertical-rl] rotate-180 text-[10.5px] font-semibold text-[var(--text-mid)] tracking-[0.18em] whitespace-nowrap uppercase">
+                Intelligence
               </div>
             </div>
           )}
@@ -1017,46 +1026,46 @@ export const DemoPage: React.FC = () => {
 
       {/* Keyboard Shortcuts Help Modal */}
       {showKeyboardHelp && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.45)] backdrop-blur-sm"
           onClick={() => setShowKeyboardHelp(false)}
         >
-          <div 
-            className="bg-[#0f1621] border border-[#1a2332] rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl"
+          <div
+            className="bg-white border border-[var(--line-strong)] rounded-xl p-6 max-w-md w-full mx-4 shadow-[0_24px_48px_-12px_rgba(15,23,42,0.18)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#4a90e2]/20 flex items-center justify-center">
-                  <Keyboard className="w-4 h-4 text-[#4a90e2]" />
+                <div className="w-8 h-8 rounded-lg bg-[rgba(37,99,235,0.10)] flex items-center justify-center border border-[rgba(37,99,235,0.20)]">
+                  <Keyboard className="w-4 h-4 text-[var(--accent-3)]" />
                 </div>
-                <h2 className="text-lg font-semibold text-white">Keyboard Shortcuts</h2>
+                <h2 className="text-base font-semibold text-[var(--text-hi)]">Keyboard Shortcuts</h2>
               </div>
               <button
                 onClick={() => setShowKeyboardHelp(false)}
-                className="w-8 h-8 rounded-lg bg-[#1a2332] hover:bg-[#252f42] flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                className="w-8 h-8 rounded-lg bg-[var(--bg-2)] hover:bg-[var(--accent-2)] hover:text-white flex items-center justify-center text-[var(--text-mid)] transition-colors"
                 aria-label="Close keyboard shortcuts"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
-            <div className="space-y-3">
-              {KEYBOARD_SHORTCUTS.map((shortcut, index) => (
-                <div 
+
+            <div className="space-y-1.5">
+              {KEYBOARD_SHORTCUTS.map((shortcut) => (
+                <div
                   key={shortcut.key}
-                  className="flex items-center justify-between py-2 border-b border-[#1a2332] last:border-0"
+                  className="flex items-center justify-between py-2 border-b border-[var(--line)] last:border-0"
                 >
-                  <span className="text-sm text-white/70">{shortcut.action}</span>
-                  <kbd className="px-2 py-1 bg-[#1a2332] rounded text-xs font-mono text-[#4a90e2] border border-[#2a3342]">
+                  <span className="text-[13px] text-[var(--text-mid)]">{shortcut.action}</span>
+                  <kbd className="px-2 py-1 bg-[var(--bg-2)] rounded text-[11px] font-mono text-[var(--accent-3)] border border-[var(--line-strong)]">
                     {shortcut.label}
                   </kbd>
                 </div>
               ))}
             </div>
-            
-            <p className="mt-4 text-xs text-white/40 text-center">
-              Press <kbd className="px-1 py-0.5 bg-[#1a2332] rounded text-[10px] font-mono">?</kbd> anytime to show this help
+
+            <p className="mt-4 text-[11px] text-[var(--text-low)] text-center">
+              Press <kbd className="px-1 py-0.5 bg-[var(--bg-2)] rounded text-[10px] font-mono text-[var(--text-mid)]">?</kbd> anytime to show this help
             </p>
           </div>
         </div>
@@ -1067,12 +1076,12 @@ export const DemoPage: React.FC = () => {
         <div className="fixed bottom-4 right-4 z-40">
           <button
             onClick={() => setShowKeyboardHelp(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-[#1a2332]/80 hover:bg-[#252f42] border border-[#2a3342] rounded-lg text-xs text-white/60 hover:text-white transition-colors backdrop-blur-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-white/90 hover:bg-white border border-[var(--line-strong)] rounded-lg text-[11px] text-[var(--text-mid)] hover:text-[var(--text-hi)] transition-colors backdrop-blur-sm shadow-[0_8px_16px_-8px_rgba(15,23,42,0.18)]"
             aria-label="Show keyboard shortcuts"
           >
             <Keyboard className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Press</span>
-            <kbd className="px-1.5 py-0.5 bg-[#0f1621] rounded text-[10px] font-mono">?</kbd>
+            <kbd className="px-1.5 py-0.5 bg-[var(--bg-2)] rounded text-[10px] font-mono text-[var(--accent-3)]">?</kbd>
             <span className="hidden sm:inline">for shortcuts</span>
           </button>
         </div>

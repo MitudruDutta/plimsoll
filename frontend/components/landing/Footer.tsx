@@ -18,7 +18,7 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       { label: "Cockpit", href: "/usershome" },
       { label: "Documents", href: "/documents" },
       { label: "Demo", href: "/demo" },
-      { label: "Pricing", href: "/pay" },
+      { label: "Pricing", href: "/#pricing" },
     ],
   },
   {

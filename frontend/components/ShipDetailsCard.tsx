@@ -17,69 +17,69 @@ export function ShipDetailsCard({ ship, onClose }: ShipDetailsCardProps) {
       <motion.div
         drag
         dragMomentum={false}
-        className="absolute top-24 left-32 z-50 w-80 bg-[#0f1621]/95 border border-[#1a2332] rounded-md shadow-2xl backdrop-blur-md overflow-hidden"
+        className="absolute top-24 left-32 z-50 w-80 bg-white/95 border border-[var(--line-strong)] rounded-xl shadow-[0_24px_56px_-12px_rgba(15,23,42,0.30)] backdrop-blur-md overflow-hidden"
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 10 }}
         transition={{ duration: 0.2 }}
       >
         {/* Header - Draggable Area */}
-        <div className="relative h-24 bg-gradient-to-r from-[#1a2332] to-[#0f1621] p-4 flex flex-col justify-end border-b border-[#1a2332] cursor-move group">
+        <div className="relative h-24 bg-gradient-to-r from-[rgba(37,99,235,0.10)] to-[rgba(37,99,235,0.03)] p-4 flex flex-col justify-end border-b border-[var(--line)] cursor-move group">
             {/* Type Icon Background */}
             <div className="absolute top-2 right-2 opacity-10">
-                <Anchor className="w-16 h-16 text-white" />
+                <Anchor className="w-16 h-16 text-[var(--accent-2)]" />
             </div>
-            
-            <button 
+
+            <button
                 onClick={onClose}
-                className="absolute top-2 right-2 p-1 rounded-sm text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                className="absolute top-2 right-2 p-1 rounded-md text-[var(--text-low)] hover:text-[var(--text-hi)] hover:bg-[var(--bg-2)] transition-colors"
             >
                 <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-2 mb-1">
-                <span className={`px-1.5 py-0.5 rounded-xs text-[10px] font-bold uppercase tracking-wider border ${
-                    ship.status === 'At Risk' ? 'bg-red-500/20 text-red-500 border-red-500/30' : 
-                    ship.status === 'Diverting' ? 'bg-orange-500/20 text-orange-500 border-orange-500/30' :
-                    'bg-emerald-500/20 text-emerald-500 border-emerald-500/30'
+                <span className={`px-1.5 py-0.5 rounded-full text-[10.5px] font-semibold uppercase tracking-[0.10em] border ${
+                    ship.status === 'At Risk' ? 'bg-[rgba(220,38,38,0.10)] text-[#b91c1c] border-[rgba(220,38,38,0.30)]' :
+                    ship.status === 'Diverting' ? 'bg-[rgba(217,119,6,0.10)] text-[#b45309] border-[rgba(217,119,6,0.30)]' :
+                    'bg-[rgba(22,163,74,0.10)] text-[#15803d] border-[rgba(22,163,74,0.30)]'
                 }`}>
                     {ship.status}
                 </span>
-                <span className="text-[10px] text-white/40 font-mono tracking-wider">{ship.type.toUpperCase()}</span>
+                <span className="text-[10.5px] text-[var(--text-mid)] font-mono tracking-wider">{ship.type.toUpperCase()}</span>
             </div>
-            <h2 className="text-lg font-bold text-white tracking-wide">{ship.name}</h2>
+            <h2 className="text-lg font-bold text-[var(--text-hi)] tracking-[-0.01em]">{ship.name}</h2>
         </div>
 
         {/* Content */}
         <div className="p-4 space-y-4">
-            
+
             {/* Key Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0a0e1a] border border-[#1a2332] p-2 rounded-sm">
+                <div className="bg-[var(--bg-1)] border border-[var(--line)] p-2 rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
-                        <Navigation className="w-3 h-3 text-[#4a90e2]" />
-                        <span className="text-[10px] text-white/40 uppercase">Speed / Crs</span>
+                        <Navigation className="w-3 h-3 text-[var(--accent-3)]" />
+                        <span className="text-[10.5px] text-[var(--text-mid)] uppercase tracking-[0.08em]">Speed / Crs</span>
                     </div>
-                    <div className="text-sm font-medium text-white/90">{ship.speed} kn <span className="text-white/30">|</span> {Math.round(ship.heading)}°</div>
+                    <div className="text-sm font-semibold text-[var(--text-hi)]">{ship.speed} kn <span className="text-[var(--text-low)]">|</span> {Math.round(ship.heading)}°</div>
                 </div>
-                <div className="bg-[#0a0e1a] border border-[#1a2332] p-2 rounded-sm">
+                <div className="bg-[var(--bg-1)] border border-[var(--line)] p-2 rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
-                        <Fuel className="w-3 h-3 text-[#4a90e2]" />
-                        <span className="text-[10px] text-white/40 uppercase">Fuel Lvl</span>
+                        <Fuel className="w-3 h-3 text-[var(--accent-3)]" />
+                        <span className="text-[10.5px] text-[var(--text-mid)] uppercase tracking-[0.08em]">Fuel Lvl</span>
                     </div>
-                     <div className="text-sm font-medium text-white/90">{ship.fuelLevel}%</div>
+                     <div className="text-sm font-semibold text-[var(--text-hi)]">{ship.fuelLevel}%</div>
                 </div>
             </div>
-            
-            {/* Position Display (New Task 26) */}
-            <div className="bg-[#0a0e1a] border border-[#1a2332] p-2 rounded-sm flex items-center justify-between">
+
+            {/* Position Display */}
+            <div className="bg-[var(--bg-1)] border border-[var(--line)] p-2 rounded-lg flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <MapPin className="w-3 h-3 text-[#4a90e2]" />
-                    <span className="text-[10px] text-white/40 uppercase">Position</span>
+                    <MapPin className="w-3 h-3 text-[var(--accent-3)]" />
+                    <span className="text-[10.5px] text-[var(--text-mid)] uppercase tracking-[0.08em]">Position</span>
                 </div>
-                <div className="text-sm font-medium text-white/90 font-mono tracking-tight">
-                    {Math.abs(ship.position[1]).toFixed(2)}°{ship.position[1] >= 0 ? 'N' : 'S'} 
-                    <span className="mx-2 text-white/20">|</span>
+                <div className="text-sm font-semibold text-[var(--text-hi)] font-mono tracking-tight">
+                    {Math.abs(ship.position[1]).toFixed(2)}°{ship.position[1] >= 0 ? 'N' : 'S'}
+                    <span className="mx-2 text-[var(--text-low)]">|</span>
                     {Math.abs(ship.position[0]).toFixed(2)}°{ship.position[0] >= 0 ? 'E' : 'W'}
                 </div>
             </div>
@@ -87,49 +87,49 @@ export function ShipDetailsCard({ ship, onClose }: ShipDetailsCardProps) {
             {/* Route Info */}
             <div className="space-y-2">
                  <div className="flex items-start gap-3">
-                    <div className="flexflex-col items-center gap-1 pt-1">
-                        <div className="w-2 h-2 rounded-full bg-[#4a90e2]" />
-                        <div className="w-0.5 h-6 bg-[#1a2332]" />
-                        <div className="w-2 h-2 rounded-full border border-[#c94444]" />
+                    <div className="flex flex-col items-center gap-1 pt-1">
+                        <div className="w-2 h-2 rounded-full bg-[var(--accent-2)]" />
+                        <div className="w-0.5 h-6 bg-[var(--line-strong)]" />
+                        <div className="w-2 h-2 rounded-full border border-[#dc2626]" />
                     </div>
                     <div className="flex-1 space-y-3">
                         <div>
-                            <div className="text-[10px] text-white/40 uppercase mb-0.5">Origin</div>
-                            <div className="text-sm text-white/80">{ship.origin}</div>
+                            <div className="text-[10.5px] text-[var(--text-mid)] uppercase tracking-[0.08em] mb-0.5">Origin</div>
+                            <div className="text-sm text-[var(--text-hi)]">{ship.origin}</div>
                         </div>
                         <div>
-                            <div className="text-[10px] text-white/40 uppercase mb-0.5">Destination</div>
-                            <div className="text-sm text-white/80">{ship.destination}</div>
+                            <div className="text-[10.5px] text-[var(--text-mid)] uppercase tracking-[0.08em] mb-0.5">Destination</div>
+                            <div className="text-sm text-[var(--text-hi)]">{ship.destination}</div>
                         </div>
                     </div>
                     <div className="text-right">
-                         <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-[#1a2332] rounded-sm mb-2">
-                            <Clock className="w-3 h-3 text-white/40" />
-                            <span className="text-xs font-mono text-white/80">ETA: {ship.eta}</span>
+                         <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-[var(--bg-2)] border border-[var(--line)] rounded-md mb-2">
+                            <Clock className="w-3 h-3 text-[var(--text-mid)]" />
+                            <span className="text-xs font-mono text-[var(--text-hi)]">ETA: {ship.eta}</span>
                          </div>
-                         <div className="text-[10px] text-red-400/80 font-medium flex items-center justify-end gap-1">
+                         <div className="text-[10.5px] text-[#b91c1c] font-semibold flex items-center justify-end gap-1">
                             {ship.riskFactor !== 'Low' && <AlertTriangle className="w-3 h-3" />}
                             Risk: {ship.riskFactor}
                          </div>
                     </div>
                  </div>
             </div>
-            
+
             {/* Cargo Manifest */}
-             <div className="bg-[#0a0e1a]/50 border border-[#1a2332] p-3 rounded-sm flex items-center gap-3">
-                <div className="p-2 bg-[#1a2332] rounded-sm">
-                    <Box className="w-4 h-4 text-[#4a90e2]" />
+             <div className="bg-[var(--bg-1)] border border-[var(--line)] p-3 rounded-lg flex items-center gap-3">
+                <div className="p-2 bg-[rgba(37,99,235,0.10)] border border-[rgba(37,99,235,0.20)] rounded-lg">
+                    <Box className="w-4 h-4 text-[var(--accent-3)]" />
                 </div>
                 <div>
-                     <div className="text-[10px] text-white/40 uppercase">Cargo Manifest</div>
-                     <div className="text-xs text-white/90 font-medium">{ship.cargo}</div>
+                     <div className="text-[10.5px] text-[var(--text-mid)] uppercase tracking-[0.08em]">Cargo Manifest</div>
+                     <div className="text-xs text-[var(--text-hi)] font-semibold">{ship.cargo}</div>
                 </div>
              </div>
 
              {/* Actions */}
              <div className="grid grid-cols-2 gap-2 pt-2">
 
-                <button className="px-3 py-2 bg-[#4a90e2]/10 border border-[#4a90e2]/30 hover:bg-[#4a90e2]/20 text-xs text-[#4a90e2] transition-colors rounded-sm">
+                <button className="px-3 py-2 bg-[rgba(37,99,235,0.10)] border border-[rgba(37,99,235,0.30)] hover:bg-[rgba(37,99,235,0.18)] text-xs text-[var(--accent-3)] font-semibold transition-colors rounded-lg">
                     Contact Channel
                 </button>
              </div>

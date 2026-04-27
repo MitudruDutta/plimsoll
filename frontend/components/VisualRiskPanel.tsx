@@ -46,10 +46,10 @@ interface VisualRiskPanelProps {
 
 // Severity color mapping
 const getSeverityColor = (severity: number) => {
-  if (severity >= 0.8) return { bg: "#c75050", text: "#ff6b6b", label: "CRITICAL" };
-  if (severity >= 0.6) return { bg: "#f5a623", text: "#ffc107", label: "HIGH" };
-  if (severity >= 0.4) return { bg: "#4a90e2", text: "#64b5f6", label: "MEDIUM" };
-  return { bg: "#5a9a7a", text: "#81c784", label: "LOW" };
+  if (severity >= 0.8) return { bg: "#dc2626", text: "#b91c1c", label: "CRITICAL" };
+  if (severity >= 0.6) return { bg: "#d97706", text: "#b45309", label: "HIGH" };
+  if (severity >= 0.4) return { bg: "#2563eb", text: "#1d4ed8", label: "MEDIUM" };
+  return { bg: "#16a34a", text: "#15803d", label: "LOW" };
 };
 
 // Risk type icon mapping
@@ -75,36 +75,37 @@ export function VisualRiskPanel({
   const severityInfo = analysis ? getSeverityColor(analysis.severity) : null;
 
   return (
-    <div className="bg-[#0a0e1a] border border-[#1a2332] rounded-sm overflow-hidden">
+    <div className="bg-white border border-[var(--line)] rounded-xl overflow-hidden shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_4px_14px_-10px_rgba(15,23,42,0.30)]">
       {/* Header */}
-      <div className="px-4 py-3 bg-gradient-to-r from-[#1a2332] to-transparent border-b border-[#1a2332]">
+      <div className="px-4 py-3 bg-gradient-to-r from-[rgba(124,58,237,0.06)] to-transparent border-b border-[var(--line)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Eye className="w-4 h-4 text-[#9b59b6]" />
+              <Eye className="w-4 h-4 text-[#7c3aed]" />
               {isAnalyzing && (
                 <motion.div
-                  className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#9b59b6]"
+                  className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#7c3aed]"
                   animate={{ scale: [1, 1.3, 1], opacity: [1, 0.6, 1] }}
                   transition={{ duration: 1, repeat: Infinity }}
                 />
               )}
             </div>
-            <h2 className="text-xs font-semibold text-white/70 tracking-wider uppercase">
+            <h2 className="text-[11px] font-semibold text-[var(--text-mid)] tracking-[0.12em] uppercase">
               Visual Risk Analysis
             </h2>
-            <span className="flex items-center gap-1 text-[10px] text-[#9b59b6] bg-[#9b59b6]/10 px-2 py-0.5 rounded-sm">
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-[#7c3aed] bg-[rgba(124,58,237,0.10)] border border-[rgba(124,58,237,0.30)] px-2 py-0.5 rounded-full">
               <Cpu className="w-3 h-3" />
               Gemini Vision
             </span>
           </div>
-          
+
           {analysis && severityInfo && (
             <span
-              className="text-[10px] font-bold px-2 py-1 rounded-sm"
+              className="text-[10px] font-bold px-2 py-1 rounded-full border"
               style={{
-                backgroundColor: `${severityInfo.bg}20`,
+                backgroundColor: `${severityInfo.bg}1a`,
                 color: severityInfo.text,
+                borderColor: `${severityInfo.bg}40`,
               }}
             >
               {severityInfo.label}
@@ -126,11 +127,11 @@ export function VisualRiskPanel({
               className="space-y-4"
             >
               {/* Source Info */}
-              <div className="flex items-center gap-3 p-3 bg-[#9b59b6]/10 border border-[#9b59b6]/30 rounded-sm">
-                <Satellite className="w-5 h-5 text-[#9b59b6]" />
+              <div className="flex items-center gap-3 p-3 bg-[rgba(124,58,237,0.06)] border border-[rgba(124,58,237,0.30)] rounded-lg">
+                <Satellite className="w-5 h-5 text-[#7c3aed]" />
                 <div>
-                  <p className="text-xs text-white/80">{analysisSource}</p>
-                  <p className="text-[10px] text-white/50 flex items-center gap-1">
+                  <p className="text-[12.5px] font-semibold text-[var(--text-hi)]">{analysisSource}</p>
+                  <p className="text-[11px] text-[var(--text-mid)] flex items-center gap-1">
                     <MapPin className="w-3 h-3" />
                     {analysisLocation}
                   </p>
@@ -138,20 +139,20 @@ export function VisualRiskPanel({
               </div>
 
               {/* Scanning Animation */}
-              <div className="relative h-32 bg-[#0f1621] rounded-sm overflow-hidden">
+              <div className="relative h-32 bg-[var(--bg-1)] border border-[var(--line)] rounded-lg overflow-hidden">
                 {/* Scan line animation */}
                 <motion.div
-                  className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#9b59b6] to-transparent"
+                  className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#7c3aed] to-transparent"
                   animate={{ top: ["0%", "100%"] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 />
-                
+
                 {/* Grid overlay */}
                 <div
-                  className="absolute inset-0 opacity-20"
+                  className="absolute inset-0 opacity-25"
                   style={{
                     backgroundImage:
-                      "linear-gradient(rgba(155, 89, 182, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(155, 89, 182, 0.3) 1px, transparent 1px)",
+                      "linear-gradient(rgba(124, 58, 237, 0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(124, 58, 237, 0.25) 1px, transparent 1px)",
                     backgroundSize: "20px 20px",
                   }}
                 />
@@ -163,9 +164,9 @@ export function VisualRiskPanel({
                       animate={{ opacity: [0.5, 1, 0.5] }}
                       transition={{ duration: 1.5, repeat: Infinity }}
                     >
-                      <Satellite className="w-8 h-8 text-[#9b59b6] mx-auto mb-2" />
+                      <Satellite className="w-8 h-8 text-[#7c3aed] mx-auto mb-2" />
                     </motion.div>
-                    <p className="text-xs text-white/60">Analyzing satellite imagery...</p>
+                    <p className="text-[12px] text-[var(--text-mid)]">Analyzing satellite imagery...</p>
                   </div>
                 </div>
               </div>
@@ -182,20 +183,21 @@ export function VisualRiskPanel({
             >
               {/* Risk Header */}
               <div
-                className="flex items-start gap-3 p-3 rounded-sm"
+                className="flex items-start gap-3 p-3 rounded-lg border"
                 style={{
-                  backgroundColor: severityInfo ? `${severityInfo.bg}10` : "#1a2332",
-                  borderLeft: `3px solid ${severityInfo?.bg || "#4a90e2"}`,
+                  backgroundColor: severityInfo ? `${severityInfo.bg}0d` : "var(--bg-1)",
+                  borderColor: severityInfo ? `${severityInfo.bg}33` : "var(--line)",
+                  borderLeft: `3px solid ${severityInfo?.bg || "#2563eb"}`,
                 }}
               >
-                <div style={{ color: severityInfo?.text || "#fff" }}>
+                <div style={{ color: severityInfo?.text || "var(--text-hi)" }}>
                   {getRiskIcon(analysis.risk_type)}
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-white/90 mb-1">
+                  <h3 className="text-sm font-semibold text-[var(--text-hi)] mb-1 tracking-[-0.01em]">
                     {analysis.risk_type.replace(/_/g, " ").toUpperCase()}
                   </h3>
-                  <p className="text-xs text-white/70 leading-relaxed">
+                  <p className="text-[12.5px] text-[var(--text-mid)] leading-relaxed">
                     {analysis.description}
                   </p>
                 </div>
@@ -203,10 +205,10 @@ export function VisualRiskPanel({
 
               {/* Stats Grid */}
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-[#0f1621] p-2 rounded-sm">
-                  <span className="text-[10px] text-white/40 block mb-1">Severity</span>
+                <div className="bg-[var(--bg-1)] border border-[var(--line)] p-2.5 rounded-lg">
+                  <span className="text-[10.5px] font-mono uppercase tracking-[0.08em] text-[var(--text-low)] block mb-1">Severity</span>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-[#1a2332] rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-[var(--bg-2)] rounded-full overflow-hidden">
                       <motion.div
                         className="h-full rounded-full"
                         style={{ backgroundColor: severityInfo?.bg }}
@@ -215,23 +217,23 @@ export function VisualRiskPanel({
                         transition={{ duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
-                    <span className="text-xs text-white/80">
+                    <span className="text-[12px] font-semibold text-[var(--text-hi)]">
                       {(analysis.severity * 100).toFixed(0)}%
                     </span>
                   </div>
                 </div>
-                <div className="bg-[#0f1621] p-2 rounded-sm">
-                  <span className="text-[10px] text-white/40 block mb-1">Confidence</span>
+                <div className="bg-[var(--bg-1)] border border-[var(--line)] p-2.5 rounded-lg">
+                  <span className="text-[10.5px] font-mono uppercase tracking-[0.08em] text-[var(--text-low)] block mb-1">Confidence</span>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-[#1a2332] rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-[var(--bg-2)] rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-[#5a9a7a] rounded-full"
+                        className="h-full bg-[var(--success)] rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${analysis.confidence * 100}%` }}
                         transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
                       />
                     </div>
-                    <span className="text-xs text-white/80">
+                    <span className="text-[12px] font-semibold text-[var(--text-hi)]">
                       {(analysis.confidence * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -240,10 +242,10 @@ export function VisualRiskPanel({
 
               {/* Affected Routes */}
               {analysis.affected_routes && analysis.affected_routes.length > 0 && (
-                <div className="bg-[#0f1621] p-3 rounded-sm">
+                <div className="bg-[var(--bg-1)] border border-[var(--line)] p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <Route className="w-3.5 h-3.5 text-[#c75050]" />
-                    <span className="text-[10px] text-white/50 uppercase tracking-wider">
+                    <Route className="w-3.5 h-3.5 text-[var(--danger)]" />
+                    <span className="text-[10.5px] font-semibold text-[var(--text-mid)] uppercase tracking-[0.10em]">
                       Affected Routes
                     </span>
                   </div>
@@ -254,7 +256,7 @@ export function VisualRiskPanel({
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: i * 0.1 }}
-                        className="text-[10px] bg-[#c75050]/20 text-[#ff6b6b] px-2 py-0.5 rounded-sm"
+                        className="text-[10.5px] font-semibold bg-[rgba(220,38,38,0.10)] border border-[rgba(220,38,38,0.30)] text-[#b91c1c] px-2 py-0.5 rounded-full"
                       >
                         {route}
                       </motion.span>
@@ -265,10 +267,10 @@ export function VisualRiskPanel({
 
               {/* Affected Ports */}
               {analysis.affected_ports && analysis.affected_ports.length > 0 && (
-                <div className="bg-[#0f1621] p-3 rounded-sm">
+                <div className="bg-[var(--bg-1)] border border-[var(--line)] p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <Anchor className="w-3.5 h-3.5 text-[#f5a623]" />
-                    <span className="text-[10px] text-white/50 uppercase tracking-wider">
+                    <Anchor className="w-3.5 h-3.5 text-[var(--warn)]" />
+                    <span className="text-[10.5px] font-semibold text-[var(--text-mid)] uppercase tracking-[0.10em]">
                       Affected Ports
                     </span>
                   </div>
@@ -279,7 +281,7 @@ export function VisualRiskPanel({
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: i * 0.1 + 0.3 }}
-                        className="text-[10px] bg-[#f5a623]/20 text-[#ffc107] px-2 py-0.5 rounded-sm"
+                        className="text-[10.5px] font-semibold bg-[rgba(217,119,6,0.10)] border border-[rgba(217,119,6,0.30)] text-[#b45309] px-2 py-0.5 rounded-full"
                       >
                         {port}
                       </motion.span>
@@ -290,10 +292,10 @@ export function VisualRiskPanel({
 
               {/* Raw Insights */}
               {analysis.raw_insights && analysis.raw_insights.length > 0 && (
-                <div className="bg-[#0f1621] p-3 rounded-sm">
+                <div className="bg-[var(--bg-1)] border border-[var(--line)] p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <Zap className="w-3.5 h-3.5 text-[#9b59b6]" />
-                    <span className="text-[10px] text-white/50 uppercase tracking-wider">
+                    <Zap className="w-3.5 h-3.5 text-[#7c3aed]" />
+                    <span className="text-[10.5px] font-semibold text-[var(--text-mid)] uppercase tracking-[0.10em]">
                       Key Insights
                     </span>
                   </div>
@@ -304,9 +306,9 @@ export function VisualRiskPanel({
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.15 + 0.5 }}
-                        className="text-[11px] text-white/70 flex items-start gap-2"
+                        className="text-[12px] text-[var(--text-mid)] flex items-start gap-2"
                       >
-                        <span className="text-[#9b59b6] mt-0.5">•</span>
+                        <span className="text-[#7c3aed] mt-0.5">•</span>
                         {insight}
                       </motion.li>
                     ))}
@@ -316,9 +318,9 @@ export function VisualRiskPanel({
 
               {/* Model Badge */}
               {analysis.gemini_model && (
-                <div className="flex items-center justify-center gap-2 pt-2 border-t border-[#1a2332]">
-                  <Cpu className="w-3 h-3 text-white/30" />
-                  <span className="text-[10px] text-white/40">
+                <div className="flex items-center justify-center gap-2 pt-2 border-t border-[var(--line)]">
+                  <Cpu className="w-3 h-3 text-[var(--text-low)]" />
+                  <span className="text-[10.5px] text-[var(--text-low)]">
                     Analyzed by {analysis.gemini_model} • {analysis.analysis_type?.replace(/_/g, " ")}
                   </span>
                 </div>
@@ -335,33 +337,33 @@ export function VisualRiskPanel({
               className="space-y-4"
             >
               {selectedRoute && (
-                <div className="p-2.5 rounded-sm border border-[#1a2332] bg-[#0f1621]">
+                <div className="p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg-1)]">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedRoute.riskLevel === 'high' ? '#c94444' : selectedRoute.riskLevel === 'medium' ? '#e8a547' : '#5a9a7a' }} />
-                    <span className="text-[10px] text-white/40 uppercase tracking-wider font-bold">Monitoring Route</span>
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedRoute.riskLevel === 'high' ? '#dc2626' : selectedRoute.riskLevel === 'medium' ? '#d97706' : '#16a34a' }} />
+                    <span className="text-[10.5px] text-[var(--text-mid)] uppercase tracking-[0.10em] font-semibold">Monitoring Route</span>
                   </div>
-                  <p className="text-xs text-white/80 font-medium">{selectedRoute.name}</p>
-                  <p className="text-[10px] text-white/50 mt-0.5">{selectedRoute.distance.toLocaleString()} nm · ~{selectedRoute.estimatedTime}d</p>
+                  <p className="text-[12.5px] text-[var(--text-hi)] font-semibold">{selectedRoute.name}</p>
+                  <p className="text-[11px] text-[var(--text-mid)] mt-0.5">{selectedRoute.distance.toLocaleString()} nm · ~{selectedRoute.estimatedTime}d</p>
                 </div>
               )}
               <div className="text-center py-6">
-                <Satellite className="w-10 h-10 text-white/20 mx-auto mb-3" />
-                <p className="text-xs text-white/40 mb-1">Visual Risk Analysis</p>
-                <p className="text-[10px] text-white/30 mb-4">
+                <Satellite className="w-10 h-10 text-[var(--text-low)] mx-auto mb-3" />
+                <p className="text-[12.5px] font-semibold text-[var(--text-hi)] mb-1">Visual Risk Analysis</p>
+                <p className="text-[11px] text-[var(--text-mid)] mb-4">
                   Waiting for satellite imagery feed...
                 </p>
                 {onRunAnalysis && (
                   <div className="flex flex-col gap-2 items-center">
                     <button
                       onClick={() => onRunAnalysis('suez_blockage')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#9b59b6]/20 border border-[#9b59b6]/40 rounded-sm text-[11px] font-medium text-[#9b59b6] hover:bg-[#9b59b6]/30 transition-all"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(124,58,237,0.10)] border border-[rgba(124,58,237,0.30)] rounded-full text-[11px] font-semibold text-[#7c3aed] hover:bg-[rgba(124,58,237,0.18)] transition-all"
                     >
                       <Eye className="w-3 h-3" />
                       Analyze Suez Canal
                     </button>
                     <button
                       onClick={() => onRunAnalysis('port_congestion')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#9b59b6]/20 border border-[#9b59b6]/40 rounded-sm text-[11px] font-medium text-[#9b59b6] hover:bg-[#9b59b6]/30 transition-all"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(124,58,237,0.10)] border border-[rgba(124,58,237,0.30)] rounded-full text-[11px] font-semibold text-[#7c3aed] hover:bg-[rgba(124,58,237,0.18)] transition-all"
                     >
                       <Anchor className="w-3 h-3" />
                       Analyze Port Congestion

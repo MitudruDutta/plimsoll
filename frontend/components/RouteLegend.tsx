@@ -13,33 +13,33 @@ interface LegendItem {
 
 const legendItems: LegendItem[] = [
   {
-    color: '#c94444',
+    color: '#dc2626',
     label: 'Active Risk Route',
     description: 'Primary shipping route through crisis zone',
     status: 'critical',
     icon: <AlertTriangle className="w-3 h-3" strokeWidth={2} />,
   },
   {
-    color: '#e8a547',
+    color: '#d97706',
     label: 'Alternative Route',
     description: 'Backup route with moderate risk',
     status: 'warning',
   },
   {
-    color: '#5a9a7a',
+    color: '#16a34a',
     label: 'Safe Route',
     description: 'Recommended diversion path',
     status: 'safe',
     icon: <CheckCircle className="w-3 h-3" strokeWidth={2} />,
   },
   {
-    color: '#4a90e2',
+    color: '#2563eb',
     label: 'Origin Port',
     description: 'Departure point',
     status: 'info',
   },
   {
-    color: '#c94444',
+    color: '#dc2626',
     label: 'Destination Port',
     description: 'Target arrival point',
     status: 'info',
@@ -51,12 +51,12 @@ export function RouteLegend() {
 
   return (
     <motion.div
-      className="absolute bottom-6 left-6 bg-[#0f1621]/98 border border-[#1a2332] rounded-sm flex flex-col z-20"
+      className="absolute bottom-6 left-6 bg-white/95 border border-[var(--line-strong)] rounded-xl flex flex-col z-20 shadow-[0_12px_28px_-12px_rgba(15,23,42,0.25)]"
       initial={{ opacity: 0, x: -20 }}
-      animate={{ 
-        opacity: 1, 
+      animate={{
+        opacity: 1,
         x: 0,
-        width: isCollapsed ? 24 : 320
+        width: isCollapsed ? 28 : 320
       }}
       transition={{ duration: 0.3 }}
       style={{ backdropFilter: 'blur(8px)' }}
@@ -64,7 +64,7 @@ export function RouteLegend() {
       {/* Toggle Button - always positioned inside or properly aligned */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-5 top-2 w-5 h-8 bg-[#0f1621] border border-l-0 border-[#1a2332] rounded-r-sm flex items-center justify-center text-white/40 hover:text-white hover:bg-[#1a2332] transition-colors z-30"
+        className="absolute -right-5 top-2 w-5 h-8 bg-white border border-l-0 border-[var(--line-strong)] rounded-r-md flex items-center justify-center text-[var(--text-mid)] hover:text-[var(--accent-3)] hover:bg-[rgba(37,99,235,0.06)] transition-colors z-30"
       >
         {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
@@ -74,10 +74,10 @@ export function RouteLegend() {
         {!isCollapsed && (
           <div className="p-4">
             {/* Header */}
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#1a2332]">
-              <Ship className="w-4 h-4 text-[#4a90e2]" strokeWidth={2} />
-              <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider">
-                Aviation Routes Legend
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[var(--line)]">
+              <Ship className="w-4 h-4 text-[var(--accent-2)]" strokeWidth={2} />
+              <h3 className="text-[11px] font-semibold text-[var(--text-mid)] uppercase tracking-[0.12em]">
+                Route Legend
               </h3>
             </div>
 
@@ -95,14 +95,14 @@ export function RouteLegend() {
                   <div className="flex-shrink-0 mt-0.5">
                     {item.icon ? (
                       <div
-                        className={`p-1 rounded-sm ${
+                        className={`p-1 rounded-md ${
                           item.status === 'critical'
-                            ? 'bg-[#c94444]/20 text-[#c94444]'
+                            ? 'bg-[rgba(220,38,38,0.10)] text-[#dc2626] border border-[rgba(220,38,38,0.25)]'
                             : item.status === 'warning'
-                            ? 'bg-[#e8a547]/20 text-[#e8a547]'
+                            ? 'bg-[rgba(217,119,6,0.10)] text-[#d97706] border border-[rgba(217,119,6,0.25)]'
                             : item.status === 'safe'
-                            ? 'bg-[#5a9a7a]/20 text-[#5a9a7a]'
-                            : 'bg-[#4a90e2]/20 text-[#4a90e2]'
+                            ? 'bg-[rgba(22,163,74,0.10)] text-[#16a34a] border border-[rgba(22,163,74,0.25)]'
+                            : 'bg-[rgba(37,99,235,0.10)] text-[var(--accent-2)] border border-[rgba(37,99,235,0.25)]'
                         }`}
                       >
                         {item.icon}
@@ -129,11 +129,11 @@ export function RouteLegend() {
 
                   {/* Label and description */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-white/80 mb-0.5">
+                    <div className="text-[12px] font-semibold text-[var(--text-hi)] mb-0.5">
                       {item.label}
                     </div>
                     {item.description && (
-                      <div className="text-[10px] text-white/40 leading-tight">
+                      <div className="text-[10.5px] text-[var(--text-mid)] leading-tight">
                         {item.description}
                       </div>
                     )}
@@ -143,17 +143,17 @@ export function RouteLegend() {
             </div>
 
             {/* Footer note */}
-            <div className="mt-4 pt-3 border-t border-[#1a2332] flex items-start gap-2">
-              <Info className="w-3 h-3 text-white/30 flex-shrink-0 mt-0.5" strokeWidth={2} />
-              <p className="text-[10px] text-white/30 leading-tight">
+            <div className="mt-4 pt-3 border-t border-[var(--line)] flex items-start gap-2">
+              <Info className="w-3 h-3 text-[var(--text-low)] flex-shrink-0 mt-0.5" strokeWidth={2} />
+              <p className="text-[10.5px] text-[var(--text-mid)] leading-tight">
                 Real-time route analysis powered by advanced AI and geopolitical risk data
               </p>
             </div>
-            
+
             {/* Pulse indicator */}
             <div className="absolute top-4 right-4">
               <motion.div
-                className="w-2 h-2 rounded-full bg-[#0078d4]"
+                className="w-2 h-2 rounded-full bg-[var(--accent-2)]"
                 animate={{
                   opacity: [1, 0.3, 1],
                   scale: [1, 1.2, 1],
@@ -172,8 +172,8 @@ export function RouteLegend() {
       {/* Collapsed State Indicator (Vertical Text) */}
       {isCollapsed && (
         <div className="h-full flex flex-col items-center py-4 gap-4">
-          <Ship className="w-4 h-4 text-white/60" strokeWidth={2} />
-          <div className="[writing-mode:vertical-rl] rotate-180 text-xs font-medium text-white/60 tracking-wider whitespace-nowrap">
+          <Ship className="w-4 h-4 text-[var(--accent-2)]" strokeWidth={2} />
+          <div className="[writing-mode:vertical-rl] rotate-180 text-[10.5px] font-mono uppercase tracking-[0.18em] text-[var(--text-mid)] whitespace-nowrap">
             LEGEND
           </div>
         </div>

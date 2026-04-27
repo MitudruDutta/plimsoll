@@ -24,8 +24,23 @@ export const CommonHeader: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname() ?? '/';
   const navigate = React.useCallback(
-    (path: string) => router.push(path),
-    [router],
+    (path: string) => {
+      const hashIndex = path.indexOf('#');
+      if (hashIndex !== -1) {
+        const basePath = path.slice(0, hashIndex) || '/';
+        const anchor = path.slice(hashIndex + 1);
+        if (pathname === basePath) {
+          const target =
+            typeof document !== 'undefined' ? document.getElementById(anchor) : null;
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+          }
+        }
+      }
+      router.push(path);
+    },
+    [router, pathname],
   );
   const { isSignedIn, email, fullName, avatarUrl, user } = useCurrentUser();
   const { signOut } = useSupabaseAuth();
@@ -53,7 +68,7 @@ export const CommonHeader: React.FC = () => {
     { path: '/usershome', label: 'Cockpit' },
     { path: '/documents', label: 'Documents' },
     { path: '/demo', label: 'Demo' },
-    { path: '/pay', label: 'Pricing' },
+    { path: '/#pricing', label: 'Pricing' },
   ];
 
   const adminMenuItems: MenuProps['items'] = [
@@ -94,7 +109,7 @@ export const CommonHeader: React.FC = () => {
       ),
       onClick: async () => {
         await signOut();
-        navigate('/pay');
+        navigate('/');
       },
     },
   ];
@@ -120,7 +135,7 @@ export const CommonHeader: React.FC = () => {
           <BrandLockup
             size={26}
             showWordmark={!isDemoPage}
-            onClick={() => navigate('/pay')}
+            onClick={() => navigate('/')}
             className="shrink-0"
           />
 

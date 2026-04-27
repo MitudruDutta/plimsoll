@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="55%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </linearGradient>
+    <linearGradient id="deck" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Hull (top-down silhouette, bow points UP/north) -->
+  <g filter="url(#glow)">
+    <path
+      d="M32 4
+         C 38 8, 42 16, 42 24
+         L 42 50
+         C 42 54, 40 56, 36 56
+         L 28 56
+         C 24 56, 22 54, 22 50
+         L 22 24
+         C 22 16, 26 8, 32 4 Z"
+      fill="url(#hull)"
+      stroke="#1d4ed8"
+      stroke-width="1.6"
+      stroke-linejoin="round"
+    />
+
+    <!-- Bow accent -->
+    <path
+      d="M32 7
+         C 36 10, 39 16, 39 22
+         L 25 22
+         C 25 16, 28 10, 32 7 Z"
+      fill="#2563eb"
+      opacity="0.85"
+    />
+
+    <!-- Bridge / superstructure -->
+    <rect x="26" y="44" width="12" height="8" rx="1.5" fill="url(#deck)" stroke="#0b1220" stroke-width="0.6"/>
+    <rect x="28" y="46" width="8" height="2" fill="#bfdbfe"/>
+    <rect x="28" y="49" width="8" height="1.5" fill="#bfdbfe" opacity="0.7"/>
+
+    <!-- Cargo deck stripes -->
+    <rect x="24" y="24" width="16" height="2.4" fill="#1d4ed8" opacity="0.55"/>
+    <rect x="24" y="29" width="16" height="2.4" fill="#1d4ed8" opacity="0.55"/>
+    <rect x="24" y="34" width="16" height="2.4" fill="#1d4ed8" opacity="0.55"/>
+    <rect x="24" y="39" width="16" height="2.4" fill="#1d4ed8" opacity="0.55"/>
+
+    <!-- Center keel highlight -->
+    <line x1="32" y1="10" x2="32" y2="44" stroke="#ffffff" stroke-width="0.8" opacity="0.55"/>
+  </g>
+</svg>

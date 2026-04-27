@@ -400,8 +400,8 @@ export const LandingPage: React.FC = () => {
 
           <div className="mt-12 grid w-full grid-cols-1 gap-3 text-left sm:grid-cols-3 sm:gap-2">
             {[
-              { icon: <Globe className="size-4" />, label: 'IMO, PSC, ECA, customs &mdash; cited' },
-              { icon: <Clock className="size-4" />, label: 'Decision in &lt; 3 minutes, not 3 days' },
+              { icon: <Globe className="size-4" />, label: 'IMO, PSC, ECA, customs — cited' },
+              { icon: <Clock className="size-4" />, label: 'Decision in < 3 minutes, not 3 days' },
               { icon: <Scale className="size-4" />, label: 'Audit-grade, replayable agent traces' },
             ].map((b, i) => (
               <div
@@ -409,7 +409,7 @@ export const LandingPage: React.FC = () => {
                 className="flex items-center gap-2.5 rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[12.5px] text-[var(--text-mid)]"
               >
                 <span className="text-[var(--accent-1)]">{b.icon}</span>
-                <span dangerouslySetInnerHTML={{ __html: b.label }} />
+                <span>{b.label}</span>
               </div>
             ))}
           </div>
@@ -521,7 +521,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="pricing-section">
+      <section id="pricing" className="pricing-section">
         <motion.div
           className="section-header"
           initial={{ opacity: 0, y: 20 }}

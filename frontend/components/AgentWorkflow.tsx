@@ -354,11 +354,11 @@ export const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
   };
 
   return (
-    <div className="p-4 border-b border-[#1a2332] box-border">
+    <div className="p-4 border-b border-[var(--line)] box-border">
       <div className="flex items-center justify-between gap-2 mb-4 box-border">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#4a90e2]" />
-          <h2 className="text-xs font-semibold text-white/60 tracking-wider uppercase leading-tight text-left m-0 p-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-2)]" />
+          <h2 className="text-xs font-semibold text-[var(--text-mid)] tracking-wider uppercase leading-tight text-left m-0 p-0">
             Multi-Agent Collaboration
           </h2>
         </div>
@@ -373,7 +373,7 @@ export const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
                 onRunMarketSentinel();
               }}
               disabled={marketSentinelLoading}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-[#4a90e2]/20 border border-[#4a90e2]/40 rounded-sm text-[10px] font-medium text-[#4a90e2] hover:bg-[#4a90e2]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[rgba(37,99,235,0.10)] border border-[rgba(37,99,235,0.30)] rounded-full text-[10.5px] font-semibold text-[var(--accent-3)] hover:bg-[rgba(37,99,235,0.18)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <Play className="w-3 h-3" strokeWidth={2} />
               {marketSentinelLoading ? 'Running...' : 'Run Sentinel'}
@@ -388,7 +388,7 @@ export const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
                 onRunHedge();
               }}
               disabled={hedgeLoading}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-[#10b981]/20 border border-[#10b981]/40 rounded-sm text-[10px] font-medium text-[#10b981] hover:bg-[#10b981]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[rgba(22,163,74,0.10)] border border-[rgba(22,163,74,0.30)] rounded-full text-[10.5px] font-semibold text-[#15803d] hover:bg-[rgba(22,163,74,0.18)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <TrendingUp className="w-3 h-3" strokeWidth={2} />
               {hedgeLoading ? 'Running...' : 'Run Hedge'}
@@ -399,13 +399,13 @@ export const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
 
       {/* Active Route Context */}
       {selectedRoute && (
-        <div className="mb-4 p-2.5 rounded-sm border border-[#1a2332] bg-[#0f1621]">
+        <div className="mb-4 p-2.5 rounded-sm border border-[var(--line)] bg-white">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedRoute.riskLevel === 'high' ? '#c94444' : selectedRoute.riskLevel === 'medium' ? '#e8a547' : '#5a9a7a' }} />
-            <span className="text-[10px] text-white/40 uppercase tracking-wider font-bold">Active Route</span>
+            <span className="text-[10px] text-[var(--text-low)] uppercase tracking-wider font-bold">Active Route</span>
           </div>
-          <p className="text-xs text-white/80 font-medium mb-1">{selectedRoute.name}</p>
-          <div className="flex items-center gap-3 text-[10px] text-white/50">
+          <p className="text-xs text-[var(--text-hi)] font-medium mb-1">{selectedRoute.name}</p>
+          <div className="flex items-center gap-3 text-[10px] text-[var(--text-mid)]">
             <span>{selectedRoute.distance.toLocaleString()} nm</span>
             <span>~{selectedRoute.estimatedTime}d</span>
             <span className={`uppercase font-bold ${selectedRoute.riskLevel === 'high' ? 'text-[#c94444]' : selectedRoute.riskLevel === 'medium' ? 'text-[#e8a547]' : 'text-[#5a9a7a]'}`}>
@@ -434,14 +434,14 @@ export const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
             >
               {marketSentinelData.signal_packet.severity}
             </span>
-            <span className="text-[10px] text-white/40 font-mono">
+            <span className="text-[10px] text-[var(--text-low)] font-mono">
               {marketSentinelData.signal_packet.signal_id}
             </span>
           </div>
-          <p className="text-xs text-white/80 leading-relaxed mb-2">
+          <p className="text-xs text-[var(--text-hi)] leading-relaxed mb-2">
             {marketSentinelData.signal_packet.summary}
           </p>
-          <div className="flex flex-wrap gap-2 text-[10px] text-white/50">
+          <div className="flex flex-wrap gap-2 text-[10px] text-[var(--text-mid)]">
             <span>Confidence: {(marketSentinelData.signal_packet.confidence * 100).toFixed(0)}%</span>
             <span>•</span>
             <span>Horizon: {marketSentinelData.signal_packet.expected_horizon_days} days</span>
@@ -470,21 +470,21 @@ export const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
             >
               {hedgeRiskData.urgency} · {hedgeRiskData.market_regime}
             </span>
-            <span className="text-[10px] text-white/40 font-mono">
+            <span className="text-[10px] text-[var(--text-low)] font-mono">
               Risk Hedge
             </span>
           </div>
-          <div className="flex flex-wrap gap-3 text-[10px] text-white/60">
+          <div className="flex flex-wrap gap-3 text-[10px] text-[var(--text-mid)]">
             <span>Exposure: ${(hedgeRiskData.total_exposure_usd / 1_000_000).toFixed(1)}M</span>
             <span>•</span>
             <span>VaR 95%: ${(hedgeRiskData.total_var_95_usd / 1_000).toFixed(0)}K</span>
           </div>
           {hedgeRecommendation && (
-            <div className="mt-2 pt-2 border-t border-white/10">
-              <p className="text-[10px] text-white/50">
-                Strategy: <span className="text-white/70">{hedgeRecommendation.regime} regime</span>
+            <div className="mt-2 pt-2 border-t border-[var(--line)]">
+              <p className="text-[10px] text-[var(--text-mid)]">
+                Strategy: <span className="text-[var(--text-mid)]">{hedgeRecommendation.regime} regime</span>
                 {hedgeRecommendation.fuel_hedging && (
-                  <> · Fuel hedge: <span className="text-white/70">{hedgeRecommendation.fuel_hedging.hedge_ratio}</span></>
+                  <> · Fuel hedge: <span className="text-[var(--text-mid)]">{hedgeRecommendation.fuel_hedging.hedge_ratio}</span></>
                 )}
               </p>
             </div>
@@ -496,7 +496,7 @@ export const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
         <button
           type="button"
           onClick={() => setSelectedAgentId("market_sentinel")}
-          className={`w-full text-left rounded-sm transition-all ${selectedAgentId === "market_sentinel" ? "ring-1 ring-[#4a90e2]/70" : "ring-1 ring-transparent hover:ring-[#4a90e2]/30"}`}
+          className={`w-full text-left rounded-sm transition-all ${selectedAgentId === "market_sentinel" ? "ring-1 ring-[rgba(37,99,235,0.55)]" : "ring-1 ring-transparent hover:ring-[rgba(37,99,235,0.25)]"}`}
         >
         <AIAgentCard
           icon={AlertTriangle}
@@ -510,7 +510,7 @@ export const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
         <button
           type="button"
           onClick={() => setSelectedAgentId("risk_hedger")}
-          className={`w-full text-left rounded-sm transition-all ${selectedAgentId === "risk_hedger" ? "ring-1 ring-[#10b981]/70" : "ring-1 ring-transparent hover:ring-[#10b981]/30"}`}
+          className={`w-full text-left rounded-sm transition-all ${selectedAgentId === "risk_hedger" ? "ring-1 ring-[rgba(22,163,74,0.55)]" : "ring-1 ring-transparent hover:ring-[rgba(22,163,74,0.25)]"}`}
         >
         <AIAgentCard
           icon={TrendingUp}

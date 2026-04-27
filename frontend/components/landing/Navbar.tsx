@@ -18,7 +18,7 @@ const NAV_LINKS: ReadonlyArray<{ label: string; href: string }> = [
   { label: "Cockpit", href: "/usershome" },
   { label: "Documents", href: "/documents" },
   { label: "Demo", href: "/demo" },
-  { label: "Pricing", href: "/pay" },
+  { label: "Pricing", href: "/#pricing" },
 ];
 
 export const Navbar: React.FC = () => {
@@ -36,6 +36,14 @@ export const Navbar: React.FC = () => {
 
   const handleNavClick = (href: string) => {
     if (href.startsWith("/")) {
+      const hashIndex = href.indexOf("#");
+      if (hashIndex !== -1 && (pathname === href.slice(0, hashIndex) || (pathname === "/" && hashIndex === 0))) {
+        const target = document.getElementById(href.slice(hashIndex + 1));
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+      }
       router.push(href);
       return;
     }
