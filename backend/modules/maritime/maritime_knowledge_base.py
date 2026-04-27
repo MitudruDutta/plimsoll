@@ -17,11 +17,14 @@ from datetime import datetime
 from functools import lru_cache
 from typing import Any
 
-from sqlalchemy import func, or_
+from sqlalchemy import bindparam, func, or_
 
 from shared.config import get_settings
 from shared.database.database import SessionLocal
 from shared.database.models import KnowledgeDocument, UserDocument
+from shared.embeddings import embed_query as _embed_query
+from shared.embeddings import embed_texts as _embed_texts
+from shared.embeddings import is_available as _embeddings_available
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -65,6 +68,9 @@ class MaritimeKnowledgeBase:
         self.embedding_dim = settings.embedding_dim
         # Compatibility for older scripts that check `kb.embeddings is None`.
         self.embeddings = None if self.mock_mode else "pgvector"
+        # When fastembed is installed we can populate the pgvector column and
+        # rank by cosine similarity. Otherwise we fall back to lexical-only.
+        self._embeddings_available = (not self.mock_mode) and _embeddings_available()
 
     def _metadata_to_json(self, metadata: dict[str, Any]) -> str:
         return json.dumps(metadata or {}, default=str, ensure_ascii=False, sort_keys=True)
@@ -153,15 +159,30 @@ class MaritimeKnowledgeBase:
             logger.error("Unknown collection %s", collection_name)
             return 0
 
+        # Pre-extract content/metadata so we can batch-embed in one pass.
+        prepared: list[tuple[str, dict[str, Any], str]] = []
+        for doc in documents:
+            content = getattr(doc, "page_content", None) or getattr(doc, "content", "") or ""
+            metadata = dict(getattr(doc, "metadata", {}) or {})
+            if not content.strip():
+                continue
+            content_hash = self._content_hash(collection_name, content, metadata)
+            prepared.append((content, metadata, content_hash))
+
+        embeddings_by_index: dict[int, list[float]] = {}
+        if self._embeddings_available and prepared:
+            try:
+                vectors = _embed_texts([item[0] for item in prepared])
+                for idx, vec in enumerate(vectors):
+                    if vec:
+                        embeddings_by_index[idx] = vec
+            except Exception:  # pragma: no cover - encoder runtime errors
+                logger.exception("Embedding generation failed; storing rows without vectors")
+
         added = 0
         session = SessionLocal()
         try:
-            for doc in documents:
-                content = getattr(doc, "page_content", None) or getattr(doc, "content", "") or ""
-                metadata = dict(getattr(doc, "metadata", {}) or {})
-                if not content.strip():
-                    continue
-                content_hash = self._content_hash(collection_name, content, metadata)
+            for idx, (content, metadata, content_hash) in enumerate(prepared):
                 exists = (
                     session.query(KnowledgeDocument)
                     .filter(KnowledgeDocument.content_hash == content_hash)
@@ -175,7 +196,7 @@ class MaritimeKnowledgeBase:
                         content=content,
                         metadata_json=self._metadata_to_json(metadata),
                         content_hash=content_hash,
-                        embedding=None,
+                        embedding=embeddings_by_index.get(idx),
                         embedding_model=self.embedding_model,
                     )
                 )
@@ -223,24 +244,63 @@ class MaritimeKnowledgeBase:
         if not selected:
             return []
 
+        query_vector: list[float] | None = None
+        if self._embeddings_available and query.strip():
+            try:
+                vec = _embed_query(query)
+                if vec:
+                    query_vector = vec
+            except Exception:  # pragma: no cover - runtime encoder failures
+                logger.exception("Query embedding failed; falling back to lexical")
+
         session = SessionLocal()
         try:
             db_query = session.query(KnowledgeDocument).filter(
                 KnowledgeDocument.collection_name.in_(selected)
             )
-            terms = [term for term in query.split() if len(term) > 2][:6]
-            if terms:
-                db_query = db_query.filter(
-                    or_(*[KnowledgeDocument.content.ilike(f"%{term}%") for term in terms])
+            if query_vector is not None:
+                # `PgVector` is a TypeDecorator so SQLAlchemy doesn't surface
+                # pgvector's custom comparator (no `cosine_distance` helper).
+                # Use the raw `<=>` operator and pass the bound parameter with
+                # the column's own type so pgvector's bind processor converts
+                # the python list into the on-wire vector format.
+                distance = KnowledgeDocument.embedding.op("<=>")(
+                    bindparam(
+                        "query_vector",
+                        query_vector,
+                        type_=KnowledgeDocument.embedding.type,
+                    )
                 )
-            rows = db_query.order_by(KnowledgeDocument.updated_at.desc()).limit(max(top_k * 4, 20)).all()
+                rows = (
+                    db_query.filter(KnowledgeDocument.embedding.isnot(None))
+                    .order_by(distance.asc())
+                    .limit(max(top_k * 4, 20))
+                    .all()
+                )
+                if not rows:
+                    # Index hasn't been ingested with vectors yet — degrade
+                    # to lexical so the route still returns useful hits.
+                    query_vector = None
+            if query_vector is None:
+                terms = [term for term in query.split() if len(term) > 2][:6]
+                if terms:
+                    db_query = db_query.filter(
+                        or_(*[KnowledgeDocument.content.ilike(f"%{term}%") for term in terms])
+                    )
+                rows = (
+                    db_query.order_by(KnowledgeDocument.updated_at.desc())
+                    .limit(max(top_k * 4, 20))
+                    .all()
+                )
+
             results = []
             for row in rows:
                 result = self._row_to_result(row, query)
                 if filters and not self._matches_filters(result.metadata, filters):
                     continue
                 results.append(result)
-            results.sort(key=lambda item: item.score, reverse=True)
+            if query_vector is None:
+                results.sort(key=lambda item: item.score, reverse=True)
             return results[:top_k]
         finally:
             session.close()

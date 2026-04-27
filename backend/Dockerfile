@@ -16,12 +16,13 @@ RUN apt-get update && apt-get install -y \
 
 # Install runtime dependencies from the repo-level pyproject.
 ARG INSTALL_AI=false
+ARG INSTALL_SCRIPTS=true
 COPY pyproject.toml .
-RUN if [ "$INSTALL_AI" = "true" ]; then \
-        uv pip install --system --no-cache -r pyproject.toml --extra ai; \
-    else \
-        uv pip install --system --no-cache -r pyproject.toml; \
-    fi
+RUN set -e; \
+    EXTRAS=""; \
+    if [ "$INSTALL_AI" = "true" ]; then EXTRAS="$EXTRAS --extra ai"; fi; \
+    if [ "$INSTALL_SCRIPTS" = "true" ]; then EXTRAS="$EXTRAS --extra scripts"; fi; \
+    uv pip install --system --no-cache -r pyproject.toml $EXTRAS
 
 # Create an unprivileged runtime user before copying the app.
 RUN groupadd --system plimsoll && \

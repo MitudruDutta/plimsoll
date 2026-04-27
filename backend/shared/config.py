@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     google_api_key: str | None = None
     google_maps_api_key: str | None = None
+    groq_api_key: str | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
 
     # --- Supabase / Storage -----------------------------------------------
     supabase_url: str | None = None
@@ -61,7 +63,7 @@ class Settings(BaseSettings):
     storage_bucket_reports: str = "reports"
 
     # --- Vector store -----------------------------------------------------
-    embedding_model: str = "models/gemini-embedding-001"
+    embedding_model: str = "BAAI/bge-base-en-v1.5"
     embedding_dim: int = 768
 
     # --- Uploads ----------------------------------------------------------

@@ -63,6 +63,15 @@ def get_default_llm() -> Any:
             raise RuntimeError("CrewAI is not installed")
 
         settings = get_settings()
+        if settings.groq_api_key:
+            os.environ.setdefault("GROQ_API_KEY", settings.groq_api_key)
+            model = settings.groq_model or "llama-3.3-70b-versatile"
+            _cached_llm = CrewLLM(
+                model=model if model.startswith("groq/") else f"groq/{model}",
+                api_key=settings.groq_api_key,
+            )
+            return _cached_llm
+
         if settings.google_api_key:
             os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key)
             _ping_gemini(settings.google_api_key)
@@ -79,7 +88,9 @@ def get_default_llm() -> Any:
             _cached_llm = CrewLLM(model=settings.openai_model or "gpt-4o-mini")
             return _cached_llm
 
-        raise RuntimeError("No LLM API key configured. Set GOOGLE_API_KEY or OPENAI_API_KEY.")
+        raise RuntimeError(
+            "No LLM API key configured. Set GROQ_API_KEY, GOOGLE_API_KEY, or OPENAI_API_KEY."
+        )
 
 
 def reset_cached_llm() -> None:

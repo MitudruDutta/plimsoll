@@ -10,7 +10,6 @@
   font-family: var(--font-sans), 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   overflow-y: scroll;
-  scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
   position: relative;
 }

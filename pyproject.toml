@@ -26,6 +26,7 @@ dependencies = [
     "httpx==0.28.1",
     "httpx-sse==0.4.3",
     "uvloop==0.22.1; platform_system != 'Windows'",
+    "fastembed>=0.4.2",
 ]
 
 [project.optional-dependencies]
