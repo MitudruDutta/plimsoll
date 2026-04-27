@@ -2,11 +2,12 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from shared.auth import get_current_user
 from shared.observability.mode import demo_response
+from shared.rate_limit import limiter
 
 router = APIRouter(
     prefix="/api/market-sentinel",
@@ -128,9 +129,10 @@ def generate_normal_packet(origin, destination):
 
 
 @router.post("/run", response_model=MarketSentinelResponse)
-async def run_analysis(request: MarketSentinelRequest):
+@limiter.limit("12/minute")
+async def run_analysis(request: Request, body: MarketSentinelRequest):
     # Extract route info
-    lanes = request.watchlist.get("lanes", [])
+    lanes = body.watchlist.get("lanes", [])
     origin = "Unknown"
     destination = "Unknown"
 
@@ -148,7 +150,7 @@ async def run_analysis(request: MarketSentinelRequest):
             "firstLane": lanes[0] if lanes else None,
             "origin": origin,
             "destination": destination,
-            "entitiesCount": len(request.watchlist.get("entities", [])),
+            "entitiesCount": len(body.watchlist.get("entities", [])),
         },
     )
     # #endregion
@@ -196,7 +198,7 @@ async def run_analysis(request: MarketSentinelRequest):
             "thread_id": str(uuid.uuid4()),
             "signal_packet": packet,
             "raw_text": raw_text,
-            "request_echo": request.dict(),
+            "request_echo": body.dict(),
         }
     )
 

@@ -7,13 +7,14 @@ API endpoints for financial risk hedging functionality.
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from modules.financial.hedge_agent import get_hedge_agent
 from modules.financial.market_data_service import get_market_data_service
 from shared.auth import get_current_user
 from shared.observability.mode import demo_response, tag_response
+from shared.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,8 @@ class CrisisActivationRequest(BaseModel):
 
 
 @router.post("/assess-risk")
-def assess_hedging_risk(params: HedgeOperationParams):
+@limiter.limit("30/minute")
+def assess_hedging_risk(request: Request, params: HedgeOperationParams):
     """
         Assess financial risk exposure.
 
@@ -78,7 +80,10 @@ def assess_hedging_risk(params: HedgeOperationParams):
 
 
 @router.post("/recommend")
-def recommend_hedging_strategy(params: HedgeOperationParams, crisis_override: bool = False):
+@limiter.limit("10/minute")
+def recommend_hedging_strategy(
+    request: Request, params: HedgeOperationParams, crisis_override: bool = False
+):
     """
     Get optimal hedging strategy recommendations.
 
@@ -116,7 +121,8 @@ def recommend_hedging_strategy(params: HedgeOperationParams, crisis_override: bo
 
 
 @router.post("/crisis-activate")
-def activate_crisis_hedging(request: CrisisActivationRequest):
+@limiter.limit("5/minute")
+def activate_crisis_hedging(request: Request, body: CrisisActivationRequest):
     """
     Activate emergency crisis hedging protocol.
 
@@ -139,8 +145,8 @@ def activate_crisis_hedging(request: CrisisActivationRequest):
     """
     try:
         # Initialize agent with crisis scenario
-        hedge_agent = get_hedge_agent(crisis_scenario=request.crisis_scenario)
-        operation_dict = request.operation_params.dict()
+        hedge_agent = get_hedge_agent(crisis_scenario=body.crisis_scenario)
+        operation_dict = body.operation_params.dict()
         crisis_plan = hedge_agent.activate_crisis_hedging(operation_dict)
         if isinstance(crisis_plan, dict):
             return demo_response(crisis_plan)
@@ -151,7 +157,8 @@ def activate_crisis_hedging(request: CrisisActivationRequest):
 
 
 @router.get("/market-data")
-def get_market_data(crisis_scenario: str | None = None):
+@limiter.limit("60/minute")
+def get_market_data(request: Request, crisis_scenario: str | None = None):
     """
     Get current market data for all asset classes.
 
@@ -186,7 +193,8 @@ def get_market_data(crisis_scenario: str | None = None):
 
 
 @router.post("/report")
-def generate_hedge_report(params: HedgeOperationParams):
+@limiter.limit("5/minute")
+def generate_hedge_report(request: Request, params: HedgeOperationParams):
     """
     Generate executive-level hedging report in natural language.
 

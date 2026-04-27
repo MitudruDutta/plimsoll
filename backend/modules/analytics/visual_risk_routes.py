@@ -7,11 +7,12 @@ Supports satellite imagery and video analysis for supply chain risks.
 
 import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from modules.analytics.visual_risk_service import get_visual_risk_analyzer
 from shared.auth import get_current_user
 from shared.observability.mode import demo_response, tag_response
+from shared.rate_limit import limiter
 from shared.uploads import UploadTooLargeError, read_upload_limited
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,10 @@ async def get_demo_analysis(scenario: str = "suez_blockage"):
 
 
 @router.post("/analyze")
-async def analyze_image(file: UploadFile = File(...), source_type: str = "satellite"):
+@limiter.limit("10/minute")
+async def analyze_image(
+    request: Request, file: UploadFile = File(...), source_type: str = "satellite"
+):
     """
     Analyze uploaded image for supply chain risks.
 

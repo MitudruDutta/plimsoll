@@ -1020,8 +1020,10 @@ async def delete_document(
 
 
 @router.post("/documents/analyze", response_model=DocumentAnalysisResponse)
+@limiter.limit("6/minute")
 async def analyze_documents_with_agents(
-    request: DocumentAnalysisRequest,
+    request: Request,
+    body: DocumentAnalysisRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -1037,7 +1039,7 @@ async def analyze_documents_with_agents(
     of what documents are present, missing, or expired.
     """
     # Validate vessel exists
-    vessel = _vessel_for_user(db, user, request.vessel_id)
+    vessel = _vessel_for_user(db, user, body.vessel_id)
 
     # Get orchestrator
     from modules.orchestration.crew_document_agents import get_document_analysis_orchestrator
@@ -1062,20 +1064,20 @@ async def analyze_documents_with_agents(
     # Get documents
     doc_service = DocumentService()
 
-    if request.document_ids:
+    if body.document_ids:
         # Get specific documents
         documents = []
-        for doc_id in request.document_ids:
+        for doc_id in body.document_ids:
             doc = doc_service.get_document(doc_id)
             try:
                 doc_vessel_id = int(doc.get("vessel_id") or 0) if doc else 0
             except (TypeError, ValueError):
                 doc_vessel_id = 0
-            if doc and doc_vessel_id == request.vessel_id:
+            if doc and doc_vessel_id == body.vessel_id:
                 documents.append(doc)
     else:
         # Get all vessel documents
-        documents = doc_service.get_vessel_documents(request.vessel_id)
+        documents = doc_service.get_vessel_documents(body.vessel_id)
 
     if not documents:
         raise HTTPException(
@@ -1098,7 +1100,7 @@ async def analyze_documents_with_agents(
 
     # Run CrewAI analysis
     result = await orchestrator.analyze_documents(
-        document_texts=document_texts, vessel_info=vessel_info, route_ports=request.port_codes
+        document_texts=document_texts, vessel_info=vessel_info, route_ports=body.port_codes
     )
 
     if not result.get("success"):
@@ -1114,7 +1116,7 @@ async def analyze_documents_with_agents(
             recommendations=[],
             agent_reasoning=result.get("error", "Unknown error"),
             vessel_info=vessel_info,
-            route_ports=request.port_codes,
+            route_ports=body.port_codes,
         )
 
     # Parse the result
@@ -1195,7 +1197,7 @@ async def analyze_documents_with_agents(
         recommendations=recommendations,
         agent_reasoning=result.get("crew_output"),
         vessel_info=vessel_info,
-        route_ports=request.port_codes,
+        route_ports=body.port_codes,
     )
 
 
@@ -1203,8 +1205,10 @@ async def analyze_documents_with_agents(
 
 
 @router.post("/documents/detect-missing", response_model=MissingDocsResponse)
+@limiter.limit("6/minute")
 async def detect_missing_documents(
-    request: MissingDocsRequest,
+    request: Request,
+    body: MissingDocsRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -1235,8 +1239,8 @@ async def detect_missing_documents(
     customer = _customer_for_user(db, user)
 
     # Mode 1: Vesselless analysis with port_codes
-    if request.port_codes:
-        port_codes = [p.strip().upper() for p in request.port_codes if p.strip()]
+    if body.port_codes:
+        port_codes = [p.strip().upper() for p in body.port_codes if p.strip()]
         route_name = f"Route: {' → '.join(port_codes[:3])}{'...' if len(port_codes) > 3 else ''}"
 
         # Use default vessel info for vesselless analysis
@@ -1254,23 +1258,23 @@ async def detect_missing_documents(
         documents = doc_service.get_customer_documents(customer.id)
 
     # Mode 2: Vessel-based analysis
-    elif request.vessel_id:
+    elif body.vessel_id:
         # Validate vessel exists
-        vessel = _vessel_for_user(db, user, request.vessel_id)
+        vessel = _vessel_for_user(db, user, body.vessel_id)
 
         # Get route
-        if request.route_id:
+        if body.route_id:
             route = (
                 db.query(VesselRoute)
                 .filter(
-                    VesselRoute.id == request.route_id, VesselRoute.vessel_id == request.vessel_id
+                    VesselRoute.id == body.route_id, VesselRoute.vessel_id == body.vessel_id
                 )
                 .first()
             )
         else:
             route = (
                 db.query(VesselRoute)
-                .filter(VesselRoute.vessel_id == request.vessel_id, VesselRoute.is_active)
+                .filter(VesselRoute.vessel_id == body.vessel_id, VesselRoute.is_active)
                 .first()
             )
 
@@ -1294,7 +1298,7 @@ async def detect_missing_documents(
         }
 
         # Get ALL vessel documents (structured data, NOT raw OCR text)
-        documents = doc_service.get_vessel_documents(request.vessel_id)
+        documents = doc_service.get_vessel_documents(body.vessel_id)
 
     else:
         raise HTTPException(
@@ -1539,8 +1543,10 @@ async def detect_missing_documents(
 
 
 @router.post("/compliance/check-route", response_model=RouteComplianceResponse)
+@limiter.limit("10/minute")
 async def check_route_compliance(
-    request: RouteComplianceRequest,
+    request: Request,
+    body: RouteComplianceRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -1549,11 +1555,11 @@ async def check_route_compliance(
     Returns both structured JSON and natural language report.
     Optionally uses CrewAI agents for comprehensive analysis.
     """
-    vessel = _vessel_for_user(db, user, request.vessel_id)
+    vessel = _vessel_for_user(db, user, body.vessel_id)
 
     compliance_service = ComplianceService(db)
 
-    if request.use_crewai:
+    if body.use_crewai:
         # Use CrewAI for comprehensive analysis
         from modules.maritime.crew_maritime_compliance import get_compliance_orchestrator
 
@@ -1575,7 +1581,7 @@ async def check_route_compliance(
         }
 
         doc_service = DocumentService()
-        user_docs = doc_service.get_vessel_documents(request.vessel_id)
+        user_docs = doc_service.get_vessel_documents(body.vessel_id)
         user_docs_list = []
         for d in user_docs:
             expiry_str = d.get("expiry_date") or ""
@@ -1593,23 +1599,23 @@ async def check_route_compliance(
 
         # Run CrewAI compliance check
         crew_result = await orchestrator.check_compliance(
-            vessel_info=vessel_info, route_ports=request.port_codes, user_documents=user_docs_list
+            vessel_info=vessel_info, route_ports=body.port_codes, user_documents=user_docs_list
         )
 
         if crew_result.get("error"):
             logger.error(f"CrewAI error: {crew_result['error']}")
             # Fall back to basic compliance check
             result = compliance_service.check_route_compliance(
-                vessel_id=request.vessel_id,
-                port_codes=request.port_codes,
-                route_name=request.route_name,
+                vessel_id=body.vessel_id,
+                port_codes=body.port_codes,
+                route_name=body.route_name,
             )
         else:
             # Parse CrewAI result and combine with basic check
             result = compliance_service.check_route_compliance(
-                vessel_id=request.vessel_id,
-                port_codes=request.port_codes,
-                route_name=request.route_name,
+                vessel_id=body.vessel_id,
+                port_codes=body.port_codes,
+                route_name=body.route_name,
             )
             # Append CrewAI insights to report
             if crew_result.get("crew_output"):
@@ -1620,9 +1626,9 @@ async def check_route_compliance(
     else:
         # Basic compliance check
         result = compliance_service.check_route_compliance(
-            vessel_id=request.vessel_id,
-            port_codes=request.port_codes,
-            route_name=request.route_name,
+            vessel_id=body.vessel_id,
+            port_codes=body.port_codes,
+            route_name=body.route_name,
         )
 
     # Save to database
@@ -1701,7 +1707,8 @@ async def get_compliance_history(
 
 
 @router.post("/kb/search", response_model=KBSearchResponse)
-async def search_knowledge_base(request: KBSearchRequest):
+@limiter.limit("30/minute")
+async def search_knowledge_base(request: Request, body: KBSearchRequest):
     """
     Search maritime regulations knowledge base.
 
@@ -1714,10 +1721,10 @@ async def search_knowledge_base(request: KBSearchRequest):
     kb = get_maritime_knowledge_base()
 
     results = kb.search_general(
-        query=request.query,
-        filters=request.filters,
-        top_k=request.top_k,
-        collections=request.collections,
+        query=body.query,
+        filters=body.filters,
+        top_k=body.top_k,
+        collections=body.collections,
     )
 
     return KBSearchResponse(
@@ -1730,7 +1737,7 @@ async def search_knowledge_base(request: KBSearchRequest):
             }
             for r in results
         ],
-        query=request.query,
+        query=body.query,
         total_found=len(results),
     )
 
