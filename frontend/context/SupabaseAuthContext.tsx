@@ -11,9 +11,7 @@ import React, {
 import type { Session, User } from "@supabase/supabase-js";
 
 import { getSupabaseClient, supabaseConfigured } from "../services/supabaseClient";
-import { setApiAuthToken } from "../services/api";
 import { setApiAccessToken } from "../services/apiClient";
-import { setDocumentAuthToken } from "../services/documentApi";
 
 export interface SupabaseAuthValue {
   session: Session | null;
@@ -45,19 +43,13 @@ export const SupabaseAuthProvider: React.FC<React.PropsWithChildren> = ({
   const [session, setSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(!supabaseConfigured);
 
-  // Push the access token into the axios clients whenever it changes
-  // so all REST calls carry an `Authorization: Bearer <jwt>` header
-  // that the FastAPI backend's Supabase verifier accepts.
+  // Single token pipeline: stash the Supabase access token in apiClient.
+  // The fetch wrapper (apiFetch / apiRequest) and the documentApi axios
+  // interceptor both read from getApiAccessToken(), so one setter feeds
+  // every REST surface.
   useEffect(() => {
-    // Wait until Supabase has had a chance to rehydrate the persisted
-    // session before we clear the cached access token. Otherwise we'd
-    // wipe a perfectly good token in the millisecond between mount and
-    // `getSession()` resolving, and any in-flight demo button would 401.
     if (!isLoaded) return;
-    const token = session?.access_token ?? null;
-    setApiAuthToken(token);
-    setApiAccessToken(token);
-    setDocumentAuthToken(token);
+    setApiAccessToken(session?.access_token ?? null);
   }, [isLoaded, session?.access_token]);
 
   useEffect(() => {

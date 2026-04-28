@@ -1,9 +1,8 @@
 "use client";
-// @ts-nocheck
 import React, { useEffect, useState } from 'react';
-import { Table, Tag, Space, Typography, Card, Statistic, Row, Col, Spin, message, Tooltip as AntTooltip } from 'antd';
+import { Table, Tag, Space, Typography, Card, Statistic, Row, Col, Spin, Tooltip as AntTooltip } from 'antd';
 import { useCurrentUser } from '@/context/SupabaseAuthContext';
-import api from '@/services/api';
+import { apiRequest, ApiError } from '@/services/apiClient';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
@@ -69,22 +68,20 @@ interface Stats {
 
 export const AdminDashboard: React.FC = () => {
   const { user, fullName, email } = useCurrentUser();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers] = useState<Customer[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Token is automatically attached by SupabaseAuthProvider's auth bridge
-        const [custRes, statsRes] = await Promise.all([
-          api.get('/customers').catch(() => ({ data: { customers: [] } })),
-          api.get('/admin/stats').catch(() => ({ data: null })),
-        ]);
-        setCustomers(custRes.data?.customers || []);
-        setStats(statsRes.data || null);
-      } catch (err) {
-        console.error('Fetch error:', err);
+        const statsRes = await apiRequest<Stats | null>('/admin/stats', {
+          requireAuth: false,
+        }).catch((err: unknown) => {
+          if (!(err instanceof ApiError)) console.error('Stats fetch error:', err);
+          return null;
+        });
+        setStats(statsRes ?? null);
       } finally {
         setLoading(false);
       }

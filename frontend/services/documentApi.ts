@@ -1,5 +1,5 @@
-// @ts-nocheck
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
+import { getApiAccessToken } from './apiClient';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
@@ -11,13 +11,16 @@ const api = axios.create({
   }
 });
 
-export function setDocumentAuthToken(token?: string | null) {
+// Single source of truth for auth: pull token from apiClient's in-memory
+// cache on every request so we never have to bridge the same token into
+// multiple axios defaults.
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = getApiAccessToken();
   if (token) {
-    api.defaults.headers.common.Authorization = `Bearer ${token}`;
-  } else {
-    delete api.defaults.headers.common.Authorization;
+    config.headers.set('Authorization', `Bearer ${token}`);
   }
-}
+  return config;
+});
 
 // Types
 export interface Vessel {
@@ -225,16 +228,12 @@ export const documentAPI = {
       formData.append('issuing_authority', params.issuing_authority);
     }
 
-    try {
-      const response = await api.post('/maritime/documents/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await api.post('/maritime/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
   },
 
   // Run CrewAI document analysis
@@ -258,7 +257,7 @@ export const documentAPI = {
   },
 
   // Get single document with full details
-  getDocument: async (documentId: string): Promise<DocumentInfo & { extracted_text: string; extracted_fields: Record<string, any> }> => {
+  getDocument: async (documentId: string): Promise<DocumentInfo & { extracted_text: string; extracted_fields: Record<string, unknown> }> => {
     const response = await api.get(`/maritime/documents/${documentId}`);
     return response.data;
   },
@@ -283,7 +282,7 @@ export const documentAPI = {
 
   // Get all available ports
   getPorts: async (region?: string, limit?: number): Promise<Port[]> => {
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
     if (region) params.region = region;
     if (limit) params.limit = limit;
     const response = await api.get('/maritime/ports', { params });
@@ -302,7 +301,7 @@ export const documentAPI = {
     regulations: Array<{
       content: string;
       source: string;
-      metadata: Record<string, any>;
+      metadata: Record<string, unknown>;
     }>;
   }> => {
     const params = vesselType ? { vessel_type: vesselType } : {};

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Shared fetch wrapper for Plimsoll demo APIs.
  *

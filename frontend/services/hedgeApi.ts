@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Hedge API Service
  * Provides functions to interact with the Financial Hedging backend API

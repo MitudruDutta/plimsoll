@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Visual Risk API Service
  * Provides functions to interact with the Visual Risk Analysis backend API (Gemini Vision)
