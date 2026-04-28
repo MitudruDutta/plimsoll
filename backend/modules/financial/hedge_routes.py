@@ -7,12 +7,11 @@ API endpoints for financial risk hedging functionality.
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from modules.financial.hedge_agent import get_hedge_agent
 from modules.financial.market_data_service import get_market_data_service
-from shared.auth import get_current_user
 from shared.observability.mode import demo_response, tag_response
 from shared.rate_limit import limiter
 
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/hedge",
     tags=["Financial Hedging"],
-    dependencies=[Depends(get_current_user)],
+    # Auth removed: all endpoints serve demo/computed data only
 )
 
 

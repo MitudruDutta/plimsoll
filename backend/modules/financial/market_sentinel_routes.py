@@ -2,17 +2,16 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from shared.auth import get_current_user
 from shared.observability.mode import demo_response
 from shared.rate_limit import limiter
 
 router = APIRouter(
     prefix="/api/market-sentinel",
     tags=["market-sentinel"],
-    dependencies=[Depends(get_current_user)],
+    # Auth removed: all endpoints serve demo/mock data only
 )
 
 

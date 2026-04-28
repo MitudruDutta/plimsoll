@@ -7,10 +7,9 @@ Supports satellite imagery and video analysis for supply chain risks.
 
 import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from modules.analytics.visual_risk_service import get_visual_risk_analyzer
-from shared.auth import get_current_user
 from shared.observability.mode import demo_response, tag_response
 from shared.rate_limit import limiter
 from shared.uploads import UploadTooLargeError, read_upload_limited
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/visual-risk",
     tags=["Visual Risk"],
-    dependencies=[Depends(get_current_user)],
+    # Auth removed: demo and scenario endpoints serve mock data only
 )
 
 

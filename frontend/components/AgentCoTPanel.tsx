@@ -389,7 +389,7 @@ export function AgentCoTPanel({
                         </h3>
                       </div>
 
-                      <p className="text-lg font-medium text-white mb-4">
+                      <p className="text-lg font-medium text-[var(--text-hi)] mb-4">
                         {decision.final_recommendation}
                       </p>
 

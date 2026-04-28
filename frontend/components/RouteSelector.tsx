@@ -128,25 +128,25 @@ export function RouteSelector({ routes, selectedRoute, onRouteSelect, isLoading 
                         padding: '10px 12px',
                         borderRadius: '8px',
                         border: isSelected
-                          ? '1px solid rgba(56, 189, 248, 0.4)'
-                          : '1px solid rgba(71, 85, 105, 0.3)',
+                          ? '1px solid rgba(37, 99, 235, 0.45)'
+                          : '1px solid rgba(15, 23, 42, 0.10)',
                         background: isSelected
-                          ? 'rgba(56, 189, 248, 0.08)'
-                          : 'rgba(30, 41, 59, 0.4)',
+                          ? 'rgba(37, 99, 235, 0.08)'
+                          : 'rgba(255, 255, 255, 0.85)',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
                       }}
                       onMouseEnter={(e) => {
                         if (!isSelected) {
-                          e.currentTarget.style.background = 'rgba(51, 65, 85, 0.5)';
-                          e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.6)';
+                          e.currentTarget.style.background = 'rgba(239, 246, 255, 0.95)';
+                          e.currentTarget.style.borderColor = 'rgba(37, 99, 235, 0.30)';
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!isSelected) {
-                          e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
-                          e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.85)';
+                          e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.10)';
                         }
                       }}
                     >
@@ -162,8 +162,8 @@ export function RouteSelector({ routes, selectedRoute, onRouteSelect, isLoading 
                         }} />
                         <span style={{
                           fontSize: '12px',
-                          fontWeight: 500,
-                          color: isSelected ? '#f1f5f9' : '#cbd5e1',
+                          fontWeight: 600,
+                          color: isSelected ? '#1d4ed8' : '#0b1220',
                           flex: 1,
                         }}>
                           {route.name}
@@ -173,7 +173,7 @@ export function RouteSelector({ routes, selectedRoute, onRouteSelect, isLoading 
                             width: '16px',
                             height: '16px',
                             borderRadius: '50%',
-                            background: '#38bdf8',
+                            background: '#2563eb',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -187,15 +187,15 @@ export function RouteSelector({ routes, selectedRoute, onRouteSelect, isLoading 
                       {/* Stats row */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <TrendingUp style={{ width: 12, height: 12, color: '#64748b' }} strokeWidth={2} />
-                          <span style={{ fontSize: '10px', color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+                          <TrendingUp style={{ width: 12, height: 12, color: '#475569' }} strokeWidth={2} />
+                          <span style={{ fontSize: '10px', color: '#334155', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
                             {route.distance.toLocaleString()} nm
                           </span>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Clock style={{ width: 12, height: 12, color: '#64748b' }} strokeWidth={2} />
-                          <span style={{ fontSize: '10px', color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+                          <Clock style={{ width: 12, height: 12, color: '#475569' }} strokeWidth={2} />
+                          <span style={{ fontSize: '10px', color: '#334155', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
                             ~{route.estimatedTime}d
                           </span>
                         </div>
@@ -228,25 +228,25 @@ export function RouteSelector({ routes, selectedRoute, onRouteSelect, isLoading 
                         <div style={{
                           marginTop: '8px',
                           paddingTop: '8px',
-                          borderTop: '1px solid rgba(56, 189, 248, 0.1)',
+                          borderTop: '1px dashed rgba(37, 99, 235, 0.20)',
                           marginLeft: '16px',
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                             {route.waypointNames.map((wp, idx) => (
                               <React.Fragment key={idx}>
                                 <span style={{
-                                  fontSize: '9px',
+                                  fontSize: '10px',
                                   color: idx === 0
-                                    ? '#38bdf8'
+                                    ? '#1d4ed8'
                                     : idx === route.waypointNames.length - 1
-                                    ? '#c94444'
-                                    : '#94a3b8',
-                                  fontWeight: (idx === 0 || idx === route.waypointNames.length - 1) ? 500 : 400,
+                                    ? '#b91c1c'
+                                    : '#334155',
+                                  fontWeight: (idx === 0 || idx === route.waypointNames.length - 1) ? 600 : 500,
                                 }}>
                                   {wp}
                                 </span>
                                 {idx < route.waypointNames.length - 1 && (
-                                  <ChevronRight style={{ width: 10, height: 10, color: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+                                  <ChevronRight style={{ width: 10, height: 10, color: 'rgba(15,23,42,0.35)', flexShrink: 0 }} />
                                 )}
                               </React.Fragment>
                             ))}

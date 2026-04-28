@@ -16,7 +16,6 @@ import { useSupabaseAuth } from "../../context/SupabaseAuthContext";
  */
 const NAV_LINKS: ReadonlyArray<{ label: string; href: string }> = [
   { label: "Cockpit", href: "/usershome" },
-  { label: "Documents", href: "/documents" },
   { label: "Demo", href: "/demo" },
   { label: "Pricing", href: "/#pricing" },
 ];

@@ -52,25 +52,36 @@ class _SupabaseJWKSCache:
     def __init__(self) -> None:
         self._jwks: dict[str, Any] | None = None
         self._expires_at: float = 0.0
+        # Soft expiry: serve stale cache on failure for up to this many seconds
+        self._stale_until: float = 0.0
 
     async def get(self, jwks_url: str) -> dict[str, Any]:
         now = time.time()
         if self._jwks and now < self._expires_at:
             return self._jwks
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(jwks_url)
                 response.raise_for_status()
                 self._jwks = response.json()
                 self._expires_at = now + _JWKS_TTL_SECONDS
+                # Keep stale copy valid for an extra hour as fallback
+                self._stale_until = now + _JWKS_TTL_SECONDS + 3600
                 return self._jwks
         except Exception as exc:
             logger.error("Failed to fetch Supabase JWKS from %s: %s", jwks_url, exc)
+            # If we have a stale-but-recent copy, serve it rather than failing
+            if self._jwks and now < self._stale_until:
+                logger.warning(
+                    "Serving stale JWKS cache (will retry on next request). Error: %s", exc
+                )
+                return self._jwks
             raise HTTPException(status_code=500, detail="Failed to fetch auth keys") from exc
 
     def invalidate(self) -> None:
         self._jwks = None
         self._expires_at = 0.0
+        self._stale_until = 0.0
 
 
 _jwks_cache = _SupabaseJWKSCache()

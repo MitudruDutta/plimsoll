@@ -162,8 +162,8 @@ export function UsersHome() {
         // Fetch customer documents (by user, not vessel)
         const docs = await documentAPI.getCustomerDocuments(customerId);
         setVesselDocuments(docs);
-      } catch (err) {
-        console.error('Failed to load compliance data:', err);
+      } catch {
+        setVesselDocuments([]);
       }
     };
     
@@ -389,8 +389,8 @@ export function UsersHome() {
       } else {
         setVesselDocuments(results[0]);
       }
-    } catch (err) {
-      console.error('Failed to refresh data:', err);
+    } catch {
+      setVesselDocuments([]);
     }
   };
 
@@ -957,13 +957,7 @@ export function UsersHome() {
                         {vesselDocuments.length === 0 ? (
                            <div className="text-center py-12">
                               <FileText className="w-12 h-12 text-[var(--text-low)] mx-auto mb-4" />
-                              <p className="text-[var(--text-mid)] text-sm mb-4">No documents uploaded yet</p>
-                              <button 
-                                 onClick={() => router.push('/documents')}
-                                 className="text-[var(--accent-1)] hover:text-[color:var(--accent-1)]/80 text-sm font-bold"
-                              >
-                                 Go to Document Upload
-                              </button>
+                              <p className="text-[var(--text-mid)] text-sm">No documents uploaded yet</p>
                            </div>
                         ) : (
                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

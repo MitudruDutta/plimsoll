@@ -30,6 +30,7 @@ from modules.financial.hedge_routes import router as hedge_router
 from modules.financial.market_sentinel_routes import router as market_sentinel_router
 from modules.maritime.maritime_routes import router as maritime_router
 from shared.auth import User, get_current_user
+from shared.auth.supabase_auth import _jwks_cache, _resolve_jwks_url
 from shared.config import get_settings
 from shared.database.database import Base, get_db, get_engine
 from shared.observability.pii_filter import install_pii_redaction
@@ -53,6 +54,17 @@ async def lifespan(app: FastAPI):
             raise
     else:
         logger.info("Skipping automatic table creation")
+
+    # Warm the JWKS cache at startup so the first authenticated request
+    # doesn't fail due to a cold-cache network round-trip timeout.
+    jwks_url = _resolve_jwks_url(settings)
+    if jwks_url:
+        try:
+            await _jwks_cache.get(jwks_url)
+            logger.info("JWKS cache primed from %s", jwks_url)
+        except Exception as exc:
+            logger.warning("Could not prime JWKS cache at startup: %s — will retry on first request", exc)
+
     yield
 
 

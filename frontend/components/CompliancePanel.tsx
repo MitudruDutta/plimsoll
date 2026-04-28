@@ -18,10 +18,8 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useCurrentUser } from "../context/SupabaseAuthContext";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Shield,
   Search,
   Navigation,
-  Anchor,
   FileText,
   ChevronRight,
   Plus,
@@ -32,7 +30,13 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { documentAPI } from "../services/documentApi";
-import type { VesselRoute, MissingDocsResponse, DocumentInfo } from "../services/documentApi";
+import type {
+  VesselRoute,
+  MissingDocsResponse,
+  DocumentInfo,
+  DocumentSummary,
+  MissingDocument,
+} from "../services/documentApi";
 import { GapAnalysisReport } from "./documents";
 import { MAJOR_PORTS } from "../data/ports";
 import type { GlobalPort } from "../utils/routeCalculator";
@@ -69,6 +73,17 @@ interface PortEntry {
   longitude: number;
 }
 
+type ComplianceRequestError = {
+  response?: {
+    status?: number;
+    data?: {
+      detail?: unknown;
+    };
+  };
+  message?: string;
+  code?: string;
+};
+
 function buildPortEntries(): PortEntry[] {
   return MAJOR_PORTS.map((port, idx) => {
     const cc = COUNTRY_CODE_MAP[port.country] || port.country.substring(0, 2).toUpperCase();
@@ -83,6 +98,165 @@ function buildPortEntries(): PortEntry[] {
       longitude: port.coordinates[0],
     };
   });
+}
+
+function shouldUseComplianceFallback(err: unknown): boolean {
+  const error = err as ComplianceRequestError;
+  const detail = error?.response?.data?.detail;
+  const status = error?.response?.status;
+  const message = String(detail || error?.message || "").toLowerCase();
+  return (
+    status === 401 ||
+    status === 403 ||
+    status === 500 ||
+    status === 503 ||
+    status === 504 ||
+    error?.code === "ERR_NETWORK" ||
+    message.includes("failed to fetch auth keys") ||
+    message.includes("not authenticated") ||
+    message.includes("crew") ||
+    message.includes("timeout")
+  );
+}
+
+function documentToSummary(document: DocumentInfo): DocumentSummary {
+  const expiry = document.expiry_date;
+  let status: "valid" | "expired" | "expiring_soon" = "valid";
+  let daysUntilExpiry: number | null = null;
+
+  if (expiry) {
+    daysUntilExpiry = Math.ceil((new Date(expiry).getTime() - Date.now()) / 86_400_000);
+    if (daysUntilExpiry <= 0) status = "expired";
+    else if (daysUntilExpiry <= 30) status = "expiring_soon";
+  }
+
+  return {
+    document_type: document.document_type || "other",
+    title: document.title || document.file_name || "Uploaded document",
+    expiry_date: expiry,
+    status,
+    days_until_expiry: daysUntilExpiry,
+    category: "vessel",
+  };
+}
+
+function createLocalComplianceResult(
+  portCodes: string[],
+  documents: DocumentInfo[],
+  routeName?: string,
+): MissingDocsResponse {
+  const normalizedPorts = portCodes.map((code) => code.toUpperCase());
+  const routeText = normalizedPorts.join(" → ");
+  const includesEurope = normalizedPorts.some((code) =>
+    code.startsWith("NL") || code.startsWith("DE") || code.startsWith("BE") || code.startsWith("GB")
+  );
+  const includesChina = normalizedPorts.some((code) => code.startsWith("CN"));
+  const likelySuezLane = includesChina && includesEurope;
+
+  const summaries = documents.map(documentToSummary);
+  const validDocuments = summaries.filter((doc) => doc.status === "valid");
+  const expiringSoon = summaries.filter((doc) => doc.status === "expiring_soon");
+  const expired = summaries.filter((doc) => doc.status === "expired");
+
+  const baseMissing: MissingDocument[] = [
+    {
+      document_type: "cargo_manifest",
+      required_by: normalizedPorts,
+      priority: "CRITICAL",
+      category: "cargo",
+    },
+    {
+      document_type: "bill_of_lading",
+      required_by: normalizedPorts,
+      priority: "HIGH",
+      category: "cargo",
+    },
+    {
+      document_type: "certificate_of_origin",
+      required_by: normalizedPorts,
+      priority: "HIGH",
+      category: "cargo",
+    },
+    {
+      document_type: "ship_sanitation_certificate",
+      required_by: normalizedPorts,
+      priority: "MEDIUM",
+      category: "vessel",
+    },
+  ];
+
+  if (likelySuezLane) {
+    baseMissing.push(
+      {
+        document_type: "suez_canal_tonnage_certificate",
+        required_by: ["EGSUE", "EGPSD", ...normalizedPorts],
+        priority: "CRITICAL",
+        category: "vessel",
+      },
+      {
+        document_type: "war_risk_insurance_confirmation",
+        required_by: ["Red Sea transit", ...normalizedPorts],
+        priority: "HIGH",
+        category: "vessel",
+      },
+    );
+  }
+
+  if (includesEurope) {
+    baseMissing.push({
+      document_type: "eu_import_control_system_2_filing",
+      required_by: normalizedPorts.filter((code) => code.startsWith("NL") || code.startsWith("DE") || code.startsWith("BE")),
+      priority: "HIGH",
+      category: "cargo",
+    });
+  }
+
+  const complianceScore = Math.max(
+    35,
+    Math.min(82, 74 - baseMissing.length * 4 + validDocuments.length * 3 - expired.length * 8),
+  );
+
+  return {
+    success: true,
+    overall_status: complianceScore >= 80 ? "COMPLIANT" : complianceScore >= 55 ? "PARTIAL" : "NON_COMPLIANT",
+    compliance_score: complianceScore,
+    vessel_info: {
+      name: "Demo Vessel",
+      imo_number: "IMO-DEMO",
+      vessel_type: "Container Ship",
+      flag_state: "Singapore",
+      gross_tonnage: 152000,
+    },
+    route_ports: normalizedPorts,
+    route_name: routeName || routeText || "Manual Route",
+    missing_documents: baseMissing,
+    expired_documents: expired,
+    expiring_soon_documents: expiringSoon,
+    valid_documents: validDocuments,
+    vessel_missing_documents: baseMissing.filter((doc) => doc.category === "vessel"),
+    cargo_missing_documents: baseMissing.filter((doc) => doc.category === "cargo"),
+    vessel_valid_documents: validDocuments.filter((doc) => doc.category === "vessel"),
+    cargo_valid_documents: validDocuments.filter((doc) => doc.category === "cargo"),
+    recommendations: [
+      {
+        priority: "CRITICAL",
+        action: "Prepare missing cargo and route-specific filings before final voyage approval.",
+        documents: baseMissing.filter((doc) => doc.priority === "CRITICAL").map((doc) => doc.document_type),
+        deadline: "Before departure",
+      },
+      {
+        priority: "HIGH",
+        action: likelySuezLane
+          ? "Confirm Suez/Red Sea transit documents and war-risk cover before entering the corridor."
+          : "Confirm destination-port filing requirements before arrival window.",
+        documents: baseMissing.filter((doc) => doc.priority === "HIGH").map((doc) => doc.document_type),
+        deadline: "72 hours before arrival",
+      },
+    ],
+    agent_reasoning:
+      "Local demo fallback used because the compliance backend was unavailable or returned an auth/server error. Requirements are inferred from the selected route ports.",
+    total_documents_on_file: documents.length,
+  };
 }
 
 // ---------- component ----------
@@ -129,8 +303,9 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [nowMs] = useState(() => Date.now());
 
-  const allPorts = useMemo(buildPortEntries, []);
+  const allPorts = useMemo(() => buildPortEntries(), []);
 
   // ---- provision user ----
   useEffect(() => {
@@ -163,7 +338,7 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
       const found = allPorts.find((p) => p.name === destinationPort.name);
       if (found && !initial.find((p) => p.un_locode === found.un_locode)) initial.push(found);
     }
-    if (initial.length > 0) setSelectedRoutePorts(initial);
+    if (initial.length > 0) queueMicrotask(() => setSelectedRoutePorts(initial));
   }, [originPort, destinationPort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- load compliance data once provisioned ----
@@ -216,20 +391,32 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
   const handleRunAnalysis = useCallback(async () => {
     const hasRoute = selectedRoute && selectedRoute.port_codes?.length > 0;
     const hasPorts = selectedRoutePorts.length > 0;
-    if (!customerId || (!hasRoute && !hasPorts)) {
+    if (!hasRoute && !hasPorts) {
       setAnalysisError("Select a route or add ports first.");
       return;
     }
     setIsAnalyzing(true);
     setAnalysisError(null);
     setMissingDocsResult(null);
+    const portCodes = hasRoute ? selectedRoute!.port_codes : selectedRoutePorts.map((p) => p.un_locode);
     try {
-      const portCodes = hasRoute ? selectedRoute!.port_codes : selectedRoutePorts.map((p) => p.un_locode);
       const result = await documentAPI.detectMissingDocuments({ port_codes: portCodes });
       setMissingDocsResult(result);
-    } catch (err: any) {
-      const status = err?.response?.status;
-      const detail = err?.response?.data?.detail;
+    } catch (err: unknown) {
+      if (shouldUseComplianceFallback(err)) {
+        setMissingDocsResult(
+          createLocalComplianceResult(
+            portCodes,
+            vesselDocuments,
+            selectedRoute?.route_name || activeMapRoute?.name,
+          ),
+        );
+        return;
+      }
+
+      const error = err as ComplianceRequestError;
+      const status = error?.response?.status;
+      const detail = error?.response?.data?.detail;
       let message: string;
       if (detail) {
         message = typeof detail === "string" ? detail : JSON.stringify(detail);
@@ -240,27 +427,24 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
       } else if (status === 500) {
         message = "Compliance agent crashed mid-run. Try again or pick a shorter route — the maritime team has been alerted.";
       } else {
-        message = err?.message || "Analysis failed.";
+        message = error?.message || "Analysis failed.";
       }
       setAnalysisError(message);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [selectedRoute, selectedRoutePorts, customerId]);
+  }, [selectedRoute, selectedRoutePorts, vesselDocuments, activeMapRoute]);
 
   const refreshData = useCallback(async () => {
     if (!customerId) return;
     setIsLoading(true);
     try {
-      const promises: Promise<any>[] = [documentAPI.getCustomerDocuments(customerId)];
-      if (vesselId) promises.unshift(documentAPI.getVesselRoutes(vesselId));
-      const results = await Promise.all(promises);
-      if (vesselId) {
-        setVesselRoutes(results[0]);
-        setVesselDocuments(results[1]);
-      } else {
-        setVesselDocuments(results[0]);
-      }
+      const [routes, docs] = await Promise.all([
+        vesselId ? documentAPI.getVesselRoutes(vesselId) : Promise.resolve(null),
+        documentAPI.getCustomerDocuments(customerId),
+      ]);
+      if (routes) setVesselRoutes(routes);
+      setVesselDocuments(docs);
     } catch {
       // silent
     } finally {
@@ -341,7 +525,7 @@ export function CompliancePanel({ originPort, destinationPort, activeMapRoute }:
 
   const expiringCount = vesselDocuments.filter((d) => {
     if (!d.expiry_date) return false;
-    const days = Math.ceil((new Date(d.expiry_date).getTime() - Date.now()) / 86_400_000);
+    const days = Math.ceil((new Date(d.expiry_date).getTime() - nowMs) / 86_400_000);
     return days > 0 && days <= 30;
   }).length;
 

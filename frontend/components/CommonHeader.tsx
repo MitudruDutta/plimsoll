@@ -66,7 +66,6 @@ export const CommonHeader: React.FC = () => {
   type NavLink = { path: string; label: string };
   const navLinks: NavLink[] = [
     { path: '/usershome', label: 'Cockpit' },
-    { path: '/documents', label: 'Documents' },
     { path: '/demo', label: 'Demo' },
     { path: '/#pricing', label: 'Pricing' },
   ];

@@ -3,11 +3,9 @@
  *
  * Why this exists
  * ---------------
- * The demo page reaches three FastAPI routers — `/api/market-sentinel`,
- * `/api/hedge`, and `/api/visual-risk` — that all sit behind
- * `Depends(get_current_user)`. Each one used to call `fetch()` directly
- * with no `Authorization` header, which is why every demo button was
- * blowing up with `Not authenticated`.
+ * The app talks to both authenticated FastAPI routers and public demo
+ * routers. Authenticated calls need a Supabase bearer token; public demo
+ * calls should stay anonymous so they never trigger Supabase/JWKS checks.
  *
  * This module exposes:
  *  - `setApiAccessToken(token)` — called by `SupabaseAuthContext` whenever
@@ -17,7 +15,7 @@
  *  - `apiFetch(path, init)` — drop-in `fetch()` replacement that:
  *      * resolves a relative `/api/...` path against the page origin so
  *        `new URL(...)` (used for query params) doesn't blow up,
- *      * attaches `Authorization: Bearer <jwt>` if a token is known,
+ *      * attaches `Authorization: Bearer <jwt>` only for authenticated calls,
  *      * normalises non-2xx responses into a thrown `Error` with the
  *        FastAPI `detail` payload (or a sensible fallback).
  */
@@ -136,14 +134,29 @@ export class ApiError extends Error {
   }
 }
 
+export function shouldUsePublicDemoFallback(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  if (!(error instanceof ApiError)) return false;
+
+  const message = error.message.toLowerCase();
+  return (
+    error.status === 401 ||
+    error.status === 403 ||
+    (error.status >= 500 &&
+      (message.includes("auth") ||
+        message.includes("jwks") ||
+        message.includes("key")))
+  );
+}
+
 /**
- * `fetch()` wrapper that injects the Supabase access token and
- * normalises errors. Use this for any demo endpoint that expects an
- * authenticated user.
+ * `fetch()` wrapper that injects the Supabase access token for authenticated
+ * requests and normalises errors.
  */
 export async function apiFetch(
   url: string,
   init: ApiFetchOptions = {},
+  _retries = 2,
 ): Promise<Response> {
   const { requireAuth = true, headers: rawHeaders, ...rest } = init;
 
@@ -157,7 +170,7 @@ export async function apiFetch(
   }
 
   const headers = new Headers(rawHeaders || {});
-  if (token && !headers.has("Authorization")) {
+  if (requireAuth && token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
@@ -168,7 +181,16 @@ export async function apiFetch(
     headers.set("Content-Type", "application/json");
   }
 
-  return fetch(url, { ...rest, headers });
+  const response = await fetch(url, { ...rest, headers });
+
+  // Auto-retry on 5xx (server/JWKS transient errors) with exponential backoff
+  if (response.status >= 500 && _retries > 0) {
+    const delay = (3 - _retries) * 800; // 800ms, then 1600ms
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    return apiFetch(url, init, _retries - 1);
+  }
+
+  return response;
 }
 
 /**

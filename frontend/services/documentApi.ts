@@ -22,6 +22,30 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
+function shouldUseEmptyListFallback(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof TypeError;
+  }
+
+  const status = error.response?.status;
+  const data = error.response?.data;
+  const detail =
+    typeof data === 'string'
+      ? data
+      : JSON.stringify(data ?? {});
+  const message = `${error.message} ${error.response?.statusText ?? ''} ${detail}`.toLowerCase();
+
+  return (
+    !status ||
+    [401, 403, 404, 500, 502, 503, 504].includes(status) ||
+    message.includes('failed to fetch auth keys') ||
+    message.includes('not authenticated') ||
+    message.includes('jwks') ||
+    message.includes('supabase') ||
+    message.includes('backend not ready')
+  );
+}
+
 // Types
 export interface Vessel {
   id: number;
@@ -245,15 +269,25 @@ export const documentAPI = {
   // Get all documents for a vessel
   getVesselDocuments: async (vesselId: number, documentType?: string): Promise<DocumentInfo[]> => {
     const params = documentType ? { document_type: documentType } : {};
-    const response = await api.get(`/maritime/documents/vessel/${vesselId}`, { params });
-    return response.data;
+    try {
+      const response = await api.get(`/maritime/documents/vessel/${vesselId}`, { params });
+      return response.data;
+    } catch (error) {
+      if (shouldUseEmptyListFallback(error)) return [];
+      throw error;
+    }
   },
 
   // Get all documents for a customer (user)
   getCustomerDocuments: async (_customerId?: number, documentType?: string): Promise<DocumentInfo[]> => {
     const params = documentType ? { document_type: documentType } : {};
-    const response = await api.get('/maritime/documents/customer', { params });
-    return response.data;
+    try {
+      const response = await api.get('/maritime/documents/customer', { params });
+      return response.data;
+    } catch (error) {
+      if (shouldUseEmptyListFallback(error)) return [];
+      throw error;
+    }
   },
 
   // Get single document with full details
@@ -325,8 +359,13 @@ export const documentAPI = {
 
   // Get all routes for a vessel
   getVesselRoutes: async (vesselId: number): Promise<VesselRoute[]> => {
-    const response = await api.get(`/maritime/vessels/${vesselId}/routes`);
-    return response.data;
+    try {
+      const response = await api.get(`/maritime/vessels/${vesselId}/routes`);
+      return response.data;
+    } catch (error) {
+      if (shouldUseEmptyListFallback(error)) return [];
+      throw error;
+    }
   },
 
   // Get active route for a vessel

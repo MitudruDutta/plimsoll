@@ -21,21 +21,21 @@ const INITIAL_VIEW_STATE = {
 };
 
 // ============================================
-// Google Maps Dark Style Color Palette
+// Light 3D Globe Color Palette
 // ============================================
 // Land & Geography
-const COLOR_LAND: [number, number, number] = [38, 43, 51]; // Dark gray land (Google Maps dark)
-const COLOR_LAND_BORDER: [number, number, number, number] = [55, 62, 73, 200]; // Subtle country borders
-const COLOR_WATER: [number, number, number] = [23, 27, 33]; // Dark water background
+const COLOR_LAND: [number, number, number] = [241, 245, 249]; // Soft slate-50 land
+const COLOR_LAND_BORDER: [number, number, number, number] = [174, 188, 208, 210]; // Subtle country borders
+const COLOR_WATER: [number, number, number] = [255, 255, 255]; // White ocean/globe base
 
 // Routes & Shipping
-const COLOR_ROUTE_DEFAULT: [number, number, number, number] = [100, 116, 139, 180]; // Muted gray route
+const COLOR_ROUTE_DEFAULT: [number, number, number, number] = [148, 163, 184, 190]; // Muted slate route
 const COLOR_ROUTE_ACTIVE: [number, number, number, number] = [66, 133, 244, 255]; // Google blue for active routes
 
 // Points of Interest
 const COLOR_STRAIT: [number, number, number, number] = [251, 191, 36, 220]; // Warm amber for straits
-const COLOR_PORT: [number, number, number] = [56, 189, 248]; // Cyan for ports
-const COLOR_PORT_GLOW: [number, number, number, number] = [56, 189, 248, 60]; // Port glow
+const COLOR_PORT: [number, number, number] = [8, 145, 178]; // Teal-cyan for ports
+const COLOR_PORT_GLOW: [number, number, number, number] = [8, 145, 178, 50]; // Port glow
 
 // Ships
 const COLOR_SHIP: [number, number, number] = [255, 255, 255]; // White ships
@@ -56,8 +56,8 @@ const COLOR_CRISIS: [number, number, number] = [239, 68, 68]; // Red for crisis
 const COLOR_CRISIS_GLOW: [number, number, number, number] = [239, 68, 68, 40]; // Crisis zone glow
 
 // Labels & UI
-const COLOR_LABEL_PRIMARY: [number, number, number, number] = [180, 185, 195, 255]; // Country labels
-const COLOR_GRATICULE: [number, number, number, number] = [60, 70, 85, 30]; // Very subtle grid
+const COLOR_LABEL_PRIMARY: [number, number, number, number] = [71, 85, 105, 230]; // Country labels
+const COLOR_GRATICULE: [number, number, number, number] = [148, 163, 184, 45]; // Very subtle grid
 
 const NUM_SHIPS = 4;
 
@@ -339,7 +339,7 @@ export function GlobalMap3D({
   }, []);
 
   const staticLayers = useMemo(() => [
-    // 1. Base Sphere (Google Maps Dark Water)
+    // 1. Base Sphere (white ocean/globe base)
     new SolidPolygonLayer({
         id: 'background-water',
         data: [{ polygon: [[-180, 90], [180, 90], [180, -90], [-180, -90]] }],
@@ -374,7 +374,7 @@ export function GlobalMap3D({
         sizeUnits: 'meters',
         sizeMinPixels: 8,
         sizeMaxPixels: 16,
-        getColor: [80, 90, 105, 50],
+        getColor: [100, 116, 139, 90],
         fontFamily: 'system-ui, -apple-system, sans-serif',
         fontWeight: 'normal',
         billboard: true,
@@ -384,7 +384,7 @@ export function GlobalMap3D({
         }
     }),
 
-    // 2. Countries - Filled polygons (Google Maps style)
+    // 2. Countries - Filled polygons (light map style)
     new GeoJsonLayer({
         id: 'countries-fill',
         data: '/data/countries.geojson',
@@ -436,7 +436,7 @@ export function GlobalMap3D({
       lineWidthMinPixels: 1,
       getPosition: (d: any) => d.coordinates,
       getFillColor: COLOR_PORT,
-      getLineColor: [28, 33, 40, 255],
+      getLineColor: [255, 255, 255, 245],
     }),
 
     // 5. Strait markers
@@ -453,13 +453,13 @@ export function GlobalMap3D({
       lineWidthMinPixels: 1.5,
       getPosition: (d: any) => d.coordinates,
       getFillColor: COLOR_STRAIT,
-      getLineColor: [28, 33, 40, 255],
+      getLineColor: [255, 255, 255, 245],
     }),
   ], [paths, portLabels, straitLabels, selectedRouteFromParent, routes, onRouteSelect]); // Dependencies for static layers
 
   // Memoize Text Layers separately (depend on labels, labelScale, and currentZoom)
   const textLayers = useMemo(() => [
-    // 7. Country Labels (Google Maps style - zoom-responsive)
+    // 7. Country Labels (light map style - zoom-responsive)
     new TextLayer({
         id: 'country-labels',
         data: visibleLabels,
@@ -480,10 +480,9 @@ export function GlobalMap3D({
         sizeMinPixels: 6, 
         sizeMaxPixels: 80, 
         
-        // Google Maps style: muted gray text
-        getColor: [155, 160, 170, 230],
+        getColor: COLOR_LABEL_PRIMARY,
         outlineWidth: 1.2,
-        outlineColor: [28, 33, 40, 180],
+        outlineColor: [255, 255, 255, 220],
         
         background: false,
         billboard: true,
@@ -521,7 +520,7 @@ export function GlobalMap3D({
         
         getColor: COLOR_STRAIT,
         outlineWidth: 1.5,
-        outlineColor: [28, 33, 40, 220],
+        outlineColor: [255, 255, 255, 235],
         
         background: false,
         
@@ -555,9 +554,9 @@ export function GlobalMap3D({
         sizeMinPixels: 8, 
         sizeMaxPixels: 80, 
         
-        getColor: [120, 200, 220, 255], // Light cyan
+        getColor: [8, 110, 140, 255],
         outlineWidth: 1.5,
-        outlineColor: [28, 33, 40, 220],
+        outlineColor: [255, 255, 255, 235],
         
         background: false,
         
@@ -677,15 +676,15 @@ export function GlobalMap3D({
   }), []);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#171b21' }}>
-      {/* Subtle vignette overlay */}
+    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#ffffff' }}>
+      {/* Subtle light-edge wash */}
       <div 
         style={{
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
           zIndex: 5,
-          background: 'radial-gradient(ellipse at center, transparent 0%, transparent 60%, rgba(0,0,0,0.25) 100%)',
+          background: 'radial-gradient(ellipse at center, transparent 0%, transparent 62%, rgba(37,99,235,0.08) 100%)',
         }}
       />
       
@@ -694,6 +693,7 @@ export function GlobalMap3D({
         onViewStateChange={({ viewState: newViewState }) => setViewState(newViewState as typeof INITIAL_VIEW_STATE)}
         controller={controllerSettings}
         layers={layers}
+        style={{ background: 'transparent' }}
         // @ts-ignore
         views={new GlobeView()}
         getTooltip={({object}: any) => {
@@ -791,11 +791,11 @@ export function GlobalMap3D({
                     </div>
                     
                     <div className="map-legend-item">
-                      <div className="map-legend-color" style={{background: 'rgb(38, 43, 51)'}} />
+                      <div className="map-legend-color" style={{background: 'rgb(241, 245, 249)'}} />
                       <span>Countries</span>
                     </div>
                     <div className="map-legend-item">
-                      <div style={{width: '16px', height: '2px', background: 'rgb(100, 116, 139)', borderRadius: '1px'}} />
+                      <div style={{width: '16px', height: '2px', background: 'rgb(148, 163, 184)', borderRadius: '1px'}} />
                       <span>Shipping Routes</span>
                     </div>
                     <div className="map-legend-item">
@@ -803,7 +803,7 @@ export function GlobalMap3D({
                       <span>Straits & Canals</span>
                     </div>
                     <div className="map-legend-item">
-                      <div className="map-legend-color circle" style={{background: 'rgb(56, 189, 248)', width: '6px', height: '6px'}} />
+                      <div className="map-legend-color circle" style={{background: 'rgb(8, 145, 178)', width: '6px', height: '6px'}} />
                       <span>Major Ports</span>
                     </div>
                     <div className="map-legend-item">

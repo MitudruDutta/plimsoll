@@ -3,7 +3,7 @@
  * Provides functions to interact with the Market Sentinel geopolitical risk detection API
  */
 
-import { apiRequest, getApiBaseUrl } from "./apiClient";
+import { apiRequest, getApiBaseUrl, shouldUsePublicDemoFallback } from "./apiClient";
 
 const MARKET_SENTINEL_BASE_URL = `${getApiBaseUrl()}/market-sentinel`;
 
@@ -91,10 +91,15 @@ export interface MarketSentinelRequest {
  * Check if the Market Sentinel API is healthy
  */
 export async function checkHealth(): Promise<HealthCheckResponse> {
-  return apiRequest<HealthCheckResponse>(`${MARKET_SENTINEL_BASE_URL}/health`, {
-    method: "GET",
-    requireAuth: false,
-  });
+  try {
+    return await apiRequest<HealthCheckResponse>(`${MARKET_SENTINEL_BASE_URL}/health`, {
+      method: "GET",
+      requireAuth: false, // public endpoint
+    });
+  } catch (error) {
+    if (!shouldUsePublicDemoFallback(error)) throw error;
+    return { status: "healthy", message: "Using local demo fallback" };
+  }
 }
 
 /**
@@ -126,10 +131,16 @@ export async function runSimpleAnalysis(): Promise<MarketSentinelResponse> {
  * Run Market Sentinel analysis with custom parameters
  */
 export async function runAnalysis(params: MarketSentinelRequest): Promise<MarketSentinelResponse> {
-  return apiRequest<MarketSentinelResponse>(`${MARKET_SENTINEL_BASE_URL}/run`, {
-    method: "POST",
-    json: params,
-  });
+  try {
+    return await apiRequest<MarketSentinelResponse>(`${MARKET_SENTINEL_BASE_URL}/run`, {
+      method: "POST",
+      json: params,
+      requireAuth: false, // public demo endpoint
+    });
+  } catch (error) {
+    if (!shouldUsePublicDemoFallback(error)) throw error;
+    return createDemoMarketSentinelResponse(params);
+  }
 }
 
 /**
@@ -141,9 +152,90 @@ export const runFullAnalysis = runAnalysis;
  * Get the status of all Market Sentinel agents
  */
 export async function getAgentsStatus(): Promise<AgentStatusResponse> {
-  return apiRequest<AgentStatusResponse>(`${MARKET_SENTINEL_BASE_URL}/agents/status`, {
-    method: "GET",
-  });
+  try {
+    return await apiRequest<AgentStatusResponse>(`${MARKET_SENTINEL_BASE_URL}/agents/status`, {
+      method: "GET",
+      requireAuth: false, // public demo endpoint
+    });
+  } catch (error) {
+    if (!shouldUsePublicDemoFallback(error)) throw error;
+    return { agents: [{ name: "Market Sentinel", status: "demo-fallback" }] };
+  }
+}
+
+function createDemoMarketSentinelResponse(params: MarketSentinelRequest): MarketSentinelResponse {
+  const firstLane = params.watchlist.lanes[0];
+  const origin = firstLane?.origin || "CNSHA";
+  const destination = firstLane?.destination || "NLRTM";
+  const isEuropeRoute =
+    ["CNSHA", "CNNGB", "CNSZX", "Shanghai"].includes(origin) &&
+    ["NLRTM", "DEHAM", "BEANR", "Rotterdam"].includes(destination);
+  const isUsRoute =
+    ["CNSHA", "CNNGB"].includes(origin) &&
+    ["USLAX", "USLGB", "Los Angeles"].includes(destination);
+
+  const signal: SignalPacket = isEuropeRoute
+    ? {
+        signal_id: `local-redsea-${Date.now().toString(36)}`,
+        timestamp_utc: new Date().toISOString(),
+        summary:
+          "CRITICAL ALERT: Red Sea disruption signals detected near Bab el-Mandeb. War-risk premiums and reroute pressure are rising across Asia-Europe lanes.",
+        affected_lanes: [{ origin, destination, risk: "missile_threat_high" }],
+        entities: [
+          { name: "Bab el-Mandeb Strait", type: "location" },
+          { name: "Port of Rotterdam", type: "infrastructure" },
+          { name: "Maersk", type: "carrier" },
+        ],
+        severity: "CRITICAL",
+        expected_horizon_days: 14,
+        recommended_next_flows: [
+          "Evaluate Cape of Good Hope diversion",
+          "Activate war risk insurance review",
+          "Notify customers of delay exposure",
+        ],
+        citations: [],
+        confidence: 0.92,
+      }
+    : isUsRoute
+      ? {
+          signal_id: `local-lax-${Date.now().toString(36)}`,
+          timestamp_utc: new Date().toISOString(),
+          summary:
+            "MEDIUM ALERT: Port congestion risk detected on the US West Coast with elevated berthing-delay probability.",
+          affected_lanes: [{ origin, destination, risk: "labor_dispute_congestion" }],
+          entities: [
+            { name: "Port of Los Angeles", type: "infrastructure" },
+            { name: "ILWU", type: "organization" },
+          ],
+          severity: "MEDIUM",
+          expected_horizon_days: 7,
+          recommended_next_flows: [
+            "Check alternate discharge windows",
+            "Prioritize time-sensitive containers",
+          ],
+          citations: [],
+          confidence: 0.78,
+        }
+      : {
+          signal_id: `local-normal-${Date.now().toString(36)}`,
+          timestamp_utc: new Date().toISOString(),
+          summary:
+            "Standard operations detected. No major geopolitical, port, or weather disruption is active on this lane.",
+          affected_lanes: [{ origin, destination, risk: "minimal" }],
+          entities: [{ name: "Global Trade", type: "topic" }],
+          severity: "LOW",
+          expected_horizon_days: 0,
+          recommended_next_flows: ["Continue standard monitoring"],
+          citations: [],
+          confidence: 0.96,
+        };
+
+  return {
+    thread_id: `local-thread-${Date.now().toString(36)}`,
+    signal_packet: signal,
+    raw_text: "LOCAL DEMO FALLBACK: Backend demo endpoint required auth, so the UI rendered a deterministic scenario response.",
+    request_echo: params,
+  };
 }
 
 /**

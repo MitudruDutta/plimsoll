@@ -31,17 +31,17 @@ const preExecutionMessages = [
   { message: 'Cargo manifest validated: 4,200 TEU containers, high-value electronics shipment', type: 'info' as const },
   { message: 'Route: Suez Canal (Red Sea) - shortest path. Transit scheduled Day 18', type: 'success' as const },
   { message: 'Market Sentinel monitoring 156 global risk indicators - all within normal range', type: 'info' as const },
-  { message: 'Azure AI Search indexed 2,847 shipping intelligence reports. No anomalies detected', type: 'info' as const },
+  { message: 'Gemini Search Grounding indexed 2,847 shipping intelligence reports. No anomalies detected', type: 'info' as const },
   { message: 'Weather forecast: Favorable conditions through Indian Ocean corridor', type: 'success' as const },
   { message: 'Vessel on course via Suez Canal route. ETA Hamburg: 28 days. Status: NOMINAL', type: 'success' as const },
   
   // === Phase 2:  (Crisis prediction - Suez route at risk) ===
   { message: '⚡ Market Sentinel: Unusual naval activity detected near Suez Canal / Red Sea region', type: 'info' as const },
-  { message: 'Azure OpenAI analyzing 3,421 intelligence reports from past 72 hours', type: 'info' as const },
+  { message: 'Gemini Pro analyzing 3,421 intelligence reports from past 72 hours', type: 'info' as const },
   { message: 'Social media sentiment analysis: Geopolitical tension keywords spiking (+340%)', type: 'info' as const },
   { message: '⚠️ Predictive model: 67% probability Suez Canal route disrupted within 5 days', type: 'critical' as const },
   { message: 'Risk Hedger: Suez Canal (Red Sea) route alert level → ELEVATED', type: 'critical' as const },
-  { message: 'Azure Cognitive: Pattern matching 2024 Houthi crisis precedent (87% similarity)', type: 'info' as const },
+  { message: 'Gemini Vision: Pattern matching 2024 Houthi crisis precedent (87% similarity)', type: 'info' as const },
   { message: '⚠️ Fleet anomaly: 12 vessels diverted from Suez route in past 6 hours', type: 'critical' as const },
   
   // === Phase 3:  (Generate alternative plans - aligned with Available Routes) ===
@@ -50,7 +50,7 @@ const preExecutionMessages = [
   { message: '📍 Panama Canal (Westbound): Shanghai → Pacific → Panama → Atlantic → Hamburg (+18 days)', type: 'info' as const },
   { message: '📍 Northern Sea Route (Arctic): REJECTED - Seasonal route impassable in current conditions', type: 'critical' as const },
   { message: 'Adversarial Debate: Cape route optimal - LOW RISK, +12 days, $180K additional fuel cost', type: 'info' as const },
-  { message: 'Azure AI Search: Cape of Good Hope 94% reliability during Red Sea tensions (2015-2024 data)', type: 'success' as const },
+  { message: 'Gemini Search Grounding: Cape of Good Hope 94% reliability during Red Sea tensions (2015-2024 data)', type: 'success' as const },
   { message: '✅ Route selected: Cape of Good Hope (Standard). Pre-booking Singapore & Cape Town berths', type: 'success' as const },
   
   // === Phase 4:  (Real crisis outbreak - Suez Canal route compromised) ===

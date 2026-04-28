@@ -1,10 +1,10 @@
 "use client";
 // @ts-nocheck
 import React, { useEffect, useState } from "react";
-import { Brain, Search, Cog } from "lucide-react";
+import { Sparkles, Search, Eye } from "lucide-react";
 import { AIAgentCard, AgentStatus } from "./AIAgentCard";
 
-interface AzureServiceState {
+interface GeminiServiceState {
   id: string;
   status: AgentStatus;
   lastAction: string;
@@ -12,21 +12,21 @@ interface AzureServiceState {
 }
 
 export const AzureBadges: React.FC = () => {
-  const [services, setServices] = useState<AzureServiceState[]>([
+  const [services, setServices] = useState<GeminiServiceState[]>([
     {
-      id: "openai",
+      id: "pro",
       status: "idle",
       lastAction: "Ready to analyze trade documents",
       calls: 0,
     },
     {
-      id: "search",
+      id: "grounding",
       status: "idle",
       lastAction: "Standing by for intelligence queries",
       calls: 0,
     },
     {
-      id: "cognitive",
+      id: "vision",
       status: "idle",
       lastAction: "Pattern recognition engine ready",
       calls: 0,
@@ -65,8 +65,8 @@ export const AzureBadges: React.FC = () => {
               calls: newCalls[1],
               status: newCalls[1] > 15 ? "completed" : "thinking",
               lastAction: newCalls[1] > 15
-                ? `Indexed geopolitical news from ${1200 + newCalls[1] * 10}+ sources`
-                : `Indexing geopolitical news from ${1200 + newCalls[1] * 10}+ sources`,
+                ? `Grounded geopolitical news from ${1200 + newCalls[1] * 10}+ sources`
+                : `Searching geopolitical news from ${1200 + newCalls[1] * 10}+ sources`,
             },
             {
               ...prev[2],
@@ -75,8 +75,8 @@ export const AzureBadges: React.FC = () => {
               lastAction: newCalls[2] > 18
                 ? `Identified ${Math.min(newCalls[2], 5)} historical precedents for similar crisis events`
                 : newCalls[2] > 8
-                  ? "Scanning historical data for pattern matches..."
-                  : "Pattern recognition engine ready",
+                  ? "Scanning satellite imagery for risk patterns..."
+                  : "Vision model ready",
             },
           ];
         });
@@ -96,33 +96,33 @@ export const AzureBadges: React.FC = () => {
       <div className="flex items-center gap-2 mb-4 box-border">
         <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-2)]" />
         <h2 className="text-[11px] font-semibold text-[var(--text-mid)] tracking-[0.12em] uppercase leading-tight text-left m-0 p-0">
-          Azure OpenAI Agents
+          Gemini AI Agents
         </h2>
       </div>
 
       <div className="space-y-3 box-border">
         <AIAgentCard
-          icon={Brain}
-          name="Azure OpenAI"
+          icon={Sparkles}
+          name="Gemini Pro"
           role="Primary reasoning engine"
-          status={getServiceById("openai")?.status || "idle"}
-          lastAction={getServiceById("openai")?.lastAction || ""}
+          status={getServiceById("pro")?.status || "idle"}
+          lastAction={getServiceById("pro")?.lastAction || ""}
         />
 
         <AIAgentCard
           icon={Search}
-          name="Azure AI Search"
+          name="Gemini Search Grounding"
           role="Real-time intelligence"
-          status={getServiceById("search")?.status || "thinking"}
-          lastAction={getServiceById("search")?.lastAction || ""}
+          status={getServiceById("grounding")?.status || "thinking"}
+          lastAction={getServiceById("grounding")?.lastAction || ""}
         />
 
         <AIAgentCard
-          icon={Cog}
-          name="Azure Cognitive"
-          role="Pattern recognition"
-          status={getServiceById("cognitive")?.status || "idle"}
-          lastAction={getServiceById("cognitive")?.lastAction || ""}
+          icon={Eye}
+          name="Gemini Vision"
+          role="Satellite pattern recognition"
+          status={getServiceById("vision")?.status || "idle"}
+          lastAction={getServiceById("vision")?.lastAction || ""}
         />
       </div>
     </div>

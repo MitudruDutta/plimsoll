@@ -487,7 +487,158 @@ export const DemoPage: React.FC = () => {
     return 'Stabilization & review';
   }, [currentTime]);
 
-  const startBackendDemo = async () => {
+  const seedLocalCoTDemo = useCallback((route: Route | null) => {
+    const routeName = route?.name || 'Fastest Route';
+    const estimatedTime = route?.estimatedTime || 21.8;
+    const distance = route?.distance || 10478;
+
+    const localSteps: CoTStep[] = [
+      {
+        step_id: 'local-cot-001',
+        agent_id: 'market_sentinel',
+        action: 'scan_route_risks',
+        title: 'Market Sentinel validates route exposure',
+        content: `${routeName} spans ${distance.toLocaleString()} nm with a projected ${estimatedTime} day transit. The route intersects elevated Red Sea and Suez disruption assumptions for Asia-Europe traffic.`,
+        confidence: 0.92,
+        azure_service: 'Azure AI Search',
+        duration_ms: 1200,
+        sources: [
+          {
+            document_id: 'local-risk-feed',
+            title: 'Demo maritime risk feed',
+            section: 'Route disruption indicators',
+            content_snippet: 'Red Sea/Suez lane risk is elevated for Shanghai to Northern Europe traffic.',
+            relevance_score: 0.91,
+            azure_service: 'Azure AI Search',
+          },
+        ],
+      },
+      {
+        step_id: 'local-cot-002',
+        agent_id: 'logistics',
+        action: 'compare_route_options',
+        title: 'Logistics agent compares route alternatives',
+        content: 'The direct route remains fastest, but a Cape of Good Hope diversion materially reduces corridor security risk at the cost of additional transit time and fuel.',
+        confidence: 0.88,
+        azure_service: 'Azure Maps',
+        duration_ms: 1400,
+      },
+      {
+        step_id: 'local-cot-003',
+        agent_id: 'compliance',
+        action: 'check_document_gaps',
+        title: 'Compliance agent checks voyage document gaps',
+        content: 'Route-specific requirements include cargo manifest, bill of lading, certificate of origin, EU ICS2 filing, and Suez/war-risk documentation for canal transit assumptions.',
+        confidence: 0.84,
+        azure_service: 'Azure Document Intelligence',
+        duration_ms: 1600,
+      },
+      {
+        step_id: 'local-cot-004',
+        agent_id: 'risk_hedger',
+        action: 'estimate_financial_impact',
+        title: 'Risk hedger estimates financial exposure',
+        content: 'Fuel, freight, insurance, and FX exposure indicate that controlled reroute execution is cheaper than an unplanned incident delay under the active crisis scenario.',
+        confidence: 0.86,
+        azure_service: 'Azure OpenAI',
+        duration_ms: 1300,
+      },
+    ];
+
+    const localDebates: DebateExchange[] = [
+      {
+        exchange_id: 'local-debate-001',
+        challenger_agent: 'adversarial',
+        defender_agent: 'logistics',
+        challenge: 'The fastest route optimizes ETA, but it concentrates risk in the Suez/Red Sea corridor. Why not preemptively reroute?',
+        challenge_reason: 'Security and insurance exposure may outweigh schedule savings.',
+        response: 'The fastest route is acceptable only if compliance and insurance gates are cleared. Without those gates, diversion is the safer operating plan.',
+        resolution: 'Use conditional reroute approval: proceed only if route-risk and document gates remain green, otherwise activate Cape diversion.',
+        resolution_accepted: true,
+        sources: [
+          {
+            document_id: 'local-route-risk',
+            title: 'Route risk comparison',
+            section: 'Asia-Europe alternatives',
+            content_snippet: 'Cape diversion increases duration but lowers security corridor exposure.',
+            relevance_score: 0.89,
+            azure_service: 'Azure AI Search',
+          },
+        ],
+      },
+    ];
+
+    const localDecision: FinalDecision = {
+      decision_id: 'local-decision-001',
+      final_recommendation: 'Prepare Cape of Good Hope reroute and hold execution behind human approval.',
+      recommendation_details: {
+        route_change: `${routeName} → Cape contingency`,
+        additional_days: 10,
+        additional_cost: '$82K fuel and charter impact',
+        risk_reduction: 'High corridor exposure reduced to moderate',
+        savings: '$112.5K avoided incident exposure',
+      },
+      total_duration_ms: 5400,
+      approval_options: [
+        { id: 'approve', label: 'Approve reroute', action: 'approve' },
+        { id: 'details', label: 'View details', action: 'details' },
+        { id: 'manual', label: 'Manual override', action: 'manual' },
+      ],
+    };
+
+    const localExecutionSteps: ExecutionStep[] = [
+      {
+        step_id: 'local-exec-001',
+        action: 'carrier_notification',
+        title: 'Notify carrier desk',
+        description: 'Carrier operations receives reroute preparation notice for Cape contingency.',
+        azure_service: 'Azure Communication Services',
+        duration_ms: 1200,
+        status: 'complete',
+      },
+      {
+        step_id: 'local-exec-002',
+        action: 'insurance_update',
+        title: 'Update insurance assumptions',
+        description: 'War-risk and delay exposure estimates are refreshed for approval review.',
+        azure_service: 'Azure Functions',
+        duration_ms: 1500,
+        status: 'complete',
+      },
+      {
+        step_id: 'local-exec-003',
+        action: 'route_activation',
+        title: 'Stage route change',
+        description: 'Navigation and customer ETA changes are staged, awaiting final operator confirmation.',
+        azure_service: 'Azure Maps',
+        duration_ms: 1800,
+        status: 'complete',
+      },
+    ];
+
+    setIsCotActive(true);
+    setCotSteps(localSteps);
+    setActiveStepIndex(localSteps.length - 1);
+    setDebates(localDebates);
+    setActiveDebateIndex(0);
+    setDebatePhase('complete');
+    setFinalDecision(localDecision);
+    setAwaitingConfirmation(true);
+    setExecutionSteps(localExecutionSteps);
+    setActiveExecutionIndex(localExecutionSteps.length);
+    setExecutionPhase('complete');
+    setExecutionSummary({
+      total_steps: localExecutionSteps.length,
+      total_duration_ms: 4500,
+      actions_completed: localExecutionSteps.map((step) => step.title),
+      final_status: 'LOCAL_DEMO_READY',
+      risk_score_before: 85,
+      risk_score_after: 38,
+      estimated_savings: '$112,500',
+    });
+  }, []);
+
+  const startBackendDemo = async (fallbackRoute: Route | null) => {
     try {
       const response = await fetch('/api/demo/start', {
         method: 'POST',
@@ -500,11 +651,26 @@ export const DemoPage: React.FC = () => {
         if (data?.websocket_url) connect(data.websocket_url);
       } else {
         console.warn('Backend not ready, running in UI-only mode');
+        seedLocalCoTDemo(fallbackRoute);
       }
     } catch (e) {
       console.warn('Backend unreachable, running in UI-only mode', e);
+      seedLocalCoTDemo(fallbackRoute);
     }
   };
+
+  useEffect(() => {
+    if (!demoStarted || cotSteps.length > 0 || finalDecision) return;
+
+    const fallbackTimer = window.setTimeout(() => {
+      if (cotSteps.length === 0 && !finalDecision) {
+        console.warn('CoT stream not received, using local UI-only reasoning sequence');
+        seedLocalCoTDemo(selectedRoute);
+      }
+    }, 5000);
+
+    return () => window.clearTimeout(fallbackTimer);
+  }, [demoStarted, cotSteps.length, finalDecision, selectedRoute, seedLocalCoTDemo]);
 
   const handleStartDemo = async (originPort: GlobalPort, destinationPort: GlobalPort) => {
     setOrigin(originPort);
@@ -518,8 +684,9 @@ export const DemoPage: React.FC = () => {
     const newRoutes = calculateRoutes(originPort.coordinates, destinationPort.coordinates);
     setRoutes(newRoutes);
     // Select the first route (usually fastest) by default
-    if (newRoutes.length > 0) {
-      setSelectedRoute(newRoutes[0]);
+    const initialRoute = newRoutes.length > 0 ? newRoutes[0] : null;
+    if (initialRoute) {
+      setSelectedRoute(initialRoute);
     } else {
       setSelectedRoute(null);
     }
@@ -556,7 +723,7 @@ export const DemoPage: React.FC = () => {
 
     setCurrentTime(0);
 
-    await startBackendDemo();
+    await startBackendDemo(initialRoute);
   };
 
   // ...
@@ -564,6 +731,10 @@ export const DemoPage: React.FC = () => {
   // Handle user confirmation of decision (NEW)
   const handleConfirmDecision = async (action: string) => {
     console.log('[Decision Confirmation] User clicked:', action);
+    if (executionPhase !== 'pending' && executionSteps.length > 0) {
+      setAwaitingConfirmation(false);
+      return;
+    }
     // WebSocket
     // 
     const message = {

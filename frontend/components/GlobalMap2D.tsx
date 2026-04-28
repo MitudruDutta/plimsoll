@@ -23,26 +23,26 @@ const INITIAL_VIEW_STATE = {
 };
 
 // ============================================
-// Google Maps Dark Style Color Palette
+// Light navigation chart palette (readable)
 // ============================================
 // Land & Geography
-const COLOR_LAND: [number, number, number] = [38, 43, 51]; // Dark gray land (Google Maps dark)
-const COLOR_LAND_BORDER: [number, number, number, number] = [55, 62, 73, 200]; // Subtle country borders
-const COLOR_WATER: [number, number, number] = [23, 27, 33]; // Dark water background
+const COLOR_LAND: [number, number, number] = [232, 234, 237]; // Light gray land
+const COLOR_LAND_BORDER: [number, number, number, number] = [180, 190, 205, 220]; // Soft borders
+const COLOR_WATER: [number, number, number] = [194, 220, 240]; // Soft blue water
 
 // Routes & Shipping
 const COLOR_ROUTE_DEFAULT: [number, number, number, number] = [100, 116, 139, 180]; // Muted gray route
-const COLOR_ROUTE_ACTIVE: [number, number, number, number] = [66, 133, 244, 255]; // Google blue for active routes
-const COLOR_ROUTE_HIGHLIGHT: [number, number, number, number] = [52, 211, 153, 255]; // Teal for selected
+const COLOR_ROUTE_ACTIVE: [number, number, number, number] = [37, 99, 235, 255]; // Strong blue active
+const COLOR_ROUTE_HIGHLIGHT: [number, number, number, number] = [16, 185, 129, 255]; // Teal for selected
 
 // Points of Interest
-const COLOR_STRAIT: [number, number, number, number] = [251, 191, 36, 220]; // Warm amber for straits
-const COLOR_PORT: [number, number, number] = [56, 189, 248]; // Cyan for ports
-const COLOR_PORT_GLOW: [number, number, number, number] = [56, 189, 248, 60]; // Port glow
+const COLOR_STRAIT: [number, number, number, number] = [217, 119, 6, 230]; // Amber straits
+const COLOR_PORT: [number, number, number] = [14, 116, 144]; // Deep cyan for ports
+const COLOR_PORT_GLOW: [number, number, number, number] = [14, 116, 144, 60]; // Port glow
 
 // Ships
-const COLOR_SHIP: [number, number, number] = [255, 255, 255]; // White ships
-const COLOR_SHIP_GLOW: [number, number, number, number] = [37, 99, 235, 110]; // Blue glow
+const COLOR_SHIP: [number, number, number] = [15, 23, 42]; // Dark ships on light water
+const COLOR_SHIP_GLOW: [number, number, number, number] = [37, 99, 235, 130]; // Blue glow
 
 // Ship icon asset (top-down vessel, bow pointing up/north)
 const SHIP_ICON = {
@@ -59,9 +59,9 @@ const COLOR_CRISIS: [number, number, number] = [239, 68, 68]; // Red for crisis
 const COLOR_CRISIS_GLOW: [number, number, number, number] = [239, 68, 68, 40]; // Crisis zone glow
 
 // Labels & UI
-const COLOR_LABEL_PRIMARY: [number, number, number, number] = [180, 185, 195, 255]; // Country labels
-const COLOR_LABEL_SECONDARY: [number, number, number, number] = [140, 150, 165, 220]; // Secondary labels
-const COLOR_GRATICULE: [number, number, number, number] = [60, 70, 85, 30]; // Very subtle grid
+const COLOR_LABEL_PRIMARY: [number, number, number, number] = [55, 65, 80, 255]; // Country labels
+const COLOR_LABEL_SECONDARY: [number, number, number, number] = [90, 100, 115, 220]; // Secondary labels
+const COLOR_GRATICULE: [number, number, number, number] = [120, 140, 165, 50]; // Subtle grid on light water
 
 const NUM_SHIPS = 4;
 
@@ -363,7 +363,7 @@ export function GlobalMap2D({
         getPosition: (d: any) => d.coordinates,
         getText: (d: any) => d.text,
         getSize: 9,
-        getColor: [80, 90, 105, 50],
+        getColor: [120, 140, 165, 80],
         fontFamily: 'system-ui, -apple-system, sans-serif',
         fontWeight: 'normal',
         billboard: true,
@@ -423,7 +423,7 @@ export function GlobalMap2D({
       lineWidthMinPixels: 1,
       getPosition: (d: any) => d.coordinates,
       getFillColor: COLOR_PORT,
-      getLineColor: [28, 33, 40, 255],
+      getLineColor: [255, 255, 255, 255],
     }),
 
     // 5. Strait markers
@@ -440,7 +440,7 @@ export function GlobalMap2D({
       lineWidthMinPixels: 1.5,
       getPosition: (d: any) => d.coordinates,
       getFillColor: COLOR_STRAIT,
-      getLineColor: [28, 33, 40, 255],
+      getLineColor: [255, 255, 255, 255],
     }),
 
     // 6. Crisis Zone Overlay (Translucent pulsing area)
@@ -538,10 +538,10 @@ export function GlobalMap2D({
              return Math.min(24, Math.max(8, baseSize * zoomFactor));
         },
         sizeUnits: 'pixels',
-        // Google Maps style: muted gray text
-        getColor: [155, 160, 170, 230],
-        outlineWidth: 1.2,
-        outlineColor: [28, 33, 40, 180], // Subtle dark outline
+        // Dark text on light water for readability
+        getColor: [40, 50, 65, 240],
+        outlineWidth: 1.5,
+        outlineColor: [255, 255, 255, 220], // White halo
         background: false,
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         fontWeight: '400',
@@ -571,9 +571,9 @@ export function GlobalMap2D({
       getPosition: (d: any) => d.coordinates || [d.lon, d.lat],
       getText: (d: any) => d.name,
       getSize: 11,
-      getColor: COLOR_STRAIT,
+      getColor: [180, 83, 9, 255],
       outlineWidth: 1.5,
-      outlineColor: [28, 33, 40, 220],
+      outlineColor: [255, 255, 255, 230],
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       fontWeight: '500',
       getTextAnchor: 'start',
@@ -599,9 +599,9 @@ export function GlobalMap2D({
       getPosition: (d: any) => d.coordinates || [d.lon, d.lat],
       getText: (d: any) => d.name,
       getSize: 10,
-      getColor: [120, 200, 220, 255], // Light cyan
+      getColor: [12, 74, 110, 255],
       outlineWidth: 1.5,
-      outlineColor: [28, 33, 40, 220],
+      outlineColor: [255, 255, 255, 230],
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       fontWeight: '400',
       getTextAnchor: 'start',
